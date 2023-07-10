@@ -2,7 +2,7 @@
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 
@@ -72,7 +72,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref wsvA.Angular, inertiaA.InverseInertiaTensor, accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref OneBodyAngularMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, Number dt, Number inverseDt, ref OneBodyAngularMotorPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             //Jacobians are just the identity matrix.
             MotorSettingsWide.ComputeSoftness(prestep.Settings, dt, out var effectiveMassCFMScale, out var softnessImpulseScale, out var maximumImpulse);
@@ -89,7 +89,7 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyAngularMotorPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, ref OneBodyAngularMotorPrestepData prestepData) { }
     }
 
     public class OneBodyAngularMotorTypeProcessor : OneBodyTypeProcessor<OneBodyAngularMotorPrestepData, Vector3Wide, OneBodyAngularMotorFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngular>

@@ -1,16 +1,13 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
-using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Numerics;
-using System.Runtime.InteropServices;
 
 namespace Demos.Demos.Dancers
 {
@@ -23,10 +20,10 @@ namespace Demos.Demos.Dancers
         //This demo relies on the DemoDancers to manage all the ragdolls and their simulations. 
         //All this demo needs to do is make a dress out of balls and drape it onto them.
         DemoDancers dancers;
-        static BodyHandle[,] CreateDressBodyGrid(Vector3 position, int widthInNodes, float spacing, float bodyRadius, float massPerBody,
+        static BodyHandle[,] CreateDressBodyGrid(Vector3 position, int widthInNodes, Number spacing, Number bodyRadius, Number massPerBody,
             int instanceId, Simulation simulation, CollidableProperty<ClothCollisionFilter> filters)
         {
-            var description = BodyDescription.CreateDynamic(QuaternionEx.Identity, new BodyInertia { InverseMass = 1f / massPerBody }, simulation.Shapes.Add(new Sphere(bodyRadius)), 0.01f);
+            var description = BodyDescription.CreateDynamic(QuaternionEx.Identity, new BodyInertia { InverseMass = 1f / massPerBody }, simulation.Shapes.Add(new Sphere(bodyRadius)), Constants.C0p01);
             BodyHandle[,] handles = new BodyHandle[widthInNodes, widthInNodes];
             var armHoleCenter = new Vector2(DemoDancers.ArmOffsetX + 0.065f, 0);
             var armHoleRadius = 0.095f;
@@ -100,23 +97,23 @@ namespace Demos.Demos.Dancers
         }
 
 
-        static void TailorDress(Simulation simulation, CollidableProperty<ClothCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, int dancerGridWidth, float levelOfDetail)
+        static void TailorDress(Simulation simulation, CollidableProperty<ClothCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, int dancerGridWidth, Number levelOfDetail)
         {
             //The demo uses lower resolution grids on dancers further away from the main dancer.
             //This is a sorta-example of level of detail. In a 'real' use case, you'd probably want to transition between levels of detail dynamically as the camera moved around.
             //That's a little trickier, but doable. Going low to high, for example, requires creating bodies at interpolated positions between existing bodies, while going to a lower level of detail removes them.
-            levelOfDetail = MathF.Max(0f, MathF.Min(1.5f, levelOfDetail));
+            levelOfDetail = MathF.Max(Constants.C0, MathF.Min(1.5f, levelOfDetail));
             var targetDressDiameter = 2.6f;
             var fullDetailWidthInBodies = 29;
-            float spacingAtFullDetail = targetDressDiameter / fullDetailWidthInBodies;
-            float bodyRadius = spacingAtFullDetail / 1.75f;
+            Number spacingAtFullDetail = targetDressDiameter / fullDetailWidthInBodies;
+            Number bodyRadius = spacingAtFullDetail / 1.75f;
             var scale = MathF.Pow(2, levelOfDetail);
             var widthInBodies = (int)MathF.Ceiling(fullDetailWidthInBodies / scale);
             var spacing = spacingAtFullDetail * scale;
             var chest = simulation.Bodies[bodyHandles.Chest];
             ref var chestShape = ref simulation.Shapes.GetShape<Capsule>(chest.Collidable.Shape.Index);
             var topOfChestHeight = chest.Pose.Position.Y + chestShape.Radius + bodyRadius;
-            var bodies = CreateDressBodyGrid(new Vector3(0, topOfChestHeight, 0) + DemoDancers.GetOffsetForDancer(dancerIndex, dancerGridWidth), widthInBodies, spacing, bodyRadius, 0.01f, dancerIndex, simulation, filters);
+            var bodies = CreateDressBodyGrid(new Vector3(0, topOfChestHeight, 0) + DemoDancers.GetOffsetForDancer(dancerIndex, dancerGridWidth), widthInBodies, spacing, bodyRadius, Constants.C0p01, dancerIndex, simulation, filters);
             //Create constraints that bind the cloth bodies closest to the chest, to the chest. This keeps the dress from sliding around.
             //In the higher resolution simulations, the arm holes and cloth bodies can actually handle it with no help, but for lower levels of detail it can be useful.
             //Also, it's very common to want to control how cloth sticks to a character. You could extend this approach to, for example, keep cloth near the body at the waist like a belt.
@@ -165,7 +162,7 @@ namespace Demos.Demos.Dancers
             dancers = new DemoDancers().Initialize<ClothCallbacks, ClothCollisionFilter>(16, 16, Simulation, collisionFilters, ThreadDispatcher, BufferPool, new SolveDescription(1, 4), TailorDress, new ClothCollisionFilter(0, 0, -1));
 
         }
-        public unsafe override void Update(Window window, Camera camera, Input input, float dt)
+        public unsafe override void Update(Window window, Camera camera, Input input, Number dt)
         {
             dancers.UpdateTargets(Simulation);
             base.Update(window, camera, input, dt);
@@ -183,8 +180,8 @@ namespace Demos.Demos.Dancers
             renderer.TextBatcher.Write(text.Clear().Append("Dancer count: ").Append(dancers.Handles.Length), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Total cloth body count: ").Append(dancers.BodyCount), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Total cloth constraint count: ").Append(dancers.ConstraintCount), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("Total dancer execution time (ms): ").Append(dancers.ExecutionTime * 1000, 2), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("Amortized execution time per dancer (us): ").Append(dancers.ExecutionTime * 1e6 / dancers.Handles.Length, 1), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Total dancer execution time (ms): ").Append((float)dancers.ExecutionTime * 1000, 2), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Amortized execution time per dancer (us): ").Append((float)dancers.ExecutionTime * 1e6 / dancers.Handles.Length, 1), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
 
             base.Render(renderer, camera, input, text, font);
         }

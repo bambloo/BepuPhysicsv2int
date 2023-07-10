@@ -1,7 +1,8 @@
-﻿using System.Numerics;
+﻿
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
 
 namespace Demos.Demos.Tanks
 {
@@ -68,7 +69,7 @@ namespace Demos.Demos.Tanks
         /// <summary>
         /// Speed of fired projectiles.
         /// </summary>
-        public float ProjectileSpeed;
+        public Number ProjectileSpeed;
 
 
         /// <summary>
@@ -99,11 +100,11 @@ namespace Demos.Demos.Tanks
         /// <summary>
         /// How much space to put in between wheels in the tread.
         /// </summary>
-        public float TreadSpacing;
+        public Number TreadSpacing;
         /// <summary>
         /// Resting length of the suspension for each wheel.
         /// </summary>
-        public float SuspensionLength;
+        public Number SuspensionLength;
         /// <summary>
         /// Spring settings for the wheel suspension.
         /// </summary>
@@ -111,6 +112,6 @@ namespace Demos.Demos.Tanks
         /// <summary>
         /// Friction for the wheel bodies.
         /// </summary>
-        public float WheelFriction;
+        public Number WheelFriction;
     }
 }

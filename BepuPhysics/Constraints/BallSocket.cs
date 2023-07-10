@@ -1,9 +1,8 @@
-﻿using BepuPhysics.CollisionDetection;
-using BepuUtilities;
+﻿using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
@@ -74,7 +73,7 @@ namespace BepuPhysics.Constraints
             BallSocketShared.ApplyImpulse(ref wsvA, ref wsvB, offsetA, offsetB, inertiaA, inertiaB, accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, Number dt, Number inverseDt,
             ref BallSocketPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffsetA, orientationA, out var offsetA);
@@ -93,7 +92,7 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref BallSocketPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref BallSocketPrestepData prestepData) { }
     }
 
 

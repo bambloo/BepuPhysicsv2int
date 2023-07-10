@@ -1,9 +1,5 @@
-﻿using BepuUtilities;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
+﻿using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace BepuUtilities
 {
@@ -15,27 +11,27 @@ namespace BepuUtilities
         /// <summary>
         /// First row, first column of the matrix.
         /// </summary>
-        public float XX;
+        public Number XX;
         /// <summary>
         /// Second row, first column of the matrix.
         /// </summary>
-        public float YX;
+        public Number YX;
         /// <summary>
         /// Second row, second column of the matrix.
         /// </summary>
-        public float YY;
+        public Number YY;
         /// <summary>
         /// Third row, first column of the matrix.
         /// </summary>
-        public float ZX;
+        public Number ZX;
         /// <summary>
         /// Third row, second column of the matrix.
         /// </summary>
-        public float ZY;
+        public Number ZY;
         /// <summary>
         /// Third row, third column of the matrix.
         /// </summary>
-        public float ZZ;
+        public Number ZZ;
 
         //TODO: Worth noting that none of the implementations in here are optimized anywhere close to what's possible.
         //The non-wide version of the Symmetric3x3 isn't used anywhere extremely performance sensitive.
@@ -79,7 +75,7 @@ namespace BepuUtilities
         /// <param name="m">Matrix to intepret as symmetric.</param>
         /// <returns>Determinant of the matrix interpreted as symmetric.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float Determinant(in Symmetric3x3 m)
+        public static Number Determinant(in Symmetric3x3 m)
         {
             var m11 = m.YY * m.ZZ - m.ZY * m.ZY;
             var m21 = m.ZY * m.ZX - m.ZZ * m.YX;
@@ -110,7 +106,7 @@ namespace BepuUtilities
             var m11 = m.YY * m.ZZ - m.ZY * m.ZY;
             var m21 = m.ZY * m.ZX - m.ZZ * m.YX;
             var m31 = m.YX * m.ZY - m.ZX * m.YY;
-            var determinantInverse = 1f / (m11 * m.XX + m21 * m.YX + m31 * m.ZX);
+            var determinantInverse = Constants.C1 / (m11 * m.XX + m21 * m.YX + m31 * m.ZX);
 
             var m22 = m.ZZ * m.XX - m.ZX * m.ZX;
             var m32 = m.ZX * m.YX - m.XX * m.ZY;
@@ -314,7 +310,7 @@ namespace BepuUtilities
         /// <param name="scale">Scale to apply to every component of the original matrix.</param>
         /// <param name="scaled">Scaled result.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Symmetric3x3 m, float scale, out Symmetric3x3 scaled)
+        public static void Scale(in Symmetric3x3 m, Number scale, out Symmetric3x3 scaled)
         {
             scaled.XX = m.XX * scale;
             scaled.YX = m.YX * scale;
@@ -331,7 +327,7 @@ namespace BepuUtilities
         /// <param name="scale">Scale to apply to every component of the original matrix.</param>
         /// <returns>Scaled result.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Symmetric3x3 operator *(Symmetric3x3 m, float scale)
+        public static Symmetric3x3 operator *(Symmetric3x3 m, Number scale)
         {
             Symmetric3x3 scaled;
             scaled.XX = m.XX * scale;

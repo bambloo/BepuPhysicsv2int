@@ -4,11 +4,9 @@ using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections.Generic;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Demos.Demos
 {
@@ -44,7 +42,7 @@ namespace Demos.Demos
             /// The value was already initialized by the narrowphase by examining the speculative margins of the involved collidables, but it can be modified.</param>
             /// <returns>True if collision detection should proceed, false otherwise.</returns>
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
             {
                 //Before creating a narrow phase pair, the broad phase asks this callback whether to bother with a given pair of objects.
                 //This can be used to implement arbitrary forms of collision filtering. See the RagdollDemo or NewtDemo for examples.
@@ -97,7 +95,7 @@ namespace Demos.Demos
                 //(Note that there's no 'bounciness' or 'coefficient of restitution' property!
                 //Bounciness is handled through the contact spring settings instead. Setting See here for more details: https://github.com/bepu/bepuphysics2/issues/3 and check out the BouncinessDemo for some options.)
                 pairMaterial.FrictionCoefficient = 1f;
-                pairMaterial.MaximumRecoveryVelocity = 2f;
+                pairMaterial.MaximumRecoveryVelocity = Constants.C0p3;
                 pairMaterial.SpringSettings = new SpringSettings(30, 1);
                 //For the purposes of the demo, contact constraints are always generated.
                 return true;
@@ -168,7 +166,7 @@ namespace Demos.Demos
             }
 
             //Note that velocity integration uses "wide" types. These are array-of-struct-of-arrays types that use SIMD accelerated types underneath.
-            //Rather than handling a single body at a time, the callback handles up to Vector<float>.Count bodies simultaneously.
+            //Rather than handling a single body at a time, the callback handles up to Vector<Number>.Count bodies simultaneously.
             Vector3Wide gravityWideDt;
 
             /// <summary>
@@ -179,7 +177,7 @@ namespace Demos.Demos
             /// </summary>
             /// <param name="dt">Current integration time step duration.</param>
             /// <remarks>This is typically used for precomputing anything expensive that will be used across velocity integration.</remarks>
-            public void PrepareForIntegration(float dt)
+            public void PrepareForIntegration(Number dt)
             {
                 //No reason to recalculate gravity * dt for every body; just cache it ahead of time.
                 gravityWideDt = Vector3Wide.Broadcast(Gravity * dt);
@@ -196,11 +194,11 @@ namespace Demos.Demos
             /// <param name="workerIndex">Index of the worker thread processing this bundle.</param>
             /// <param name="dt">Durations to integrate the velocity over. Can vary over lanes.</param>
             /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
-            public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<float> dt, ref BodyVelocityWide velocity)
+            public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<Number> dt, ref BodyVelocityWide velocity)
             {
                 //This also is a handy spot to implement things like position dependent gravity or per-body damping.
                 //We don't have to check for kinematics; IntegrateVelocityForKinematics returns false in this type, so we'll never see them in this callback.
-                //Note that these are SIMD operations and "Wide" types. There are Vector<float>.Count lanes of execution being evaluated simultaneously.
+                //Note that these are SIMD operations and "Wide" types. There are Vector<Number>.Count lanes of execution being evaluated simultaneously.
                 //The types are laid out in array-of-structures-of-arrays (AOSOA) format. That's because this function is frequently called from vectorized contexts within the solver.
                 //Transforming to "array of structures" (AOS) format for the callback and then back to AOSOA would involve a lot of overhead, so instead the callback works on the AOSOA representation directly.
                 velocity.Linear += gravityWideDt;
@@ -219,7 +217,7 @@ namespace Demos.Demos
             //Drop a ball on a big static box.
             var sphere = new Sphere(1);
             var sphereInertia = sphere.ComputeInertia(1);
-            simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 5, 0), sphereInertia, simulation.Shapes.Add(sphere), 0.01f));
+            simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 5, 0), sphereInertia, simulation.Shapes.Add(sphere), Constants.C0p01));
 
             simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), simulation.Shapes.Add(new Box(500, 1, 500))));
 
@@ -234,7 +232,7 @@ namespace Demos.Demos
                 
                 //Note that each timestep is 0.01 units in duration, so all 100 time steps will last 1 unit of time.
                 //(Usually, units of time are defined to be seconds, but the engine has no preconceived notions about units. All it sees are the numbers.)
-                simulation.Timestep(0.01f, threadDispatcher);
+                simulation.Timestep(Constants.C0p01, threadDispatcher);
             }
 
             //If you intend to reuse the BufferPool, disposing the simulation is a good idea- it returns all the buffers to the pool for reuse.

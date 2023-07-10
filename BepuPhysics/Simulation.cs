@@ -1,13 +1,13 @@
-﻿using BepuUtilities;
-using BepuUtilities.Collections;
-using BepuUtilities.Memory;
-using BepuPhysics.Collidables;
+﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
-using BepuPhysics.Constraints;
+using BepuPhysics.Trees;
+using BepuUtilities;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using BepuPhysics.Trees;
+using Math = BepuUtilities.Utils.Math;
 
 #if !DEBUG
 [module: SkipLocalsInit]
@@ -206,7 +206,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="dt">Duration of the time step.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void PredictBoundingBoxes(float dt, IThreadDispatcher threadDispatcher = null)
+        public void PredictBoundingBoxes(Number dt, IThreadDispatcher threadDispatcher = null)
         {
             profiler.Start(PoseIntegrator);
             PoseIntegrator.PredictBoundingBoxes(dt, BufferPool, threadDispatcher);
@@ -218,7 +218,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="dt">Duration of the time step.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void CollisionDetection(float dt, IThreadDispatcher threadDispatcher = null)
+        public void CollisionDetection(Number dt, IThreadDispatcher threadDispatcher = null)
         {
             profiler.Start(BroadPhase);
             BroadPhase.Update(threadDispatcher);
@@ -238,7 +238,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="dt">Duration of the time step.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void Solve(float dt, IThreadDispatcher threadDispatcher = null)
+        public void Solve(Number dt, IThreadDispatcher threadDispatcher = null)
         {
             Profiler.Start(Solver);
             var constrainedBodySet = Solver.PrepareConstraintIntegrationResponsibilities(threadDispatcher);
@@ -276,7 +276,7 @@ namespace BepuPhysics
         /// </remarks>
         /// <param name="dt">Duration of the time step.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        public void Timestep(float dt, IThreadDispatcher threadDispatcher = null)
+        public void Timestep(Number dt, IThreadDispatcher threadDispatcher = null)
         {
             if (dt <= 0)
                 throw new ArgumentException("Timestep duration must be positive.", nameof(dt));

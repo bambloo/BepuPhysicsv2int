@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+﻿using BepuUtilities.Numerics;
 using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Trees
@@ -52,7 +52,7 @@ namespace BepuPhysics.Trees
         /// This will be overwritten right after use, so don't expect anything meaningful here outside of refinement scheduling's scope.
         /// </summary>
         [FieldOffset(8)]
-        public float LocalCostChange;
+        public Number LocalCostChange;
 
     }
 }

@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities.Collections;
-using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Demos.Demos.Tanks
 {
@@ -23,7 +21,7 @@ namespace Demos.Demos.Tanks
         /// <summary>
         /// Friction coefficient to use for the body.
         /// </summary>
-        public float Friction;
+        public Number Friction;
         /// <summary>
         /// True if the body is a projectile and should explode on contact.
         /// </summary>
@@ -60,7 +58,7 @@ namespace Demos.Demos.Tanks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
         {
             //It's impossible for two statics to collide, and pairs are sorted such that bodies always come before statics.
             if (b.Mobility != CollidableMobility.Static)
@@ -129,7 +127,7 @@ namespace Demos.Demos.Tanks
             }
             //These are just some nice standard values. Higher maximum velocities can result in more energy being introduced during deep contact.
             //Finite spring stiffness helps the solver converge to a solution in difficult cases. Try to keep the spring frequency at around half of the timestep frequency or less.
-            pairMaterial.MaximumRecoveryVelocity = 2f;
+            pairMaterial.MaximumRecoveryVelocity = Constants.C0p3;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);
 
             if (propertiesA.Projectile || (pair.B.Mobility != CollidableMobility.Static && Properties[pair.B.BodyHandle].Projectile))

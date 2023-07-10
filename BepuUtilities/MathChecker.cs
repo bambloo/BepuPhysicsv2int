@@ -1,7 +1,7 @@
-﻿using System;
+﻿using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuUtilities
 {
@@ -15,9 +15,9 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="f">Value to validate.</param>
         /// <returns>True if the value is invalid, false if it is valid.</returns>
-        public static bool IsInvalid(float f)
+        public static bool IsInvalid(Number f)
         {
-            return float.IsNaN(f) || float.IsInfinity(f);
+            return Number.IsNaN(f) || Number.IsInfinity(f);
         }
 
 
@@ -26,7 +26,7 @@ namespace BepuUtilities
         /// This is only run when the CHECKMATH symbol is defined.
         /// </summary>
         [Conditional("CHECKMATH")]
-        public static void Validate(this float f)
+        public static void Validate(this Number f)
         {
             if (IsInvalid(f))
             {
@@ -120,7 +120,7 @@ namespace BepuUtilities
         public static void ValidateOrientation(this Quaternion q)
         {
             var lengthSquared = q.LengthSquared();
-            if (IsInvalid(lengthSquared) && Math.Abs(1 - lengthSquared) < 1e-5f)
+            if (IsInvalid(lengthSquared) && Math.Abs(1 - lengthSquared) < Constants.C1em5)
             {
                 Debug.Fail("Invalid value.");
             }
@@ -175,17 +175,17 @@ namespace BepuUtilities
         }
 
         [Conditional("CHECKMATH")]
-        public static void Validate(this Vector<float> f, int laneCount = -1)
+        public static void Validate(this Vector<Number> f, int laneCount = -1)
         {
-            if (laneCount < -1 || laneCount > Vector<float>.Count)
+            if (laneCount < -1 || laneCount > Vector<Number>.Count)
                 Debug.Fail("Invalid lane count.");
             if (laneCount == -1)
-                laneCount = Vector<float>.Count;
-            ref var casted = ref Unsafe.As<Vector<float>, float>(ref f);
+                laneCount = Vector<Number>.Count;
+            ref var casted = ref Unsafe.As<Vector<Number>, Number>(ref f);
             for (int i = 0; i < laneCount; ++i)
             {
                 var value = Unsafe.Add(ref casted, i);
-                if (float.IsNaN(value) || float.IsInfinity(value))
+                if (Number.IsNaN(value) || Number.IsInfinity(value))
                 {
                     Debug.Fail($"Invalid floating point value: {value}.");
                 }
@@ -193,17 +193,17 @@ namespace BepuUtilities
         }
 
         [Conditional("CHECKMATH")]
-        public static void Validate(this Vector<float> f, Vector<int> lanesToTest)
+        public static void Validate(this Vector<Number> f, Vector<int> lanesToTest)
         {
-            ref var castedValues = ref Unsafe.As<Vector<float>, float>(ref f);
+            ref var castedValues = ref Unsafe.As<Vector<Number>, Number>(ref f);
             ref var castedMask = ref Unsafe.As<Vector<int>, int>(ref lanesToTest);
-            for (int i = 0; i < Vector<float>.Count; ++i)
+            for (int i = 0; i < Vector<Number>.Count; ++i)
             {
                 var mask = Unsafe.Add(ref castedMask, i);
                 if (mask != 0)
                 {
                     var value = Unsafe.Add(ref castedValues, i);
-                    if (float.IsNaN(value) || float.IsInfinity(value))
+                    if (Number.IsNaN(value) || Number.IsInfinity(value))
                     {
                         Debug.Fail($"Invalid floating point value: {value}.");
                     }

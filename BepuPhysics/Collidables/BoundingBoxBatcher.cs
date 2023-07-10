@@ -1,15 +1,13 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
-using BepuPhysics.Constraints;
 using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace BepuPhysics
 {
@@ -96,6 +94,7 @@ namespace BepuPhysics
             ref var motionState = ref MotionStates[Count];
             motionState.Pose = pose;
             motionState.Velocity = velocity;
+            Debug.Assert(!Number.IsNaN(velocity.Linear.X));
             Count++;
         }
 
@@ -118,7 +117,7 @@ namespace BepuPhysics
         internal Shapes shapes;
         internal Bodies bodies;
         internal BroadPhase broadPhase;
-        internal float dt;
+        internal Number dt;
 
         int minimumBatchIndex, maximumBatchIndex;
         Buffer<BoundingBoxBatch> batches;
@@ -129,7 +128,7 @@ namespace BepuPhysics
         /// </summary>
         public const int CollidablesPerFlush = 16;
 
-        public unsafe BoundingBoxBatcher(Bodies bodies, Shapes shapes, BroadPhase broadPhase, BufferPool pool, float dt)
+        public unsafe BoundingBoxBatcher(Bodies bodies, Shapes shapes, BroadPhase broadPhase, BufferPool pool, Number dt)
         {
             this.bodies = bodies;
             this.shapes = shapes;
@@ -155,15 +154,15 @@ namespace BepuPhysics
             var shapeIndices = batch.ShapeIndices;
             var continuations = batch.Continuations;
             ref var activeSet = ref bodies.ActiveSet;
-            var dtWide = new Vector<float>(dt);
-            Span<float> minimumMarginSpan = stackalloc float[Vector<float>.Count];
-            Span<float> maximumMarginSpan = stackalloc float[Vector<float>.Count];
+            var dtWide = new Vector<Number>(dt);
+            Span<Number> minimumMarginSpan = stackalloc Number[Vector<Number>.Count];
+            Span<Number> maximumMarginSpan = stackalloc Number[Vector<Number>.Count];
             Span<int> allowExpansionBeyondSpeculativeMarginSpan = stackalloc int[Vector<int>.Count];
-            for (int bundleStartIndex = 0; bundleStartIndex < batch.Count; bundleStartIndex += Vector<float>.Count)
+            for (int bundleStartIndex = 0; bundleStartIndex < batch.Count; bundleStartIndex += Vector<Number>.Count)
             {
                 int countInBundle = batch.Count - bundleStartIndex;
-                if (countInBundle > Vector<float>.Count)
-                    countInBundle = Vector<float>.Count;
+                if (countInBundle > Vector<Number>.Count)
+                    countInBundle = Vector<Number>.Count;
 
                 //Note that doing a gather-scatter to enable vectorized bundle execution isn't worth it for some shape types.
                 //We're just ignoring that fact for simplicity. Bounding box updates aren't a huge concern overall. That said,
@@ -188,11 +187,11 @@ namespace BepuPhysics
                 var angularBoundsExpansion = BoundingBoxHelpers.GetAngularBoundsExpansion(Vector3Wide.Length(velocities.Angular), dtWide, maximumRadius, maximumAngularExpansion);
                 var speculativeMargin = Vector3Wide.Length(velocities.Linear) * dtWide + angularBoundsExpansion;
 
-                var minimumSpeculativeMargin = new Vector<float>(minimumMarginSpan);
-                var maximumSpeculativeMargin = new Vector<float>(maximumMarginSpan);
+                var minimumSpeculativeMargin = new Vector<Number>(minimumMarginSpan);
+                var maximumSpeculativeMargin = new Vector<Number>(maximumMarginSpan);
                 var allowExpansionBeyondSpeculativeMargin = new Vector<int>(allowExpansionBeyondSpeculativeMarginSpan);
                 speculativeMargin = Vector.Max(minimumSpeculativeMargin, Vector.Min(maximumSpeculativeMargin, speculativeMargin));
-                var maximumBoundsExpansion = Vector.ConditionalSelect(allowExpansionBeyondSpeculativeMargin, new Vector<float>(float.MaxValue), speculativeMargin);
+                var maximumBoundsExpansion = Vector.ConditionalSelect(allowExpansionBeyondSpeculativeMargin, new Vector<Number>(Number.MaxValue), speculativeMargin);
                 BoundingBoxHelpers.GetBoundsExpansion(velocities.Linear, dtWide, angularBoundsExpansion, out var minExpansion, out var maxExpansion);
                 minExpansion = Vector3Wide.Max(-maximumBoundsExpansion, minExpansion);
                 maxExpansion = Vector3Wide.Min(maximumBoundsExpansion, maxExpansion);
@@ -257,7 +256,7 @@ namespace BepuPhysics
                 var speculativeMargin = motionState.Velocity.Linear.Length() * dt + angularBoundsExpansion;
                 speculativeMargin = MathF.Max(collidable.MinimumSpeculativeMargin, MathF.Min(collidable.MaximumSpeculativeMargin, speculativeMargin));
                 collidable.SpeculativeMargin = speculativeMargin;
-                var maximumAllowedExpansion = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? float.MaxValue : speculativeMargin;
+                var maximumAllowedExpansion = collidable.Continuity.AllowExpansionBeyondSpeculativeMargin ? Number.MaxValue : speculativeMargin;
                 BoundingBoxHelpers.GetBoundsExpansion(motionState.Velocity.Linear, dt, angularBoundsExpansion, out var minExpansion, out var maxExpansion);
                 var broadcastMaximumBoundsExpansion = new Vector3(maximumAllowedExpansion);
                 minExpansion = Vector3.Max(-broadcastMaximumBoundsExpansion, minExpansion);
@@ -273,8 +272,8 @@ namespace BepuPhysics
         {
             ref var batch = ref batches[shapeBatch.TypeId];
             ref var activeSet = ref bodies.ActiveSet;
-            var minValue = new Vector3(float.MaxValue);
-            var maxValue = new Vector3(-float.MaxValue);
+            var minValue = new Vector3(Number.MaxValue);
+            var maxValue = new Vector3(-Number.MaxValue);
             for (int i = 0; i < batch.Count; ++i)
             {
                 var shapeIndex = batch.ShapeIndices[i];
@@ -370,6 +369,7 @@ namespace BepuPhysics
                 //Dispose of the batch and any associated buffers; since the flush is one pass, we won't be needing this again.
                 batch.Dispose(pool);
             }
+            
             pool.Return(ref batches);
         }
     }

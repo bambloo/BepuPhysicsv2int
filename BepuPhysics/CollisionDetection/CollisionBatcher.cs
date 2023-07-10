@@ -1,11 +1,11 @@
-﻿using BepuUtilities.Memory;
-using BepuPhysics.Collidables;
+﻿using BepuPhysics.Collidables;
+using BepuPhysics.CollisionDetection.CollisionTasks;
+using BepuUtilities;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using BepuPhysics.CollisionDetection.CollisionTasks;
-using System.Numerics;
-using System;
-using BepuUtilities;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -40,7 +40,7 @@ namespace BepuPhysics.CollisionDetection
         /// <summary>
         /// Timestep duration used by pairs which rely on velocity to compute local bounding boxes for pruning.
         /// </summary>
-        public float Dt;
+        public Number Dt;
 
         int minimumBatchIndex, maximumBatchIndex;
         //The streaming batcher contains batches for pending work submitted by the user.
@@ -54,7 +54,7 @@ namespace BepuPhysics.CollisionDetection
         public BatcherContinuations<MeshReduction> MeshReductions;
         public BatcherContinuations<CompoundMeshReduction> CompoundMeshReductions;
 
-        public unsafe CollisionBatcher(BufferPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, float dt, TCallbacks callbacks)
+        public unsafe CollisionBatcher(BufferPool pool, Shapes shapes, CollisionTaskRegistry collisionTypeMatrix, Number dt, TCallbacks callbacks)
         {
             Pool = pool;
             Shapes = shapes;
@@ -86,7 +86,7 @@ namespace BepuPhysics.CollisionDetection
         }
 
         private unsafe void Add(ref CollisionTaskReference reference, int flipMask, int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
-            Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
+            Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, Number speculativeMargin, Number maximumExpansion,
             in PairContinuation continuation)
         {
             ref var batch = ref batches[reference.TaskIndex];
@@ -173,7 +173,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe void AddDirectly(
             ref CollisionTaskReference reference, int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
-            Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
+            Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, Number speculativeMargin, Number maximumExpansion,
             in PairContinuation pairContinuation)
         {
             if (reference.TaskIndex < 0)
@@ -197,7 +197,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void AddDirectly(
            int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
-           Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, float speculativeMargin, float maximumExpansion,
+           Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB, Number speculativeMargin, Number maximumExpansion,
            in PairContinuation pairContinuation)
         {
             ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
@@ -206,7 +206,7 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void AddDirectly(int shapeTypeA, int shapeTypeB, void* shapeA, void* shapeB,
-            Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, float speculativeMargin, in PairContinuation pairContinuation)
+            Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, Number speculativeMargin, in PairContinuation pairContinuation)
         {
             AddDirectly(shapeTypeA, shapeTypeB, shapeA, shapeB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, pairContinuation);
         }
@@ -215,7 +215,7 @@ namespace BepuPhysics.CollisionDetection
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB,
             Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, in BodyVelocity velocityA, in BodyVelocity velocityB,
-            float speculativeMargin, float maximumExpansion,
+            Number speculativeMargin, Number maximumExpansion,
             in PairContinuation continuation)
         {
             var shapeTypeA = shapeIndexA.Type;
@@ -227,7 +227,7 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(TypedIndex shapeIndexA, TypedIndex shapeIndexB, Vector3 offsetB, Quaternion orientationA, Quaternion orientationB,
-            float speculativeMargin, in PairContinuation continuation)
+            Number speculativeMargin, in PairContinuation continuation)
         {
             Add(shapeIndexA, shapeIndexB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, continuation);
         }
@@ -267,14 +267,14 @@ namespace BepuPhysics.CollisionDetection
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Add(
-           int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, float speculativeMargin, int pairId)
+           int shapeTypeA, int shapeTypeB, int shapeSizeA, int shapeSizeB, void* shapeA, void* shapeB, Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, Number speculativeMargin, int pairId)
         {
             ref var reference = ref typeMatrix.GetTaskReference(shapeTypeA, shapeTypeB);
             CacheShapes(ref reference, shapeA, shapeB, shapeSizeA, shapeSizeB, out var cachedShapeA, out var cachedShapeB);
             AddDirectly(ref reference, shapeTypeA, shapeTypeB, cachedShapeA, cachedShapeB, offsetB, orientationA, orientationB, default, default, speculativeMargin, default, new PairContinuation(pairId));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, float speculativeMargin, int pairId)
+        public unsafe void Add<TShapeA, TShapeB>(TShapeA shapeA, TShapeB shapeB, Vector3 offsetB, Quaternion orientationA, Quaternion orientationB, Number speculativeMargin, int pairId)
             where TShapeA : struct, IShape where TShapeB : struct, IShape
         {
             //Note that the shapes are passed by copy to avoid a GC hole. This isn't optimal, but it does allow a single code path, and the underlying function is the one

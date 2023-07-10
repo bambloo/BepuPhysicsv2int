@@ -1,18 +1,18 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System.Numerics;
-using DemoContentLoader;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
+using DemoContentLoader;
+using DemoRenderer;
 using Demos.Demos;
-using System;
 
 namespace Demos.SpecializedTests
 {
     public class ConstraintTestDemo : Demo
     {
-        static float GetNextPosition(ref float x)
+        static Number GetNextPosition(ref Number x)
         {
             var toReturn = x;
             x += 3;
@@ -31,10 +31,10 @@ namespace Demos.SpecializedTests
             var shapeB = new Box(.75f, 1, .5f);
             var shapeIndexB = Simulation.Shapes.Add(shapeB);
             var collidableB = new CollidableDescription(shapeIndexB);
-            var activity = new BodyActivityDescription(0.01f);
+            var activity = new BodyActivityDescription(Constants.C0p01);
             var inertiaA = shapeA.ComputeInertia(1);
             var inertiaB = shapeB.ComputeInertia(1);
-            var nextX = -10f;
+            Number nextX = -10f;
             {
                 var x = GetNextPosition(ref nextX);
                 var a = Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(x, 3, 0), inertiaA, collidableA, activity));
@@ -94,7 +94,7 @@ namespace Demos.SpecializedTests
                     LocalBasisB = RagdollDemo.CreateBasis(new Vector3(0, 1, 0), new Vector3(1, 0, 0)),
                     TargetAngle = MathHelper.PiOver4,
                     SpringSettings = new SpringSettings(30, 1),
-                    ServoSettings = new ServoSettings(float.MaxValue, 0, float.MaxValue)
+                    ServoSettings = new ServoSettings(Number.MaxValue, 0, Number.MaxValue)
                 });
             }
             {
@@ -122,7 +122,7 @@ namespace Demos.SpecializedTests
                     LocalAxisA = new Vector3(0, 1, 0),
                     LocalAxisB = new Vector3(0, 1, 0),
                     TargetVelocity = MathHelper.Pi * 2,
-                    Settings = new MotorSettings(float.MaxValue, 0.1f)
+                    Settings = new MotorSettings(Number.MaxValue, 0.1f)
                 });
                 Simulation.Solver.Add(a, b, new AngularHinge { LocalHingeAxisA = new Vector3(0, 1, 0), LocalHingeAxisB = new Vector3(0, 1, 0), SpringSettings = new SpringSettings(30, 1) });
             }
@@ -134,7 +134,7 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, b, new AngularServo
                 {
                     TargetRelativeRotationLocalA = QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2),
-                    ServoSettings = new ServoSettings(float.MaxValue, 0, 12f),
+                    ServoSettings = new ServoSettings(Number.MaxValue, 0, 12f),
                     SpringSettings = new SpringSettings(30, 1)
                 });
             }
@@ -172,7 +172,7 @@ namespace Demos.SpecializedTests
                 var bHandle = Simulation.Bodies.Add(bDescription);
                 var cHandle = Simulation.Bodies.Add(cDescription);
                 var dHandle = Simulation.Bodies.Add(dDescription);
-                var distanceSpringiness = new SpringSettings(3f, 1);
+                var distanceSpringiness = new SpringSettings(Constants.C3, 1);
                 Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceConstraint(Vector3.Distance(a, b), distanceSpringiness));
                 Simulation.Solver.Add(aHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(a, c), distanceSpringiness));
                 Simulation.Solver.Add(aHandle, dHandle, new CenterDistanceConstraint(Vector3.Distance(a, d), distanceSpringiness));
@@ -212,7 +212,7 @@ namespace Demos.SpecializedTests
                 var aHandle = Simulation.Bodies.Add(aDescription);
                 var bHandle = Simulation.Bodies.Add(bDescription);
                 var cHandle = Simulation.Bodies.Add(cDescription);
-                var distanceSpringiness = new SpringSettings(3f, 1);
+                var distanceSpringiness = new SpringSettings(Constants.C3, 1);
                 Simulation.Solver.Add(aHandle, bHandle, new CenterDistanceConstraint(Vector3.Distance(a, b), distanceSpringiness));
                 Simulation.Solver.Add(aHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(a, c), distanceSpringiness));
                 Simulation.Solver.Add(bHandle, cHandle, new CenterDistanceConstraint(Vector3.Distance(b, c), distanceSpringiness));
@@ -233,7 +233,7 @@ namespace Demos.SpecializedTests
                 var aHandle = Simulation.Bodies.Add(aDescription);
                 var bHandle = Simulation.Bodies.Add(bDescription);
                 var cHandle = Simulation.Bodies.Add(cDescription);
-                var distanceSpringiness = new SpringSettings(3f, 1);
+                var distanceSpringiness = new SpringSettings(Constants.C3, 1);
                 var distanceAB = Vector3.Distance(a, b);
                 var distanceBC = Vector3.Distance(b, c);
                 var distanceCA = Vector3.Distance(c, a);
@@ -292,7 +292,7 @@ namespace Demos.SpecializedTests
                     LocalOffsetB = new Vector3(0, -0.5f, 0),
                     LocalAxis = new Vector3(0, 1, 0),
                     TargetVelocity = -2,
-                    Settings = new MotorSettings(15, 0.01f)
+                    Settings = new MotorSettings(15, Constants.C0p01)
                 });
             }
             {
@@ -328,7 +328,7 @@ namespace Demos.SpecializedTests
                 {
                     LocalAxisA = new Vector3(0, 1, 0),
                     TargetVelocity = MathHelper.Pi * 5,
-                    Settings = new MotorSettings(float.MaxValue, 0.1f)
+                    Settings = new MotorSettings(Number.MaxValue, 0.1f)
                 });
             }
             {
@@ -338,7 +338,7 @@ namespace Demos.SpecializedTests
                 {
                     LocalOffset = new Vector3(0, 1, 0),
                     Target = new Vector3(x, 3, 0),
-                    ServoSettings = new ServoSettings(2, 0, float.MaxValue),
+                    ServoSettings = new ServoSettings(2, 0, Number.MaxValue),
                     SpringSettings = new SpringSettings(5, 1)
                 });
             }
@@ -351,7 +351,7 @@ namespace Demos.SpecializedTests
                 {
                     LocalOffset = new Vector3(0, 1, 0),
                     TargetVelocity = new Vector3(0, -1, 0),
-                    Settings = new MotorSettings(float.MaxValue, 1e-2f),
+                    Settings = new MotorSettings(Number.MaxValue, Constants.C1em2),
                 });
             }
             {
@@ -374,7 +374,7 @@ namespace Demos.SpecializedTests
                 Simulation.Solver.Add(a, new OneBodyAngularMotor
                 {
                     TargetVelocity = new Vector3(1, 0, 0),
-                    Settings = new MotorSettings(float.MaxValue, 0.001f),
+                    Settings = new MotorSettings(Number.MaxValue, Constants.C0p001),
                 });
             }
             {
@@ -418,7 +418,7 @@ namespace Demos.SpecializedTests
                 {
                     LocalAxisA = new Vector3(0, 1, 0),
                     VelocityScale = -4,
-                    Settings = new MotorSettings(float.MaxValue, 0.0001f)
+                    Settings = new MotorSettings(Number.MaxValue, 0.0001f)
                 });
                 Simulation.Solver.Add(c, a, new Hinge
                 {

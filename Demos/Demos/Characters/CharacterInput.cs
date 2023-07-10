@@ -1,13 +1,13 @@
-﻿using DemoRenderer;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System.Numerics;
-using System;
-using System.Diagnostics;
-using DemoUtilities;
-using DemoRenderer.UI;
-using OpenTK.Input;
 using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
+using DemoRenderer;
+using DemoRenderer.UI;
+using DemoUtilities;
+using OpenTK.Input;
+using System.Diagnostics;
 
 namespace Demos.Demos.Characters
 {
@@ -24,14 +24,21 @@ namespace Demos.Demos.Characters
     {
         BodyHandle bodyHandle;
         CharacterControllers characters;
-        float speed;
+        Number speed;
         Capsule shape;
 
         public BodyHandle BodyHandle { get { return bodyHandle; } }
 
         public CharacterInput(CharacterControllers characters, Vector3 initialPosition, Capsule shape,
-            float minimumSpeculativeMargin, float mass, float maximumHorizontalForce, float maximumVerticalGlueForce,
-            float jumpVelocity, float speed, float maximumSlope = MathF.PI * 0.25f)
+            Number minimumSpeculativeMargin, Number mass, Number maximumHorizontalForce, Number maximumVerticalGlueForce,
+            Number jumpVelocity, Number speed): this(characters, initialPosition, shape, minimumSpeculativeMargin, mass, maximumHorizontalForce, maximumVerticalGlueForce, jumpVelocity, speed, MathF.PI * Constants.C0p25)
+        {
+
+        }
+
+        public CharacterInput(CharacterControllers characters, Vector3 initialPosition, Capsule shape,
+            Number minimumSpeculativeMargin, Number mass, Number maximumHorizontalForce, Number maximumVerticalGlueForce,
+            Number jumpVelocity, Number speed, Number maximumSlope)
         {
             this.characters = characters;
             var shapeIndex = characters.Simulation.Shapes.Add(shape);
@@ -40,14 +47,14 @@ namespace Demos.Demos.Characters
             //This is effectively equivalent to giving it an infinite inertia tensor- in other words, no torque will cause it to rotate.
             bodyHandle = characters.Simulation.Bodies.Add(
                 BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f / mass },
-                new(shapeIndex, minimumSpeculativeMargin, float.MaxValue, ContinuousDetection.Passive), shape.Radius * 0.02f));
+                new(shapeIndex, minimumSpeculativeMargin, Number.MaxValue, ContinuousDetection.Passive), shape.Radius * 0.02f));
             ref var character = ref characters.AllocateCharacter(bodyHandle);
             character.LocalUp = new Vector3(0, 1, 0);
             character.CosMaximumSlope = MathF.Cos(maximumSlope);
             character.JumpVelocity = jumpVelocity;
             character.MaximumVerticalForce = maximumVerticalGlueForce;
             character.MaximumHorizontalForce = maximumHorizontalForce;
-            character.MinimumSupportDepth = shape.Radius * -0.01f;
+            character.MinimumSupportDepth = shape.Radius * -Constants.C0p01;
             character.MinimumSupportContinuationDepth = -minimumSpeculativeMargin;
             this.speed = speed;
             this.shape = shape;
@@ -61,7 +68,7 @@ namespace Demos.Demos.Characters
         static Key Jump = Key.Space;
         static Key JumpAlternate = Key.BackSpace; //I have a weird keyboard.
 
-        public void UpdateCharacterGoals(Input input, Camera camera, float simulationTimestepDuration)
+        public void UpdateCharacterGoals(Input input, Camera camera, Number simulationTimestepDuration)
         {
             Vector2 movementDirection = default;
             if (input.IsDown(MoveForward))
@@ -124,8 +131,8 @@ namespace Demos.Demos.Characters
                     var worldMovementDirection = characterRight * movementDirection.X + characterForward * movementDirection.Y;
                     var currentVelocity = Vector3.Dot(characterBody.Velocity.Linear, worldMovementDirection);
                     //We'll arbitrarily set air control to be a fraction of supported movement's speed/force.
-                    const float airControlForceScale = .2f;
-                    const float airControlSpeedScale = .2f;
+                    Number airControlForceScale = .2f;
+                    Number airControlSpeedScale = .2f;
                     var airAccelerationDt = characterBody.LocalInertia.InverseMass * character.MaximumHorizontalForce * airControlForceScale * simulationTimestepDuration;
                     var maximumAirSpeed = effectiveSpeed * airControlSpeedScale;
                     var targetVelocity = MathF.Min(currentVelocity + airAccelerationDt, maximumAirSpeed);
@@ -137,7 +144,12 @@ namespace Demos.Demos.Characters
             }
         }
 
-        public void UpdateCameraPosition(Camera camera, float cameraBackwardOffsetScale = 4)
+        public void UpdateCameraPosition(Camera camera)
+        {
+            UpdateCameraPosition(camera, 4);
+        }
+
+        public void UpdateCameraPosition(Camera camera, Number cameraBackwardOffsetScale)
         {
             //We'll override the demo harness's camera control by attaching the camera to the character controller body.
             ref var character = ref characters.GetCharacterByBodyHandle(bodyHandle);
@@ -149,13 +161,13 @@ namespace Demos.Demos.Characters
                 camera.Forward * (shape.HalfLength + shape.Radius) * cameraBackwardOffsetScale;
         }
 
-        void RenderControl(ref Vector2 position, float textHeight, string controlName, string controlValue, TextBuilder text, TextBatcher textBatcher, Font font)
+        void RenderControl(ref Vector2 position, Number textHeight, string controlName, string controlValue, TextBuilder text, TextBatcher textBatcher, Font font)
         {
             text.Clear().Append(controlName).Append(": ").Append(controlValue);
             textBatcher.Write(text, position, textHeight, new Vector3(1), font);
             position.Y += textHeight * 1.1f;
         }
-        public void RenderControls(Vector2 position, float textHeight, TextBatcher textBatcher, TextBuilder text, Font font)
+        public void RenderControls(Vector2 position, Number textHeight, TextBatcher textBatcher, TextBuilder text, Font font)
         {
             RenderControl(ref position, textHeight, nameof(MoveForward), ControlStrings.GetName(MoveForward), text, textBatcher, font);
             RenderControl(ref position, textHeight, nameof(MoveBackward), ControlStrings.GetName(MoveBackward), text, textBatcher, font);

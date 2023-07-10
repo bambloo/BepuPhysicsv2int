@@ -1,8 +1,8 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 
@@ -81,7 +81,7 @@ namespace BepuPhysics.Constraints
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         //public static void Solve(ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB,
-        //    in Symmetric3x3Wide effectiveMass, in Vector<float> softnessImpulseScale, in Vector3Wide biasImpulse, in Vector<float> maximumImpulse,
+        //    in Symmetric3x3Wide effectiveMass, in Vector<Number> softnessImpulseScale, in Vector3Wide biasImpulse, in Vector<Number> maximumImpulse,
         //    in Symmetric3x3Wide impulseToVelocityA, in Symmetric3x3Wide negatedImpulseToVelocityB, ref Vector3Wide accumulatedImpulse)
         //{
         //    //Jacobians are just I and -I.
@@ -103,7 +103,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, inertiaA.InverseInertiaTensor, inertiaB.InverseInertiaTensor, accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref AngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, Number dt, Number inverseDt, ref AngularServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Jacobians are just I and -I.
             QuaternionWide.ConcatenateWithoutOverlap(prestep.TargetRelativeRotationLocalA, orientationA, out var targetOrientationB);
@@ -134,7 +134,7 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularServoPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularServoPrestepData prestepData) { }
     }
 
     public class AngularServoTypeProcessor : TwoBodyTypeProcessor<AngularServoPrestepData, Vector3Wide, AngularServoFunctions, AccessOnlyAngularWithoutPose, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngular>

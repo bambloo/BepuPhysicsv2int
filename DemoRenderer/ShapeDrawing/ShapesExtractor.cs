@@ -1,13 +1,14 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics;
+using BepuPhysics.Collidables;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using BepuPhysics;
-using BepuPhysics.Collidables;
-using System.Numerics;
-using System.Runtime.CompilerServices;
+using BepuUtilities.Numerics;
 using SharpDX.Direct3D11;
 using System;
 using System.Diagnostics;
+
+using System.Runtime.CompilerServices;
 
 namespace DemoRenderer.ShapeDrawing
 {
@@ -95,7 +96,7 @@ namespace DemoRenderer.ShapeDrawing
                     {
                         SphereInstance instance;
                         instance.Position = pose.Position;
-                        instance.Radius = Unsafe.AsRef<Sphere>(shapeData).Radius;
+                        instance.Radius = (float)Unsafe.AsRef<Sphere>(shapeData).Radius;
                         Helpers.PackOrientation(pose.Orientation, out instance.PackedOrientation);
                         instance.PackedColor = Helpers.PackColor(color);
                         shapeCache.Spheres.Add(instance, pool);
@@ -106,8 +107,8 @@ namespace DemoRenderer.ShapeDrawing
                         CapsuleInstance instance;
                         instance.Position = pose.Position;
                         ref var capsule = ref Unsafe.AsRef<Capsule>(shapeData);
-                        instance.Radius = capsule.Radius;
-                        instance.HalfLength = capsule.HalfLength;
+                        instance.Radius = (float)capsule.Radius;
+                        instance.HalfLength = (float)capsule.HalfLength;
                         instance.PackedOrientation = Helpers.PackOrientationU64(pose.Orientation);
                         instance.PackedColor = Helpers.PackColor(color);
                         shapeCache.Capsules.Add(instance, pool);
@@ -120,9 +121,9 @@ namespace DemoRenderer.ShapeDrawing
                         ref var box = ref Unsafe.AsRef<Box>(shapeData);
                         instance.PackedColor = Helpers.PackColor(color);
                         instance.Orientation = pose.Orientation;
-                        instance.HalfWidth = box.HalfWidth;
-                        instance.HalfHeight = box.HalfHeight;
-                        instance.HalfLength = box.HalfLength;
+                        instance.HalfWidth = (float)box.HalfWidth;
+                        instance.HalfHeight = (float)box.HalfHeight;
+                        instance.HalfLength = (float)box.HalfLength;
                         shapeCache.Boxes.Add(instance, pool);
                     }
                     break;
@@ -135,9 +136,9 @@ namespace DemoRenderer.ShapeDrawing
                         instance.B = triangle.B;
                         instance.C = triangle.C;
                         instance.PackedOrientation = Helpers.PackOrientationU64(pose.Orientation);
-                        instance.X = pose.Position.X;
-                        instance.Y = pose.Position.Y;
-                        instance.Z = pose.Position.Z;
+                        instance.X = (float)pose.Position.X;
+                        instance.Y = (float)pose.Position.Y;
+                        instance.Z = (float)pose.Position.Z;
                         shapeCache.Triangles.Add(instance, pool);
                     }
                     break;
@@ -146,8 +147,8 @@ namespace DemoRenderer.ShapeDrawing
                         CylinderInstance instance;
                         instance.Position = pose.Position;
                         ref var cylinder = ref Unsafe.AsRef<Cylinder>(shapeData);
-                        instance.Radius = cylinder.Radius;
-                        instance.HalfLength = cylinder.HalfLength;
+                        instance.Radius = (float)cylinder.Radius;
+                        instance.HalfLength = (float)cylinder.HalfLength;
                         instance.PackedOrientation = Helpers.PackOrientationU64(pose.Orientation);
                         instance.PackedColor = Helpers.PackColor(color);
                         shapeCache.Cylinders.Add(instance, pool);
@@ -299,14 +300,14 @@ namespace DemoRenderer.ShapeDrawing
             ref var state = ref set.DynamicsState[indexInSet];
             if (Bodies.IsKinematic(state.Inertia.Local))
             {
-                var kinematicBase = new Vector3(0, 0.609f, 0.37f);
-                var kinematicVariationSpan = new Vector3(0.1f, 0.1f, 0.1f);
+                var kinematicBase = new Vector3(0, (Number)0.609f, (Number)0.37f);
+                var kinematicVariationSpan = new Vector3(Constants.C0p1, Constants.C0p1, Constants.C0p1);
                 color = kinematicBase + kinematicVariationSpan * colorVariation;
             }
             else
             {
-                var dynamicBase = new Vector3(0.8f, 0.1f, 0.566f);
-                var dynamicVariationSpan = new Vector3(0.2f, 0.2f, 0.2f);
+                var dynamicBase = new Vector3(Constants.C0p8, Constants.C0p1, (Number)0.566f);
+                var dynamicVariationSpan = new Vector3(Constants.C0p2, Constants.C0p2, Constants.C0p2);
                 color = dynamicBase + dynamicVariationSpan * colorVariation;
             }
 
@@ -314,13 +315,13 @@ namespace DemoRenderer.ShapeDrawing
             {
                 if (activity.SleepCandidate)
                 {
-                    var sleepCandidateTint = new Vector3(0.35f, 0.35f, 0.7f);
+                    var sleepCandidateTint = new Vector3((Number)0.35f, (Number)0.35f, Constants.C0p7);
                     color *= sleepCandidateTint;
                 }
             }
             else
             {
-                var sleepTint = new Vector3(0.2f, 0.2f, 0.4f);
+                var sleepTint = new Vector3(Constants.C0p2, Constants.C0p2, Constants.C0p4);
                 color *= sleepTint;
             }
 
@@ -333,8 +334,8 @@ namespace DemoRenderer.ShapeDrawing
             var handle = statics.IndexToHandle[index];
             //Statics don't have any activity states. Just some simple variation on a central static color.
             Helpers.UnpackColor((uint)HashHelper.Rehash(handle.Value), out Vector3 colorVariation);
-            var staticBase = new Vector3(0.1f, 0.057f, 0.014f);
-            var staticVariationSpan = new Vector3(0.07f, 0.07f, 0.03f);
+            var staticBase = new Vector3(Constants.C0p1, (Number)0.057f, (Number)0.014f);
+            var staticVariationSpan = new Vector3((Number)0.07f, (Number)0.07f, (Number)0.03f);
             var color = staticBase + staticVariationSpan * colorVariation;
             ref var collidable = ref statics[index];
             AddShape(shapes, collidable.Shape, collidable.Pose, color, ref shapeCache, pool);

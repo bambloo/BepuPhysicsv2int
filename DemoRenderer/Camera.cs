@@ -1,6 +1,6 @@
 ﻿using BepuUtilities;
-using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 
 namespace DemoRenderer
 {
@@ -14,59 +14,59 @@ namespace DemoRenderer
         /// </summary>
         public Vector3 Position { get; set; }
 
-        float yaw;
+        Number yaw;
         /// <summary>
         /// Gets or sets the yaw of the camera as a value from -PI to PI. At 0, Forward is aligned with -z. At PI/2, Forward is aligned with +x. In other words, higher values turn right.
         /// </summary>
-        public float Yaw
+        public Number Yaw
         {
             get { return yaw; }
             set
             {
                 var revolution = (value + Math.PI) / (2 * Math.PI);
                 revolution -= Math.Floor(revolution);
-                yaw = (float)(revolution * (Math.PI * 2) - Math.PI);
+                yaw = (revolution * (Math.PI * 2) - Math.PI);
             }
         }
-        float pitch;
+        Number pitch;
         /// <summary>
         /// Gets or sets the pitch of the camera, clamped to a value from -MaximumPitch to MaximumPitch. Higher values look downward, lower values look upward.
         /// </summary>
-        public float Pitch
+        public Number Pitch
         {
             get { return pitch; }
             set { pitch = Math.Clamp(value, -maximumPitch, maximumPitch); }
         }
 
-        float maximumPitch;
+        Number maximumPitch;
         /// <summary>
         /// Gets or sets the maximum pitch of the camera, a value from 0 to PI / 2.
         /// </summary>
-        public float MaximumPitch
+        public Number MaximumPitch
         {
             get { return maximumPitch; }
-            set { maximumPitch = (float)Math.Clamp(value, 0, Math.PI / 2); }
+            set { maximumPitch = (Number)Math.Clamp(value, 0, Math.PI / 2); }
         }
 
         /// <summary>
         /// Gets or sets the aspect ratio of the camera.
         /// </summary>
-        public float AspectRatio { get; set; }
+        public Number AspectRatio { get; set; }
 
         /// <summary>
         /// Gets or sets the vertical field of view of the camera.
         /// </summary>
-        public float FieldOfView { get; set; }
+        public Number FieldOfView { get; set; }
 
         /// <summary>
         /// Gets or sets the near plane of the camera.
         /// </summary>
-        public float NearClip { get; set; }
+        public Number NearClip { get; set; }
 
         /// <summary>
         /// Gets or sets the far plane of the camera.
         /// </summary>
-        public float FarClip { get; set; }
+        public Number FarClip { get; set; }
 
         //All of this could be quite a bit faster, but wasting a few thousand cycles per frame isn't exactly a concern.
         /// <summary>
@@ -206,6 +206,10 @@ namespace DemoRenderer
             }
         }
 
+        public Camera(Number aspectRatio, Number fieldOfView, Number nearClip, Number farClip) : this( aspectRatio, fieldOfView, nearClip, farClip, MathF.PI * new Number(0.499f))
+        {
+        }
+
         /// <summary>
         /// Creates a new camera.
         /// </summary>
@@ -214,7 +218,7 @@ namespace DemoRenderer
         /// <param name="nearClip">Near clip plane of the camera's projection.</param>
         /// <param name="farClip">Far clip plane of the camera's projection.</param>
         /// <param name="maximumPitch">Maximum angle that the camera can look up or down.</param>
-        public Camera(float aspectRatio, float fieldOfView, float nearClip, float farClip, float maximumPitch = MathF.PI * 0.499f)
+        public Camera(Number aspectRatio, Number fieldOfView, Number nearClip, Number farClip, Number maximumPitch/* = MathF.PI * 0.499f */)
         {
             AspectRatio = aspectRatio;
             FieldOfView = fieldOfView;
@@ -236,10 +240,10 @@ namespace DemoRenderer
             {
                 return Forward;
             }
-            var unitPlaneHalfHeight = MathF.Tan(FieldOfView * 0.5f);
+            var unitPlaneHalfHeight = MathF.Tan(FieldOfView * Constants.C0p5);
             var unitPlaneHalfWidth = unitPlaneHalfHeight * AspectRatio;
             var localRayDirection = new Vector3(
-                new Vector2(unitPlaneHalfWidth, unitPlaneHalfHeight) * 2 * new Vector2(normalizedMousePosition.X - 0.5f, 0.5f - normalizedMousePosition.Y), -1);
+                new Vector2(unitPlaneHalfWidth, unitPlaneHalfHeight) * 2 * new Vector2(normalizedMousePosition.X - Constants.C0p5, Constants.C0p5 - normalizedMousePosition.Y), -1);
             QuaternionEx.TransformWithoutOverlap(localRayDirection, OrientationQuaternion, out var rayDirection);
             return rayDirection;
         }

@@ -1,7 +1,6 @@
-﻿using System;
+﻿using BepuUtilities.Numerics;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace DemoContentLoader
 {
@@ -43,7 +42,7 @@ namespace DemoContentLoader
         public static void Save(FontContent content, BinaryWriter writer)
         {
             writer.Write(content.Name);
-            writer.Write(content.InverseSizeInTexels);
+            writer.Write((float)content.InverseSizeInTexels);
             writer.Write(content.Characters.Count);
             foreach (var pair in content.Characters)
             {

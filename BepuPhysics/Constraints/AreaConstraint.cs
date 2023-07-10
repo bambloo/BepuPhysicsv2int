@@ -1,9 +1,8 @@
-﻿using BepuPhysics.CollisionDetection;
-using BepuUtilities;
+﻿using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
@@ -17,7 +16,7 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// 2 times the target area of the triangle. Computed from ||ab x ac||.
         /// </summary>
-        public float TargetScaledArea;
+        public Number TargetScaledArea;
         /// <summary>
         /// Spring frequency and damping parameters.
         /// </summary>
@@ -55,7 +54,7 @@ namespace BepuPhysics.Constraints
             ConstraintChecker.AssertValid(SpringSettings, nameof(AreaConstraint));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<AreaConstraintPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            Unsafe.As<Vector<float>, float>(ref target.TargetScaledArea) = TargetScaledArea;
+            Unsafe.As<Vector<Number>, Number>(ref target.TargetScaledArea) = TargetScaledArea;
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
@@ -63,22 +62,22 @@ namespace BepuPhysics.Constraints
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<AreaConstraintPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            description.TargetScaledArea = Unsafe.As<Vector<float>, float>(ref source.TargetScaledArea);
+            description.TargetScaledArea = Unsafe.As<Vector<Number>, Number>(ref source.TargetScaledArea);
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
         }
     }
 
     public struct AreaConstraintPrestepData
     {
-        public Vector<float> TargetScaledArea;
+        public Vector<Number> TargetScaledArea;
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct AreaConstraintFunctions : IThreeBodyConstraintFunctions<AreaConstraintPrestepData, Vector<float>>
+    public struct AreaConstraintFunctions : IThreeBodyConstraintFunctions<AreaConstraintPrestepData, Vector<Number>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ApplyImpulse(in Vector<float> inverseMassA, in Vector<float> inverseMassB, in Vector<float> inverseMassC,
-            in Vector3Wide negatedJacobianA, in Vector3Wide jacobianB, in Vector3Wide jacobianC, in Vector<float> impulse,
+        private static void ApplyImpulse(in Vector<Number> inverseMassA, in Vector<Number> inverseMassB, in Vector<Number> inverseMassC,
+            in Vector3Wide negatedJacobianA, in Vector3Wide jacobianB, in Vector3Wide jacobianC, in Vector<Number> impulse,
             ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC)
         {
             Vector3Wide.Scale(negatedJacobianA, inverseMassA * impulse, out var negativeVelocityChangeA);
@@ -90,7 +89,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ComputeJacobian(in Vector3Wide positionA, in Vector3Wide positionB, in Vector3Wide positionC, out Vector<float> normalLength, out Vector3Wide negatedJacobianA, out Vector3Wide jacobianB, out Vector3Wide jacobianC)
+        static void ComputeJacobian(in Vector3Wide positionA, in Vector3Wide positionB, in Vector3Wide positionC, out Vector<Number> normalLength, out Vector3Wide negatedJacobianA, out Vector3Wide jacobianB, out Vector3Wide jacobianC)
         {
             //Area of a triangle with vertices a, b, and c is:
             //||ab x ac|| * 0.5
@@ -113,7 +112,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.CrossWithoutOverlap(ab, ac, out var abxac);
             Vector3Wide.Length(abxac, out normalLength);
             //The triangle normal length can be zero if the edges are parallel or antiparallel. Protect against the potential division by zero.
-            Vector3Wide.Scale(abxac, Vector.ConditionalSelect(Vector.GreaterThan(normalLength, new Vector<float>(1e-10f)), Vector<float>.One / normalLength, Vector<float>.Zero), out var normal);
+            Vector3Wide.Scale(abxac, Vector.ConditionalSelect(Vector.GreaterThan(normalLength, new Vector<Number>(Constants.C1em10)), Vector<Number>.One / normalLength, Vector<Number>.Zero), out var normal);
 
             Vector3Wide.CrossWithoutOverlap(ac, normal, out jacobianB);
             Vector3Wide.CrossWithoutOverlap(normal, ab, out jacobianC);
@@ -125,13 +124,13 @@ namespace BepuPhysics.Constraints
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, 
             in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, 
-            ref AreaConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC)
+            ref AreaConstraintPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC)
         {
             ComputeJacobian(positionA, positionB, positionC, out _, out var negatedJacobianA, out var jacobianB, out var jacobianC);
             ApplyImpulse(inertiaA.InverseMass, inertiaB.InverseMass, inertiaC.InverseMass, negatedJacobianA, jacobianB, jacobianC, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, float dt, float inverseDt, ref AreaConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, Number dt, Number inverseDt, ref AreaConstraintPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC)
         {
             ComputeJacobian(positionA, positionB, positionC, out var normalLength, out var negatedJacobianA, out var jacobianB, out var jacobianC);
 
@@ -144,7 +143,7 @@ namespace BepuPhysics.Constraints
 
             //Choose an epsilon based on the target area. Note that area ~= width^2 and our jacobian contributions are things like (ac x N) * (ac x N).
             //Given that N is perpendicular to AC, ||(ac x N)|| == ||ac||, so the contribution is just ||ac||^2. Given the square, it's proportional to area and the area is a decent epsilon source.
-            var epsilon = 5e-4f * prestep.TargetScaledArea;
+            var epsilon = Constants.C5em4 * prestep.TargetScaledArea;
             contributionA = Vector.Max(epsilon, contributionA);
             contributionB = Vector.Max(epsilon, contributionB);
             contributionC = Vector.Max(epsilon, contributionC);
@@ -169,14 +168,14 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, in BodyVelocityWide wsvC, ref AreaConstraintPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, in BodyVelocityWide wsvC, ref AreaConstraintPrestepData prestepData) { }
     }
 
 
     /// <summary>
     /// Handles the solve iterations of a bunch of area constraints.
     /// </summary>
-    public class AreaConstraintTypeProcessor : ThreeBodyTypeProcessor<AreaConstraintPrestepData, Vector<float>, AreaConstraintFunctions, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear>
+    public class AreaConstraintTypeProcessor : ThreeBodyTypeProcessor<AreaConstraintPrestepData, Vector<Number>, AreaConstraintFunctions, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear>
     {
         public const int BatchTypeId = 36;
     }

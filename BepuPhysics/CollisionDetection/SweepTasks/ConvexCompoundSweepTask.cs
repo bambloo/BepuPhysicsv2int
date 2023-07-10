@@ -1,8 +1,8 @@
-﻿using System;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using BepuPhysics.Collidables;
+﻿using BepuPhysics.Collidables;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System;
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
@@ -21,13 +21,13 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         protected override unsafe bool PreorderedTypeSweep<TSweepFilter>(
             void* shapeDataA, Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB,
-            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+            Number maximumT, Number minimumProgression, Number convergenceThreshold, int maximumIterationCount,
+            bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out Number t0, out Number t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
             ref var convex = ref Unsafe.AsRef<TShapeA>(shapeDataA);
             ref var compound = ref Unsafe.AsRef<TCompound>(shapeDataB);
-            t0 = float.MaxValue;
-            t1 = float.MaxValue;
+            t0 = Number.MaxValue;
+            t1 = Number.MaxValue;
             hitLocation = new Vector3();
             hitNormal = new Vector3();
             default(TOverlapFinder).FindOverlaps(ref convex, orientationA, velocityA, ref compound, offsetB, orientationB, velocityB, maximumT, shapes, pool, out var overlaps);
@@ -59,10 +59,10 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 }
             }
             overlaps.Dispose(pool);
-            return t1 < float.MaxValue;
+            return t1 < Number.MaxValue;
         }
 
-        protected override unsafe bool PreorderedTypeSweep(void* shapeDataA, in RigidPose localPoseA, Quaternion orientationA, in BodyVelocity velocityA, void* shapeDataB, in RigidPose localPoseB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+        protected override unsafe bool PreorderedTypeSweep(void* shapeDataA, in RigidPose localPoseA, Quaternion orientationA, in BodyVelocity velocityA, void* shapeDataB, in RigidPose localPoseB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, Number maximumT, Number minimumProgression, Number convergenceThreshold, int maximumIterationCount, out Number t0, out Number t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
             throw new NotImplementedException("Compounds cannot be nested; this should never be called.");
         }

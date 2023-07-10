@@ -1,15 +1,14 @@
-﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
-using BepuPhysics.Collidables;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System;
-using BepuPhysics.Constraints;
-using System.Diagnostics;
-using System.Threading;
-using BepuUtilities;
+﻿using BepuPhysics.Collidables;
 using BepuPhysics.Constraints.Contact;
+using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Threading;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -21,7 +20,7 @@ namespace BepuPhysics.CollisionDetection
      * will result in an immediate calculation of the manifold. This is useful for batching together many collidable pairs of the same type for simultaneous SIMD-friendly execution.
      * (Not all pairs are ideal fits for wide SIMD, but many common and simple ones are.)
      * 
-     * The interface to the broad phase makes no guarantees about the nature of this batching. The narrow phase could immediately execute, or it could batch up Vector<float>.Count,
+     * The interface to the broad phase makes no guarantees about the nature of this batching. The narrow phase could immediately execute, or it could batch up Vector<Number>.Count,
      * or maybe 32 in a row, or it could wait until all overlaps have been submitted before actually beginning work.
      * 
      * This deferred execution requires that the pending work be stored somehow. This is complicated by the fact that there are a variety of different top level pairs that handle
@@ -96,7 +95,7 @@ namespace BepuPhysics.CollisionDetection
         //TODO: It is possible that some types will benefit from per-overlap data, like separating axes. For those, we should have type-dedicated overlap dictionaries.
         //The majority of type pairs, however, only require a constraint handle.
         public PairCache PairCache;
-        internal float timestepDuration;
+        internal Number timestepDuration;
 
         internal ContactConstraintAccessor[] contactConstraintAccessors;
         public void RegisterContactConstraintAccessor(ContactConstraintAccessor contactConstraintAccessor)
@@ -182,7 +181,7 @@ namespace BepuPhysics.CollisionDetection
             return constraintTypeId < PairCache.CollisionConstraintTypeCount;
         }
 
-        public void Prepare(float dt, IThreadDispatcher threadDispatcher = null)
+        public void Prepare(Number dt, IThreadDispatcher threadDispatcher = null)
         {
             timestepDuration = dt;
             OnPrepare(threadDispatcher);
@@ -411,7 +410,7 @@ namespace BepuPhysics.CollisionDetection
             ref var setA = ref Bodies.Sets[bodyLocationA.SetIndex];
             ref var stateA = ref setA.DynamicsState[bodyLocationA.Index];
             ref var collidableA = ref setA.Collidables[bodyLocationA.Index];
-            float speculativeMarginB;
+            Number speculativeMarginB;
             if (twoBodies)
             {
                 ref var bodyLocationB = ref Bodies.HandleToLocation[b.BodyHandle.Value];
@@ -496,17 +495,17 @@ namespace BepuPhysics.CollisionDetection
             ref ContinuousDetection continuityA, ref ContinuousDetection continuityB,
             TypedIndex shapeA, TypedIndex shapeB,
             int broadPhaseIndexA, int broadPhaseIndexB,
-            float speculativeMargin,
+            Number speculativeMargin,
             ref RigidPose poseA, ref RigidPose poseB,
             ref BodyVelocity velocityA, ref BodyVelocity velocityB)
         {
             Debug.Assert(pair.A.Packed != pair.B.Packed);
             var allowExpansion = continuityA.AllowExpansionBeyondSpeculativeMargin | continuityB.AllowExpansionBeyondSpeculativeMargin;
-            //Note that we pick float.MaxValue for the maximum bounds expansion passive-involving pairs.
+            //Note that we pick Number.MaxValue for the maximum bounds expansion passive-involving pairs.
             //This is a compromise- looser bounds are not a correctness issue, so we're trading off potentially more subpairs
             //and the need to compute a tighter maximum bound. That's not incredibly expensive, but it does add up. For now, we use the looser bound under the assumption
             //that the vast majority of pairs won't benefit from the tighter bound.
-            var maximumExpansion = allowExpansion ? float.MaxValue : speculativeMargin;
+            var maximumExpansion = allowExpansion ? Number.MaxValue : speculativeMargin;
 
             //Create a continuation for the pair given the CCD state.
             //Note that we never create 'unilateral' CCD pairs. That is, if either collidable in a pair enables a CCD feature, we just act like both are using it.
@@ -531,13 +530,13 @@ namespace BepuPhysics.CollisionDetection
                     ref var bTree = ref bInStaticTree ? ref Simulation.BroadPhase.StaticTree : ref Simulation.BroadPhase.ActiveTree;
                     aTree.GetBoundsPointers(broadPhaseIndexA, out var aMin, out var aMax);
                     bTree.GetBoundsPointers(broadPhaseIndexB, out var bMin, out var bMax);
-                    var maximumRadiusA = (*aMax - *aMin).Length() * 0.5f;
-                    var maximumRadiusB = (*bMax - *bMin).Length() * 0.5f;
+                    var maximumRadiusA = (*aMax - *aMin).Length() * Constants.C0p5;
+                    var maximumRadiusB = (*bMax - *bMin).Length() * Constants.C0p5;
                     if ((velocityA.Angular.Length() * maximumRadiusA + velocityB.Angular.Length() * maximumRadiusB + (velocityB.Linear - velocityA.Linear).Length()) * timestepDuration > speculativeMargin)
                     {
                         Simulation.Shapes[shapeA.Type].GetShapeData(shapeA.Index, out var shapeDataA, out var shapeSizeA);
                         Simulation.Shapes[shapeB.Type].GetShapeData(shapeB.Index, out var shapeDataB, out var shapeSizeB);
-                        float minimumSweepTimestepA, sweepConvergenceThresholdA;
+                        Number minimumSweepTimestepA, sweepConvergenceThresholdA;
                         if (continuityA.Mode == ContinuousDetectionMode.Continuous)
                         {
                             minimumSweepTimestepA = continuityA.MinimumSweepTimestep;
@@ -545,10 +544,10 @@ namespace BepuPhysics.CollisionDetection
                         }
                         else
                         {
-                            minimumSweepTimestepA = float.MaxValue;
-                            sweepConvergenceThresholdA = float.MaxValue;
+                            minimumSweepTimestepA = Number.MaxValue;
+                            sweepConvergenceThresholdA = Number.MaxValue;
                         }
-                        float minimumSweepTimestepB, sweepConvergenceThresholdB;
+                        Number minimumSweepTimestepB, sweepConvergenceThresholdB;
                         if (continuityB.Mode == ContinuousDetectionMode.Continuous)
                         {
                             minimumSweepTimestepB = continuityB.MinimumSweepTimestep;
@@ -556,8 +555,8 @@ namespace BepuPhysics.CollisionDetection
                         }
                         else
                         {
-                            minimumSweepTimestepB = float.MaxValue;
-                            sweepConvergenceThresholdB = float.MaxValue;
+                            minimumSweepTimestepB = Number.MaxValue;
+                            sweepConvergenceThresholdB = Number.MaxValue;
                         }
                         var filter = new CCDSweepFilter { NarrowPhase = this, Pair = pair, WorkerIndex = workerIndex };
                         if (sweepTask.Sweep(

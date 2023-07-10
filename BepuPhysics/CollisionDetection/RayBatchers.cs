@@ -1,15 +1,16 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.Trees;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
-using System.Numerics;
 using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.CollisionDetection
 {
     public interface IBroadPhaseRayTester
     {
-        unsafe void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT);
+        unsafe void RayTest(CollidableReference collidable, RayData* rayData, Number* maximumT);
     }
     public interface IBroadPhaseBatchedRayTester : IBroadPhaseRayTester
     {
@@ -37,7 +38,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            public unsafe void TestLeaf(int leafIndex, RayData* rayData, Number* maximumT)
             {
                 RayTester.RayTest(Leaves[leafIndex], rayData, maximumT);
             }
@@ -72,7 +73,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="maximumT">Maximum distance that the ray will travel in units of the ray's length.</param>
         /// <param name="id">Identifier value for the ray. Leaf tests will have access to the id.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(ref Vector3 origin, ref Vector3 direction, float maximumT, int id = 0)
+        public void Add(ref Vector3 origin, ref Vector3 direction, Number maximumT, int id = 0)
         {
             if (batcher.Add(ref origin, ref direction, maximumT, id))
             {
@@ -130,7 +131,7 @@ namespace BepuPhysics.CollisionDetection
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public unsafe void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex)
+                public unsafe void OnRayHit(in RayData ray, ref Number maximumT, Number t, Vector3 normal, int childIndex)
                 {
                     HitHandler.OnRayHit(ray, ref maximumT, t, normal, Reference, childIndex);
                 }
@@ -149,7 +150,7 @@ namespace BepuPhysics.CollisionDetection
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void RayTest(CollidableReference reference, RayData* rayData, float* maximumT)
+            public unsafe void RayTest(CollidableReference reference, RayData* rayData, Number* maximumT)
             {
                 if (HitHandler.HitHandler.AllowTest(reference))
                 {
@@ -180,7 +181,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="maximumT">Maximum distance that the ray will travel in units of the ray's length.</param>
         /// <param name="id">Identifier value for the ray. Callbacks will have access to the id.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Add(ref Vector3 origin, ref Vector3 direction, float maximumT, int id = 0)
+        public void Add(ref Vector3 origin, ref Vector3 direction, Number maximumT, int id = 0)
         {
             batcher.Add(ref origin, ref direction, maximumT, id);
         }

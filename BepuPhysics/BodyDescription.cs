@@ -1,9 +1,6 @@
 ﻿using BepuPhysics.Collidables;
-using BepuPhysics.Constraints;
-using BepuUtilities;
-using BepuUtilities.Memory;
-using System.Numerics;
-using System.Runtime.CompilerServices;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using System.Runtime.InteropServices;
 
 namespace BepuPhysics
@@ -17,7 +14,7 @@ namespace BepuPhysics
         /// <summary>
         /// Threshold of squared velocity under which the body is allowed to go to sleep. This is compared against dot(linearVelocity, linearVelocity) + dot(angularVelocity, angularVelocity).
         /// </summary>
-        public float SleepThreshold;
+        public Number SleepThreshold;
         /// <summary>
         /// The number of time steps that the body must be under the sleep threshold before the body becomes a sleep candidate.
         /// Note that the body is not guaranteed to go to sleep immediately after meeting this minimum.
@@ -30,7 +27,7 @@ namespace BepuPhysics
         /// <param name="sleepThreshold">Threshold of squared velocity under which the body is allowed to go to sleep. This is compared against dot(linearVelocity, linearVelocity) + dot(angularVelocity, angularVelocity).</param>
         /// <param name="minimumTimestepCountUnderThreshold">The number of time steps that the body must be under the sleep threshold before the body becomes a sleep candidate.
         /// Note that the body is not guaranteed to go to sleep immediately after meeting this minimum.</param>
-        public BodyActivityDescription(float sleepThreshold, byte minimumTimestepCountUnderThreshold = 32)
+        public BodyActivityDescription(Number sleepThreshold, byte minimumTimestepCountUnderThreshold = 32)
         {
             SleepThreshold = sleepThreshold;
             MinimumTimestepCountUnderThreshold = minimumTimestepCountUnderThreshold;
@@ -41,7 +38,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="sleepThreshold">Threshold of squared velocity under which the body is allowed to go to sleep. This is compared against dot(linearVelocity, linearVelocity) + dot(angularVelocity, angularVelocity).
         /// Note that the body is not guaranteed to go to sleep immediately after meeting this minimum.</param>
-        public static implicit operator BodyActivityDescription(float sleepThreshold)
+        public static implicit operator BodyActivityDescription(Number sleepThreshold)
         {
             return new BodyActivityDescription(sleepThreshold);
         }
@@ -81,11 +78,11 @@ namespace BepuPhysics
         /// <typeparam name="TShape">Type of the shape to compute a speculative margin for.</typeparam>
         /// <param name="shape">Shape to compute a speculative margin for.</param>
         /// <returns>Speculative margin for the given shape.</returns>
-        public static float GetDefaultSpeculativeMargin<TShape>(in TShape shape) where TShape : struct, IConvexShape
+        public static Number GetDefaultSpeculativeMargin<TShape>(in TShape shape) where TShape : struct, IConvexShape
         {
             shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
             var minimumRadius = maximumRadius - maximumAngularExpansion;
-            return 0.1f * (float)System.Math.Sqrt(maximumRadius * minimumRadius);
+            return Constants.C0p1 * (Number)Math.Sqrt(maximumRadius * minimumRadius);
         }
 
         /// <summary>
@@ -100,7 +97,7 @@ namespace BepuPhysics
             activity.MinimumTimestepCountUnderThreshold = 32;
             shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
             var minimumRadius = maximumRadius - maximumAngularExpansion;
-            activity.SleepThreshold = minimumRadius * minimumRadius * 0.1f;
+            activity.SleepThreshold = minimumRadius * minimumRadius * Constants.C0p1;
             return activity;
         }
 
@@ -141,7 +138,7 @@ namespace BepuPhysics
         /// <param name="shapes">Shape collection to add the shape to.</param>
         /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
         /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateConvexDynamic<TConvexShape>(RigidPose pose, BodyVelocity velocity, float mass, Shapes shapes, in TConvexShape shape) where TConvexShape : unmanaged, IConvexShape
+        public static BodyDescription CreateConvexDynamic<TConvexShape>(RigidPose pose, BodyVelocity velocity, Number mass, Shapes shapes, in TConvexShape shape) where TConvexShape : unmanaged, IConvexShape
         {
             var description = new BodyDescription
             {
@@ -163,7 +160,7 @@ namespace BepuPhysics
         /// <param name="shapes">Shape collection to add the shape to.</param>
         /// <param name="shape">Shape to add to the shape set and to create the body from.</param>
         /// <returns>Constructed description for the body.</returns>
-        public static BodyDescription CreateConvexDynamic<TConvexShape>(RigidPose pose, float mass, Shapes shapes, in TConvexShape shape) where TConvexShape : unmanaged, IConvexShape
+        public static BodyDescription CreateConvexDynamic<TConvexShape>(RigidPose pose, Number mass, Shapes shapes, in TConvexShape shape) where TConvexShape : unmanaged, IConvexShape
         {
             return CreateConvexDynamic(pose, default, mass, shapes, shape);
         }

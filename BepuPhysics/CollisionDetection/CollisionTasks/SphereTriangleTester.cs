@@ -1,7 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
@@ -11,14 +11,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         public int BatchSize => 32;
 
-        public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
+        public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB,
             int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void Select(ref Vector<float> distanceSquared, ref Vector3Wide localNormal, ref Vector<float> distanceSquaredCandidate, ref Vector3Wide localNormalCandidate)
+        static void Select(ref Vector<Number> distanceSquared, ref Vector3Wide localNormal, ref Vector<Number> distanceSquaredCandidate, ref Vector3Wide localNormalCandidate)
         {
             var useCandidate = Vector.LessThan(distanceSquaredCandidate, distanceSquared);
             distanceSquared = Vector.Min(distanceSquaredCandidate, distanceSquared);
@@ -26,7 +26,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount,
+        public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount,
             out Convex1ContactManifoldWide manifold)
         {
             Unsafe.SkipInit(out manifold);
@@ -41,7 +41,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(b.A, localOffsetB, out var pa);
             Vector3Wide.CrossWithoutOverlap(ab, ac, out var localTriangleNormal);
             Vector3Wide.Length(localTriangleNormal, out var triangleNormalLength);
-            var inverseTriangleNormalLength = Vector<float>.One / triangleNormalLength;
+            var inverseTriangleNormalLength = Vector<Number>.One / triangleNormalLength;
             Vector3Wide.Scale(localTriangleNormal, inverseTriangleNormalLength, out localTriangleNormal);
 
             //EdgeAB plane test: (pa x ab) * (ab x ac) >= 0
@@ -58,11 +58,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.CrossWithoutOverlap(ac, pa, out var acxpa);
             Vector3Wide.Dot(paxab, localTriangleNormal, out var edgePlaneTestAB);
             Vector3Wide.Dot(acxpa, localTriangleNormal, out var edgePlaneTestAC);
-            var edgePlaneTestBC = Vector<float>.One - (edgePlaneTestAB + edgePlaneTestAC) * inverseTriangleNormalLength;
+            var edgePlaneTestBC = Vector<Number>.One - (edgePlaneTestAB + edgePlaneTestAC) * inverseTriangleNormalLength;
 
-            var outsideAB = Vector.LessThan(edgePlaneTestAB, Vector<float>.Zero);
-            var outsideAC = Vector.LessThan(edgePlaneTestAC, Vector<float>.Zero);
-            var outsideBC = Vector.LessThan(edgePlaneTestBC, Vector<float>.Zero);
+            var outsideAB = Vector.LessThan(edgePlaneTestAB, Vector<Number>.Zero);
+            var outsideAC = Vector.LessThan(edgePlaneTestAC, Vector<Number>.Zero);
+            var outsideBC = Vector.LessThan(edgePlaneTestBC, Vector<Number>.Zero);
 
             var outsideAnyEdge = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideAC, outsideBC));
             Unsafe.SkipInit(out Vector3Wide localClosestOnTriangle);
@@ -80,7 +80,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //This does some partially redundant work if the edge is AB or AC, but given that we didn't have bcbc or bcpb, it's fine.
                 Vector3Wide.Dot(negativeEdgeStartToP, edgeDirection, out var negativeOffsetDotEdge);
                 Vector3Wide.Dot(edgeDirection, edgeDirection, out var edgeDotEdge);
-                var edgeScale = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, -negativeOffsetDotEdge / edgeDotEdge));
+                var edgeScale = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, -negativeOffsetDotEdge / edgeDotEdge));
                 Vector3Wide.Scale(edgeDirection, edgeScale, out var pointOnEdge);
                 Vector3Wide.Add(edgeStart, pointOnEdge, out pointOnEdge);
 
@@ -104,7 +104,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(manifold.OffsetA, offsetB, out manifold.OffsetA);
             Vector3Wide.Length(manifold.OffsetA, out var distance);
             //Note the normal is calibrated to point from B to A.
-            var normalScale = new Vector<float>(-1) / distance;
+            var normalScale = new Vector<Number>(-1) / distance;
             Vector3Wide.Scale(manifold.OffsetA, normalScale, out manifold.Normal);
             manifold.Depth = a.Radius - distance;
             //In the event that the sphere's center point is touching the triangle, the normal is undefined. In that case, the 'correct' normal would be the triangle's normal.
@@ -113,14 +113,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             TriangleWide.ComputeNondegenerateTriangleMask(ab, ac, triangleNormalLength, out _, out var nondegenerateMask);
             manifold.ContactExists = Vector.BitwiseAnd(
                 Vector.BitwiseAnd(
-                    Vector.GreaterThan(distance, Vector<float>.Zero),
+                    Vector.GreaterThan(distance, Vector<Number>.Zero),
                     nondegenerateMask),
                 Vector.BitwiseAnd(
-                    Vector.LessThanOrEqual(faceNormalDotLocalNormal, new Vector<float>(-TriangleWide.BackfaceNormalDotRejectionThreshold)),
+                    Vector.LessThanOrEqual(faceNormalDotLocalNormal, new Vector<Number>(-TriangleWide.BackfaceNormalDotRejectionThreshold)),
                     Vector.GreaterThanOrEqual(manifold.Depth, -speculativeMargin)));
         }
 
-        public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public void Test(ref SphereWide a, ref TriangleWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

@@ -1,12 +1,11 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Trees
 {
@@ -80,7 +79,7 @@ namespace BepuPhysics.Trees
                     return;
                 }
                 Debug.Assert(overlapHandlers.Length >= threadCount);
-                const float jobMultiplier = 1.5f;
+                Number jobMultiplier = Constants.C1p5;
                 var targetJobCount = Math.Max(1, jobMultiplier * threadCount);
                 leafThreshold = (int)(tree.LeafCount / targetJobCount);
                 jobs = new QuickList<Job>((int)(targetJobCount * 2), Pool);

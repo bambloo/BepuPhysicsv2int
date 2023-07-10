@@ -1,12 +1,13 @@
-﻿using System;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using BepuUtilities.Memory;
-using System.Diagnostics;
-using BepuUtilities;
+﻿using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuPhysics.Trees;
-using BepuPhysics.CollisionDetection.CollisionTasks;
+using BepuUtilities;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Collidables
 {
@@ -41,7 +42,7 @@ namespace BepuPhysics.Collidables
     {
         //We use a non-generic hit handler to capture the final result of a leaf test.
         //This requires caching out the T and Normal for reading by whatever ended up calling this, but it's worth it to avoid AOT pipelines barfing on infinite recursion.
-        public float T;
+        public Number T;
         public Vector3 Normal;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool AllowTest(int childIndex)
@@ -51,7 +52,7 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
-        public void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex)
+        public void OnRayHit(in RayData ray, ref Number maximumT, Number t, Vector3 normal, int childIndex)
         {
             Debug.Assert(childIndex == 0, "Compounds can contain only convexes, so the child index is always zero.");
             T = t;
@@ -196,7 +197,7 @@ namespace BepuPhysics.Collidables
                 var localPoseRadiusSquared = childPose.Position.LengthSquared();
                 if (contributionLengthSquared > localPoseRadiusSquared)
                 {
-                    angularContributionToChildLinear *= (float)(Math.Sqrt(localPoseRadiusSquared) / Math.Sqrt(contributionLengthSquared));
+                    angularContributionToChildLinear *= (Number)(Math.Sqrt(localPoseRadiusSquared) / Math.Sqrt(contributionLengthSquared));
                 }
                 childVelocity.Linear = velocity.Linear + angularContributionToChildLinear;
                 childPose.Position += pose.Position;
@@ -210,7 +211,7 @@ namespace BepuPhysics.Collidables
             AddChildBoundsToBatcher(ref Children, ref batcher, pose, velocity, bodyIndex);
         }
 
-        public void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref Number maximumT, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             RayData localRay;
@@ -320,7 +321,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlapsPointer)
+        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, Number maximumT, BufferPool pool, Shapes shapes, void* overlapsPointer)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             Tree.ConvertBoxToCentroidWithExtent(min, max, out var sweepOrigin, out var expansion);
@@ -345,7 +346,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of the children.</param>
         /// <param name="shapes">Shapes collection containing the data for the compound child shapes.</param>
         /// <returns>Inertia of the compound.</returns>
-        public BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes)
+        public BodyInertia ComputeInertia(Span<Number> childMasses, Shapes shapes)
         {
             return CompoundBuilder.ComputeInertia(Children, childMasses, shapes);
         }
@@ -357,7 +358,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of the children.</param>
         /// <param name="centerOfMass">Calculated center of mass of the compound. Subtracted from all the compound child poses.</param>
         /// <returns>Inertia of the compound.</returns>
-        public BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes, out Vector3 centerOfMass)
+        public BodyInertia ComputeInertia(Span<Number> childMasses, Shapes shapes, out Vector3 centerOfMass)
         {
             return CompoundBuilder.ComputeInertia(Children, childMasses, shapes, out centerOfMass);
         }

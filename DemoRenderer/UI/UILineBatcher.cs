@@ -1,12 +1,9 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using SharpDX.Direct3D11;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Text;
+
 
 namespace DemoRenderer.UI
 {
@@ -20,7 +17,7 @@ namespace DemoRenderer.UI
         {
             set
             {
-                screenToPackedScale = new Vector2(65535f / value.X, 65535f / value.Y);
+                screenToPackedScale = new Vector2((Number)65535f / value.X, (Number)65535f / value.Y);
             }
         }
         UILineInstance[] lines;

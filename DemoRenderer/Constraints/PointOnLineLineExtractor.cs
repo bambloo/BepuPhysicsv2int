@@ -1,8 +1,9 @@
 ﻿using BepuUtilities.Collections;
 using BepuPhysics;
 using BepuPhysics.Constraints;
-using System.Numerics;
+
 using BepuUtilities;
+using BepuUtilities.Numerics;
 
 namespace DemoRenderer.Constraints
 {
@@ -27,9 +28,9 @@ namespace DemoRenderer.Constraints
             var anchorB = poseB.Position + worldOffsetB;
             var closestPointOnLine = Vector3.Dot(anchorB - anchorA, worldDirection) * worldDirection + anchorA;
 
-            var color = new Vector3(0.2f, 0.2f, 1f) * tint;
+            var color = new Vector3(Constants.C0p2, Constants.C0p2, Constants.C1) * tint;
             var packedColor = Helpers.PackColor(color);
-            var backgroundColor = new Vector3(0f, 0f, 1f) * tint;
+            var backgroundColor = new Vector3(Constants.C0, Constants.C0, Constants.C1) * tint;
             lines.AllocateUnsafely() = new LineInstance(poseA.Position, anchorA, packedColor, 0);
             lines.AllocateUnsafely() = new LineInstance(anchorA, closestPointOnLine, packedColor, 0);
             lines.AllocateUnsafely() = new LineInstance(closestPointOnLine, anchorB, Helpers.PackColor(new Vector3(1, 0, 0) * tint), 0);

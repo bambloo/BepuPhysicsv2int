@@ -1,14 +1,15 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System.Numerics;
-using System;
 using BepuPhysics.CollisionDetection;
-using System.Runtime.CompilerServices;
-using System.Diagnostics;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
+using DemoRenderer;
+
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace Demos.Demos
 {
@@ -115,7 +116,7 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
         {
             //It's impossible for two statics to collide, and pairs are sorted such that bodies always come before statics.
             if (b.Mobility != CollidableMobility.Static)
@@ -152,12 +153,12 @@ namespace Demos.Demos
 
     public class RagdollDemo : Demo
     {
-        static BodyHandle AddBody<TShape>(TShape shape, float mass, in RigidPose pose, Simulation simulation) where TShape : unmanaged, IConvexShape
+        static BodyHandle AddBody<TShape>(TShape shape, Number mass, in RigidPose pose, Simulation simulation) where TShape : unmanaged, IConvexShape
         {
             //Note that this always registers a new shape instance. You could be more clever/efficient and share shapes, but the goal here is to show the most basic option.
             //Also, the cost of registering different shapes isn't that high for tiny implicit shapes.
             var shapeIndex = simulation.Shapes.Add(shape);
-            var description = BodyDescription.CreateDynamic(pose, shape.ComputeInertia(mass), shapeIndex, 0.01f);
+            var description = BodyDescription.CreateDynamic(pose, shape.ComputeInertia(mass), shapeIndex, Constants.C0p01);
             return simulation.Bodies.Add(description);
         }
 
@@ -168,7 +169,7 @@ namespace Demos.Demos
             QuaternionEx.ConcatenateWithoutOverlap(localOrientation, ragdollPose.Orientation, out worldPose.Orientation);
             return worldPose;
         }
-        public static void GetCapsuleForLineSegment(Vector3 start, Vector3 end, float radius, out Capsule capsule, out Vector3 position, out Quaternion orientation)
+        public static void GetCapsuleForLineSegment(Vector3 start, Vector3 end, Number radius, out Capsule capsule, out Vector3 position, out Quaternion orientation)
         {
             position = 0.5f * (start + end);
 
@@ -178,7 +179,7 @@ namespace Demos.Demos
             //The capsule shape's length is along its local Y axis, so get the shortest rotation from Y to the current orientation.
             var cross = Vector3.Cross(offset / capsule.Length, new Vector3(0, 1, 0));
             var crossLength = cross.Length();
-            orientation = crossLength > 1e-8f ? QuaternionEx.CreateFromAxisAngle(cross / crossLength, (float)Math.Asin(crossLength)) : Quaternion.Identity;
+            orientation = crossLength > 1e-8f ? QuaternionEx.CreateFromAxisAngle(cross / crossLength, (Number)Math.Asin(crossLength)) : Quaternion.Identity;
         }
 
         public static Quaternion CreateBasis(Vector3 z, Vector3 x)
@@ -197,10 +198,10 @@ namespace Demos.Demos
             //By default, these motors use nonzero softness (inverse damping) to damp the relative motion between ragdoll pieces.
             //If you set the damping to 0 and then set the maximum force to some finite value (75 works reasonably well), the ragdolls act more like action figures.
             //You could also replace the AngularMotors with AngularServos and provide actual relative orientation goals for physics-driven animation.
-            return new AngularMotor { TargetVelocityLocalA = new Vector3(), Settings = new MotorSettings(float.MaxValue, 0.01f) };
+            return new AngularMotor { TargetVelocityLocalA = new Vector3(), Settings = new MotorSettings(Number.MaxValue, Constants.C0p01) };
         }
 
-        static RagdollArmHandles AddArm(float sign, Vector3 localShoulder, RigidPose localChestPose, BodyHandle chestHandle, ref SubgroupCollisionFilter chestMask,
+        static RagdollArmHandles AddArm(Number sign, Vector3 localShoulder, RigidPose localChestPose, BodyHandle chestHandle, ref SubgroupCollisionFilter chestMask,
             int limbBaseBitIndex, int ragdollIndex, RigidPose ragdollPose, CollidableProperty<SubgroupCollisionFilter> filters, SpringSettings constraintSpringSettings, Simulation simulation)
         {
             RagdollArmHandles handles;
@@ -284,7 +285,7 @@ namespace Demos.Demos
                 LocalBasisB = CreateBasis(new Vector3(1, 0, 0), new Vector3(0, 0, 1)),
                 TargetAngle = 0,
                 SpringSettings = constraintSpringSettings,
-                ServoSettings = new ServoSettings(float.MaxValue, 0, float.MaxValue)
+                ServoSettings = new ServoSettings(Number.MaxValue, 0, Number.MaxValue)
             });
             simulation.Solver.Add(handles.LowerArm, handles.Hand, BuildAngularMotor());
 
@@ -381,7 +382,7 @@ namespace Demos.Demos
                 LocalBasisB = CreateBasis(new Vector3(0, 1, 0), new Vector3(0, 0, 1)),
                 TargetAngle = 0,
                 SpringSettings = constraintSpringSettings,
-                ServoSettings = new ServoSettings(float.MaxValue, 0, float.MaxValue)
+                ServoSettings = new ServoSettings(Number.MaxValue, 0, Number.MaxValue)
             });
             simulation.Solver.Add(handles.LowerLeg, handles.Foot, BuildAngularMotor());
 
@@ -431,7 +432,7 @@ namespace Demos.Demos
             var horizontalOrientation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 0, 1), MathHelper.PiOver2);
             RagdollHandles handles;
             var hipsPose = new RigidPose { Position = new Vector3(0, 1.1f, 0), Orientation = horizontalOrientation };
-            handles.Hips = AddBody(new Capsule(0.17f, 0.25f), 8, GetWorldPose(hipsPose.Position, hipsPose.Orientation, ragdollPose), simulation);
+            handles.Hips = AddBody(new Capsule(0.17f, Constants.C0p25), 8, GetWorldPose(hipsPose.Position, hipsPose.Orientation, ragdollPose), simulation);
             var abdomenPose = new RigidPose { Position = new Vector3(0, 1.3f, 0), Orientation = horizontalOrientation };
             handles.Abdomen = AddBody(new Capsule(0.17f, 0.22f), 7, GetWorldPose(abdomenPose.Position, abdomenPose.Orientation, ragdollPose), simulation);
             var chestPose = new RigidPose { Position = new Vector3(0, 1.6f, 0), Orientation = horizontalOrientation };
@@ -544,13 +545,13 @@ namespace Demos.Demos
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20, 10, -20);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
             var collisionFilters = new CollidableProperty<SubgroupCollisionFilter>();
             Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks(collisionFilters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             int ragdollIndex = 0;
-            var spacing = new Vector3(2f, 3, 1);
+            var spacing = new Vector3(Constants.C0p3, 3, 1);
             int width = 8;
             int height = 8;
             int length = 8;

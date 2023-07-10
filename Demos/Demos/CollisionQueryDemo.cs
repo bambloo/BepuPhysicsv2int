@@ -5,15 +5,13 @@ using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Demos.Demos
 {
@@ -34,7 +32,7 @@ namespace Demos.Demos
 
             var random = new Random(5);
             var shapeToDrop = new Box(1, 1, 1);
-            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDrop.ComputeInertia(1), Simulation.Shapes.Add(shapeToDrop), 0.01f);
+            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDrop.ComputeInertia(1), Simulation.Shapes.Add(shapeToDrop), (Number)Constants.C0p01);
             for (int i = 0; i < 128; ++i)
             {
                 descriptionToDrop.Pose.Position = new Vector3(-5 + 10 * random.NextSingle(), 45 + 150 * random.NextSingle(), -5 + 10 * random.NextSingle());

@@ -1,6 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
@@ -8,7 +8,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     public struct SphereTriangleDistanceTester : IPairDistanceTester<SphereWide, TriangleWide>
     {
         public void Test(in SphereWide a, in TriangleWide b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
-            out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
+            out Vector<int> intersected, out Vector<Number> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             //Note that we're borrowing a lot here from the SphereTriangleCollisionTask. Could share more if you find yourself needing to change things dramatically.
             //Main difficulty in fully sharing is that sweep tests do not honor one sidedness, so some of the conditions change.
@@ -41,9 +41,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Dot(localTriangleNormal, localTriangleNormal, out var triangleNormalLengthSquared);
             var edgePlaneTestBC = triangleNormalLengthSquared - edgePlaneTestAB - edgePlaneTestAC;
 
-            var outsideAB = Vector.LessThan(edgePlaneTestAB, Vector<float>.Zero);
-            var outsideAC = Vector.LessThan(edgePlaneTestAC, Vector<float>.Zero);
-            var outsideBC = Vector.LessThan(edgePlaneTestBC, Vector<float>.Zero);
+            var outsideAB = Vector.LessThan(edgePlaneTestAB, Vector<Number>.Zero);
+            var outsideAC = Vector.LessThan(edgePlaneTestAC, Vector<Number>.Zero);
+            var outsideBC = Vector.LessThan(edgePlaneTestBC, Vector<Number>.Zero);
 
             var outsideAnyEdge = Vector.BitwiseOr(outsideAB, Vector.BitwiseOr(outsideAC, outsideBC));
             Unsafe.SkipInit(out Vector3Wide localClosestOnTriangle);
@@ -60,7 +60,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 //This does some partially redundant work if the edge is AB or AC, but given that we didn't have bcbc or bcpb, it's fine.
                 Vector3Wide.Dot(negativeEdgeStartToP, edgeDirection, out var negativeOffsetDotEdge);
                 Vector3Wide.Dot(edgeDirection, edgeDirection, out var edgeDotEdge);
-                var edgeScale = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, -negativeOffsetDotEdge / edgeDotEdge));
+                var edgeScale = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, -negativeOffsetDotEdge / edgeDotEdge));
                 Vector3Wide.Scale(edgeDirection, edgeScale, out var pointOnEdge);
                 Vector3Wide.Add(edgeStart, pointOnEdge, out pointOnEdge);
 
@@ -80,11 +80,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //normal = normalize(localOffsetA - localClosestOnTriangle) = (localOffsetB + localClosestOnTriangle) / (-||localOffsetB + localClosestOnTriangle||)
             Vector3Wide.Add(localOffsetB, localClosestOnTriangle, out var localNormal);
             Vector3Wide.Length(localNormal, out var localNormalLength);
-            Vector3Wide.Scale(localNormal, new Vector<float>(-1f) / localNormalLength, out localNormal);
+            Vector3Wide.Scale(localNormal, new Vector<Number>(Constants.Cm1) / localNormalLength, out localNormal);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out normal);
             Vector3Wide.Scale(normal, -a.Radius, out closestA);
             distance = localNormalLength - a.Radius;
-            intersected = Vector.LessThanOrEqual(distance, Vector<float>.Zero);
+            intersected = Vector.LessThanOrEqual(distance, Vector<Number>.Zero);
 
             
         }

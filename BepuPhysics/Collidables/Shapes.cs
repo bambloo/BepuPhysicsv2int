@@ -1,12 +1,12 @@
-﻿using BepuUtilities.Collections;
+﻿using BepuPhysics.CollisionDetection;
+using BepuPhysics.Trees;
+using BepuUtilities;
 using BepuUtilities.Memory;
-using System.Numerics;
-using System.Runtime.CompilerServices;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using BepuPhysics.CollisionDetection;
-using BepuUtilities;
-using BepuPhysics.Trees;
+using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Collidables
 {
@@ -69,11 +69,11 @@ namespace BepuPhysics.Collidables
             min += pose.Position;
             max += pose.Position;
         }
-        internal virtual void ComputeBounds(int shapeIndex, Quaternion orientation, out float maximumRadius, out float maximumAngularExpansion, out Vector3 min, out Vector3 max)
+        internal virtual void ComputeBounds(int shapeIndex, Quaternion orientation, out Number maximumRadius, out Number maximumAngularExpansion, out Vector3 min, out Vector3 max)
         {
             throw new InvalidOperationException("Nonconvex shapes are not required to have a maximum radius or angular expansion implementation. This should only ever be called on convexes.");
         }
-        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref Number maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
         public abstract void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, ref RaySource rays, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
         /// <summary>
@@ -224,7 +224,7 @@ namespace BepuPhysics.Collidables
         /// <param name="shapeIndex">Index of the shape to compute the inertia of.</param>
         /// <param name="mass">Mass to use to compute the inertia.</param>
         /// <returns>Inertia of the shape.</returns>
-        BodyInertia ComputeInertia(int shapeIndex, float mass);
+        BodyInertia ComputeInertia(int shapeIndex, Number mass);
     }
 
     public class ConvexShapeBatch<TShape, TShapeWide> : ShapeBatch<TShape>, IConvexShapeBatch
@@ -245,7 +245,7 @@ namespace BepuPhysics.Collidables
             //And they don't have any children.
         }
 
-        public BodyInertia ComputeInertia(int shapeIndex, float mass)
+        public BodyInertia ComputeInertia(int shapeIndex, Number mass)
         {
             return shapes[shapeIndex].ComputeInertia(mass);
         }
@@ -260,14 +260,14 @@ namespace BepuPhysics.Collidables
             shapes[shapeIndex].ComputeBounds(orientation, out min, out max);
         }
 
-        internal override void ComputeBounds(int shapeIndex, Quaternion orientation, out float maximumRadius, out float angularExpansion, out Vector3 min, out Vector3 max)
+        internal override void ComputeBounds(int shapeIndex, Quaternion orientation, out Number maximumRadius, out Number angularExpansion, out Vector3 min, out Vector3 max)
         {
             ref var shape = ref shapes[shapeIndex];
             shape.ComputeBounds(orientation, out min, out max);
             shape.ComputeAngularExpansionData(out maximumRadius, out angularExpansion);
         }
 
-        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref Number maximumT, ref TRayHitHandler hitHandler)
         {
             if (shapes[shapeIndex].RayTest(pose, ray.Origin, ray.Direction, out var t, out var normal) && t <= maximumT)
             {
@@ -322,7 +322,7 @@ namespace BepuPhysics.Collidables
         {
             shapes[shapeIndex].ComputeBounds(orientation, out min, out max);
         }
-        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref Number maximumT, ref TRayHitHandler hitHandler)
         {
             shapes[shapeIndex].RayTest(pose, ray, ref maximumT, ref hitHandler);
         }
@@ -368,7 +368,7 @@ namespace BepuPhysics.Collidables
             shapes[shapeIndex].ComputeBounds(orientation, shapeBatches, out min, out max);
         }
 
-        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler)
+        public override void RayTest<TRayHitHandler>(int shapeIndex, in RigidPose pose, in RayData ray, ref Number maximumT, ref TRayHitHandler hitHandler)
         {
             shapes[shapeIndex].RayTest(pose, ray, ref maximumT, shapeBatches, ref hitHandler);
         }

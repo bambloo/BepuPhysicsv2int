@@ -1,8 +1,6 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
-using System;
-using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
@@ -13,11 +11,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         where TSupportFinderA : struct, ISupportFinder<TShapeA, TShapeWideA>
         where TSupportFinderB : struct, ISupportFinder<TShapeB, TShapeWideB>
     {
-        public const float TerminationEpsilonDefault = 1e-7f;
-        public const float ContainmentEpsilonDefault = 0.000316227766f;
+        public static readonly Number TerminationEpsilonDefault = Constants.C1em7;
+        public static readonly Number ContainmentEpsilonDefault = new Number(0.000316227766f);
 
-        public float TerminationEpsilon;
-        public float ContainmentEpsilon;
+        public Number TerminationEpsilon;
+        public Number ContainmentEpsilon;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void SampleMinkowskiDifference(
@@ -49,7 +47,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Append(ref Vector<int> mask, ref Simplex simplex, ref Vector3Wide vA, ref Vector3Wide v)
         {
-            for (int i = 0; i < Vector<float>.Count; ++i)
+            for (int i = 0; i < Vector<Number>.Count; ++i)
             {
                 if (mask[i] == 0)
                 {
@@ -69,8 +67,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Select(ref Vector<int> mask,
-            ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId,
-            in Vector<float> distanceSquaredCandidate, in Vector3Wide closestCandidate, in Vector3Wide closestACandidate, in Vector<int> featureIdCandidate)
+            ref Vector<Number> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId,
+            in Vector<Number> distanceSquaredCandidate, in Vector3Wide closestCandidate, in Vector3Wide closestACandidate, in Vector<int> featureIdCandidate)
         {
             var useCandidate = Vector.BitwiseAnd(mask, Vector.LessThan(distanceSquaredCandidate, distanceSquared));
             distanceSquared = Vector.ConditionalSelect(useCandidate, distanceSquaredCandidate, distanceSquared);
@@ -80,8 +78,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void Edge(ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide aOnA, ref Vector3Wide bOnA, out Vector3Wide ab, out Vector<float> abab, out Vector<float> abA, in Vector<int> aFeatureId, in Vector<int> bFeatureId,
-            ref Vector<int> mask, ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId)
+        static void Edge(ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide aOnA, ref Vector3Wide bOnA, out Vector3Wide ab, out Vector<Number> abab, out Vector<Number> abA, in Vector<int> aFeatureId, in Vector<int> bFeatureId,
+            ref Vector<int> mask, ref Vector<Number> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId)
         {
             Vector3Wide.Subtract(b, a, out ab);
             Vector3Wide.Dot(ab, ab, out abab);
@@ -89,12 +87,12 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //Note that vertex B (and technically A, too) is handled by clamping the edge. No need to handle the vertices by themselves (apart from the base case).
             var abT = -abA / abab;
             //Protect against division by zero. It's a degenerate edge, so just pick vertex a as a representative.
-            abT = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(abab), new Vector<float>(1e-15f)), abT, Vector<float>.Zero);
-            var aFeatureContribution = Vector.ConditionalSelect(Vector.LessThan(abT, Vector<float>.One), aFeatureId, Vector<int>.Zero);
-            var bFeatureContribution = Vector.ConditionalSelect(Vector.GreaterThan(abT, Vector<float>.Zero), bFeatureId, Vector<int>.Zero);
+            abT = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(abab), new Vector<Number>(Constants.C1em15)), abT, Vector<Number>.Zero);
+            var aFeatureContribution = Vector.ConditionalSelect(Vector.LessThan(abT, Vector<Number>.One), aFeatureId, Vector<int>.Zero);
+            var bFeatureContribution = Vector.ConditionalSelect(Vector.GreaterThan(abT, Vector<Number>.Zero), bFeatureId, Vector<int>.Zero);
             var featureIdCandidate = Vector.BitwiseOr(aFeatureContribution, bFeatureContribution);
 
-            abT = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, abT));
+            abT = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, abT));
             Vector3Wide.Scale(ab, abT, out var closestOnAB);
             Vector3Wide.Add(closestOnAB, a, out closestOnAB);
             Vector3Wide.Subtract(bOnA, aOnA, out var abOnA);
@@ -144,11 +142,11 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
         static void Triangle(
             ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide c,
             ref Vector3Wide aOnA, ref Vector3Wide bOnA, ref Vector3Wide cOnA,
-            ref Vector<float> abA, ref Vector<float> acA,
+            ref Vector<Number> abA, ref Vector<Number> acA,
             ref Vector3Wide ab, ref Vector3Wide ac,
-            ref Vector<float> abab, ref Vector<float> acac,
+            ref Vector<Number> abab, ref Vector<Number> acac,
             in Vector<int> featureIdCandidate,
-            ref Vector<int> mask, ref Vector<float> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId)
+            ref Vector<int> mask, ref Vector<Number> distanceSquared, ref Vector3Wide closest, ref Vector3Wide closestA, ref Vector<int> featureId)
         {
             //Triangle distances are only accepted if the projected point is actually within the triangle. Note that this allows distances to be computed
             //for test point which is on the 'wrong' side of the plane in the tetrahedral case. That's fine, because the point is either inside 
@@ -171,7 +169,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.CrossWithoutOverlap(ab, ac, out var n);
             Vector3Wide.LengthSquared(n, out var abxacLengthSquared);
             Vector3Wide.Dot(a, n, out var aN);
-            var inverseNLengthSquared = Vector<float>.One / abxacLengthSquared;
+            var inverseNLengthSquared = Vector<Number>.One / abxacLengthSquared;
             var t = aN * inverseNLengthSquared;
             Vector3Wide.Scale(n, t, out var closestCandidate);
             //Note that the above is not the fastest possible implementation. There are some shared terms that we're not taking advantage of for numerical reasons.
@@ -181,12 +179,12 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.Dot(ab, ac, out var abac);
             var cWeight = (abA * abac - acA * abab) * inverseNLengthSquared;
             var bWeight = (abac * acA - acac * abA) * inverseNLengthSquared;
-            var aWeight = Vector<float>.One - bWeight - cWeight;
+            var aWeight = Vector<Number>.One - bWeight - cWeight;
             var projectionInTriangle = Vector.BitwiseAnd(
                 Vector.BitwiseAnd(
-                    Vector.GreaterThanOrEqual(aWeight, Vector<float>.Zero),
-                    Vector.GreaterThanOrEqual(bWeight, Vector<float>.Zero)),
-                Vector.GreaterThanOrEqual(cWeight, Vector<float>.Zero));
+                    Vector.GreaterThanOrEqual(aWeight, Vector<Number>.Zero),
+                    Vector.GreaterThanOrEqual(bWeight, Vector<Number>.Zero)),
+                Vector.GreaterThanOrEqual(cWeight, Vector<Number>.Zero));
 
             Vector3Wide.Scale(aOnA, aWeight, out var aOnAContribution);
             Vector3Wide.Scale(bOnA, bWeight, out var bOnAContribution);
@@ -200,7 +198,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 distanceSquaredCandidate, closestCandidate, closestACandidate, featureIdCandidate);
         }
 
-        static void FindClosestPoint(ref Vector<int> outerLoopTerminatedMask, ref Simplex simplex, out Vector<float> distanceSquared, out Vector3Wide closestA, out Vector3Wide closest)
+        static void FindClosestPoint(ref Vector<int> outerLoopTerminatedMask, ref Simplex simplex, out Vector<Number> distanceSquared, out Vector3Wide closestA, out Vector3Wide closest)
         {
             //The outer loop mask considers 0 to be executing, -1 to be terminated.
             var activeMask = Vector.OnesComplement(outerLoopTerminatedMask);
@@ -310,19 +308,19 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             Vector3Wide.CrossWithoutOverlap(cd, ac, out var nacd);
             Vector3Wide.CrossWithoutOverlap(bd, cd, out var nbdc);
             Vector3Wide.Dot(ad, nabc, out var calibrationDotABC);
-            var flipRequired = Vector.GreaterThanOrEqual(calibrationDotABC, Vector<float>.Zero);
+            var flipRequired = Vector.GreaterThanOrEqual(calibrationDotABC, Vector<Number>.Zero);
             Vector3Wide.Dot(nabc, simplex.A, out var abcDot);
             Vector3Wide.Dot(nabd, simplex.A, out var abdDot);
             Vector3Wide.Dot(nacd, simplex.A, out var acdDot);
             Vector3Wide.Dot(nbdc, simplex.B, out var bdcDot);
-            var abcInside = Vector.Xor(Vector.GreaterThanOrEqual(abcDot, Vector<float>.Zero), flipRequired);
-            var abdInside = Vector.Xor(Vector.GreaterThanOrEqual(abdDot, Vector<float>.Zero), flipRequired);
-            var acdInside = Vector.Xor(Vector.GreaterThanOrEqual(acdDot, Vector<float>.Zero), flipRequired);
-            var bdcInside = Vector.Xor(Vector.GreaterThanOrEqual(bdcDot, Vector<float>.Zero), flipRequired);
+            var abcInside = Vector.Xor(Vector.GreaterThanOrEqual(abcDot, Vector<Number>.Zero), flipRequired);
+            var abdInside = Vector.Xor(Vector.GreaterThanOrEqual(abdDot, Vector<Number>.Zero), flipRequired);
+            var acdInside = Vector.Xor(Vector.GreaterThanOrEqual(acdDot, Vector<Number>.Zero), flipRequired);
+            var bdcInside = Vector.Xor(Vector.GreaterThanOrEqual(bdcDot, Vector<Number>.Zero), flipRequired);
             var tetrahedronContains = Vector.BitwiseAnd(Vector.BitwiseAnd(abcInside, abdInside), Vector.BitwiseAnd(acdInside, bdcInside));
             var useTetrahedralResult = Vector.BitwiseAnd(tetrahedronContains, activeMask);
             //Note that we don't guarantee correct closest points in the intersecting case, so there's no need to blend with barycentric weights.
-            Select(ref useTetrahedralResult, ref distanceSquared, ref closest, ref closestA, ref featureId, Vector<float>.Zero, new Vector3Wide(), new Vector3Wide(), new Vector<int>(1 | 2 | 4 | 8));
+            Select(ref useTetrahedralResult, ref distanceSquared, ref closest, ref closestA, ref featureId, Vector<Number>.Zero, new Vector3Wide(), new Vector3Wide(), new Vector<int>(1 | 2 | 4 | 8));
 
             TryRemove(ref simplex, 3, featureId, activeMask);
             TryRemove(ref simplex, 2, featureId, activeMask);
@@ -333,7 +331,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
 
 
         public void Test(in TShapeWideA a, in TShapeWideB b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
-            out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
+            out Vector<int> intersected, out Vector<Number> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             Unsafe.SkipInit(out closestA);
             Unsafe.SkipInit(out normal);
@@ -353,8 +351,8 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             intersected = Vector<int>.Zero;
             int iterationCount = 0;
             //Note that we use hardcoded defaults if this is default constructed.
-            var epsilon = new Vector<float>(TerminationEpsilon > 0 ? TerminationEpsilon : TerminationEpsilonDefault);
-            var containmentEpsilon = new Vector<float>(ContainmentEpsilon > 0 ? ContainmentEpsilon : ContainmentEpsilonDefault);
+            var epsilon = new Vector<Number>(TerminationEpsilon > 0 ? TerminationEpsilon : TerminationEpsilonDefault);
+            var containmentEpsilon = new Vector<Number>(ContainmentEpsilon > 0 ? ContainmentEpsilon : ContainmentEpsilonDefault);
             //Use the JIT's ability to optimize away branches with generic type knowledge to set appropriate containment epsilons for shapes that have actual margins.
             if (supportFinderA.HasMargin && supportFinderB.HasMargin)
             {
@@ -373,7 +371,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
                 containmentEpsilon = Vector.Max(containmentEpsilon, marginB);
             }
             var containmentEpsilonSquared = containmentEpsilon * containmentEpsilon;
-            var distanceSquared = new Vector<float>(float.MaxValue);
+            var distanceSquared = new Vector<Number>(Number.MaxValue);
             while (true)
             {
                 ++iterationCount;
@@ -434,7 +432,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //The normal gathered during the loop was the unnormalized offset.
             //Note that this normalization will cover lanes which weren't separated- that's fine. Valid lanes are described by the intersected flag.
             distance = Vector.SquareRoot(distanceSquared);
-            var inverseDistance = Vector<float>.One / distance;
+            var inverseDistance = Vector<Number>.One / distance;
             //The containment epsilon acts as a margin around shapes that guarantees that normals remain numerically valid.
             //To avoid a case where the distance goes from near epsilon to intersecting in sub-epsilon motion, we report the distance as be adjusted by the containment epsilon. 
             //In other words, the shapes are spherically expanded a little. Not ideal for shapes that don't actually have margins, but not horrible.

@@ -1,7 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
 using BepuUtilities.Memory;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
@@ -19,12 +19,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             where TOverlaps : struct, ICollisionTaskOverlaps<TSubpairOverlaps>
             where TSubpairOverlaps : struct, ICollisionTaskSubpairOverlaps;
 
-        unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+        unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, Number maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps;
     }
     public interface IConvexCompoundOverlapFinder
     {
-        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps);
+        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, Number dt, out ConvexCompoundTaskOverlaps overlaps);
     }
 
     public struct ConvexCompoundOverlapFinder<TConvex, TConvexWide, TCompound> : IConvexCompoundOverlapFinder
@@ -32,7 +32,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TConvexWide : struct, IShapeWide<TConvex>
         where TCompound : struct, IBoundsQueryableCompound
     {
-        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out ConvexCompoundTaskOverlaps overlaps)
+        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, Number dt, out ConvexCompoundTaskOverlaps overlaps)
         {
             overlaps = new ConvexCompoundTaskOverlaps(pool, pairCount);
             ref var pairsToTest = ref overlaps.subpairQueries;
@@ -42,18 +42,18 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Unsafe.SkipInit(out Vector3Wide relativeLinearVelocityA);
             Unsafe.SkipInit(out Vector3Wide angularVelocityA);
             Unsafe.SkipInit(out Vector3Wide angularVelocityB);
-            Unsafe.SkipInit(out Vector<float> maximumAllowedExpansion);
+            Unsafe.SkipInit(out Vector<Number> maximumAllowedExpansion);
             Unsafe.SkipInit(out TConvexWide convexWide);
             if (convexWide.InternalAllocationSize > 0)
             {
                 var memory = stackalloc byte[convexWide.InternalAllocationSize];
                 convexWide.Initialize(new Buffer<byte>(memory, convexWide.InternalAllocationSize));
             }
-            for (int i = 0; i < pairCount; i += Vector<float>.Count)
+            for (int i = 0; i < pairCount; i += Vector<Number>.Count)
             {
                 var count = pairCount - i;
-                if (count > Vector<float>.Count)
-                    count = Vector<float>.Count;
+                if (count > Vector<Number>.Count)
+                    count = Vector<Number>.Count;
 
                 //Compute the local bounding boxes using wide operations for the expansion work.
                 //Doing quite a bit of gather work (and still quite a bit of scalar work). Very possible that a scalar path could win. TODO: test that.
@@ -69,7 +69,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.WriteFirst(pair.RelativeLinearVelocityA, ref GatherScatter.GetOffsetInstance(ref relativeLinearVelocityA, j));
                     Vector3Wide.WriteFirst(pair.AngularVelocityA, ref GatherScatter.GetOffsetInstance(ref angularVelocityA, j));
                     Vector3Wide.WriteFirst(pair.AngularVelocityB, ref GatherScatter.GetOffsetInstance(ref angularVelocityB, j));
-                    Unsafe.Add(ref Unsafe.As<Vector<float>, float>(ref maximumAllowedExpansion), j) = pair.MaximumExpansion;
+                    Unsafe.Add(ref Unsafe.As<Vector<Number>, Number>(ref maximumAllowedExpansion), j) = pair.MaximumExpansion;
 
                     convexWide.WriteSlot(j, Unsafe.AsRef<TConvex>(pair.A));
                 }
@@ -82,7 +82,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 convexWide.GetBounds(ref localOrientationA, count, out var maximumRadius, out var maximumAngularExpansion, out var min, out var max);
 
                 Vector3Wide.Negate(localOffsetB, out var localPositionA);
-                BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref min, ref max, Vector<float>.Zero, localPositionA, localRelativeLinearVelocityA, angularVelocityA, angularVelocityB, dt,
+                BoundingBoxHelpers.ExpandLocalBoundingBoxes(ref min, ref max, Vector<Number>.Zero, localPositionA, localRelativeLinearVelocityA, angularVelocityA, angularVelocityB, dt,
                     maximumRadius, maximumAngularExpansion, maximumAllowedExpansion);
 
                 for (int j = 0; j < count; ++j)

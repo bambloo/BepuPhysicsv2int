@@ -1,13 +1,9 @@
-﻿using BepuPhysics.CollisionDetection.CollisionTasks;
-using BepuUtilities;
-using BepuUtilities.Collections;
+﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System;
-using System.Collections.Generic;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -54,7 +50,7 @@ namespace BepuPhysics.CollisionDetection
         {
             public int ChildIndex;
             public int ContactIndex;
-            public float Distinctiveness;
+            public Number Distinctiveness;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -66,16 +62,16 @@ namespace BepuPhysics.CollisionDetection
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static float ComputeDistinctiveness(in ConvexContact candidate, Vector3 contactNormal, in NonconvexContact reducedContact, float distanceSquaredInterpolationMin, float inverseDistanceSquaredInterpolationSpan, float depthScale)
+        static Number ComputeDistinctiveness(in ConvexContact candidate, Vector3 contactNormal, in NonconvexContact reducedContact, Number distanceSquaredInterpolationMin, Number inverseDistanceSquaredInterpolationSpan, Number depthScale)
         {
             //The more distant a contact is from another contact, or the more different its normal is, the more distinct it is considered.
             //The goal is for distinctiveness to range from around 0 to 2. The exact values aren't extremely important- we just want a rough range
             //so that we can meaningfully blend in a depth heuristic.
             var normalDot = Vector3.Dot(contactNormal, reducedContact.Normal);
-            const float normalInterpolationSpan = -0.99999f;
+            Number normalInterpolationSpan = Constants.Cm0p99999;
             //Normal dots above a threshold are considered completely redundant. acos(0.99999) is about 0.25 degrees.
             //Normals pointing at a 90 degree angle are given a value of ~1, while being completely opposed gives a value of ~2.
-            var normalDistinctiveness = (normalDot - 0.99999f) * (1f / normalInterpolationSpan);
+            var normalDistinctiveness = (normalDot - Constants.C0p99999) * (Constants.C1 / normalInterpolationSpan);
 
             //Below a threshold, the offset is considered completely redundant.
             var offsetDistinctiveness = ((reducedContact.Offset - candidate.Offset).LengthSquared() - distanceSquaredInterpolationMin) * inverseDistanceSquaredInterpolationSpan;
@@ -95,8 +91,8 @@ namespace BepuPhysics.CollisionDetection
             {
                 //Take into account the depth of the contact. Deeper contacts are more important to the manifold.
                 var depthMultiplier = 1 + candidate.Depth * depthScale;
-                if (depthMultiplier < 0.01f)
-                    depthMultiplier = 0.01f;
+                if (depthMultiplier < Constants.C0p01)
+                    depthMultiplier = Constants.C0p01;
                 distinctiveness *= depthMultiplier;
             }
             return distinctiveness;
@@ -112,8 +108,8 @@ namespace BepuPhysics.CollisionDetection
 
             //We first compute some calibration data. Knowing the approximate center of the manifold and the maximum distance allows more informed thresholds.
 
-            var extentAxis = new Vector3(0.280454652f, 0.55873544499f, 0.7804869574f);
-            float minimumExtent = float.MaxValue;
+            var extentAxis = new Vector3(Constants.C0p280454652, Constants.C0p55873544499, Constants.C0p7804869574);
+            Number minimumExtent = Number.MaxValue;
             Vector3 minimumExtentPosition = default;
             for (int i = 0; i < ChildCount; ++i)
             {
@@ -129,7 +125,7 @@ namespace BepuPhysics.CollisionDetection
                     }
                 }
             }
-            float maximumDistanceSquared = 0;
+            Number maximumDistanceSquared = 0;
             for (int i = 0; i < ChildCount; ++i)
             {
                 ref var child = ref Children[i];
@@ -140,8 +136,8 @@ namespace BepuPhysics.CollisionDetection
                         maximumDistanceSquared = distanceSquared;
                 }
             }
-            var maximumDistance = (float)Math.Sqrt(maximumDistanceSquared);
-            float initialBestScore = -float.MaxValue;
+            var maximumDistance = (Number)Math.Sqrt(maximumDistanceSquared);
+            Number initialBestScore = -Number.MaxValue;
             int initialBestScoreIndex = 0;
             var maximumAllocatedCandidateCount = ChildCount * 4;
             Buffer<RemainingCandidate> remainingContactsBuffer;
@@ -156,7 +152,7 @@ namespace BepuPhysics.CollisionDetection
                 remainingContactsBuffer = new Buffer<RemainingCandidate>(memory, maximumAllocatedCandidateCount);
             }
             var remainingContacts = new QuickList<RemainingCandidate>(remainingContactsBuffer);
-            var extremityScale = maximumDistance * 5e-3f;
+            var extremityScale = maximumDistance * Constants.C5em3;
             for (int childIndex = 0; childIndex < ChildCount; ++childIndex)
             {
                 ref var child = ref Children[childIndex];
@@ -167,7 +163,7 @@ namespace BepuPhysics.CollisionDetection
                     //Note that we only consider 'extreme' contacts that have positive depth to avoid selecting purely speculative contacts as a starting point.
                     //If there are no contacts with positive depth, it's fine to just rely on the 'deepest' speculative contact. 
                     //Feature id stability doesn't matter much if there is no stable contact.
-                    float candidateScore;
+                    Number candidateScore;
                     if (contact.Depth >= 0)
                     {
                         //Note that we assume that the contact offsets have already been moved into the parent's space in compound pairs so that we can validly compare extents across manifolds.
@@ -187,7 +183,7 @@ namespace BepuPhysics.CollisionDetection
                     ref var indices = ref remainingContacts.AllocateUnsafely();
                     indices.ChildIndex = childIndex;
                     indices.ContactIndex = contactIndex;
-                    indices.Distinctiveness = float.MaxValue;
+                    indices.Distinctiveness = Number.MaxValue;
                 }
             }
 
@@ -195,9 +191,9 @@ namespace BepuPhysics.CollisionDetection
 
             UseContact(ref remainingContacts, initialBestScoreIndex, ref Children, manifold);
 
-            var distanceSquaredInterpolationMin = maximumDistanceSquared * (1e-3f * 1e-3f);
-            var inverseDistanceSquaredInterpolationSpan = 1f / (maximumDistanceSquared);
-            var depthScale = 400f / maximumDistance;
+            var distanceSquaredInterpolationMin = maximumDistanceSquared * (Constants.C1em3 * Constants.C1em3);
+            var inverseDistanceSquaredInterpolationSpan = Constants.C1 / (maximumDistanceSquared);
+            var depthScale = Constants.C400 / maximumDistance;
 
             //We now have a decent starting point. Now, incrementally search for contacts which expand the manifold as much as possible.
             //This is going to be a greedy and nonoptimal search, but being consistent and good enough is more important than true optimality.
@@ -207,7 +203,7 @@ namespace BepuPhysics.CollisionDetection
                 var lastContactIndex = manifold->Count - 1;
                 var reducedContact = reducedContacts + lastContactIndex;
 
-                float bestScore = -1;
+                Number bestScore = -1;
                 int bestScoreIndex = -1;
                 //Note the order of the loop; we choose the best contact by index, and removals can modify indices after the removal index.
                 //Can't reverse order (easily).

@@ -1,12 +1,8 @@
 ﻿using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
-
-
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Trees
 {
@@ -17,26 +13,26 @@ namespace BepuPhysics.Trees
         //While this may be closer to true that it appears at first glance due to the very high cost of cache misses versus trivial ALU work,
         //it's probably not *identical*.
         //The builders also use this approximation.
-        public unsafe float MeasureCostMetric()
+        public unsafe Number MeasureCostMetric()
         {
             //Assumption: Index 0 is always the root if it exists, and an empty tree will have a 'root' with a child count of 0.
             ref var rootNode = ref Nodes[0];
             ref var rootChildren = ref rootNode.A;
 
-            var merged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(-float.MaxValue) };
+            var merged = new BoundingBox { Min = new Vector3(Number.MaxValue), Max = new Vector3(-Number.MaxValue) };
             for (int i = 0; i < LeafCount; ++i)
             {
                 ref var child = ref Unsafe.Add(ref rootChildren, i);
                 BoundingBox.CreateMerged(child.Min, child.Max, merged.Min, merged.Max, out merged.Min, out merged.Max);
             }
-            float rootMetric = ComputeBoundsMetric(ref merged);
+            Number rootMetric = ComputeBoundsMetric(ref merged);
 
-            const float leafCost = 1;
-            const float internalNodeCost = 1;
+            Number leafCost = 1;
+            Number internalNodeCost = 1;
 
             if (LeafCount > 2)
             {
-                float totalCost = 0;
+                Number totalCost = 0;
                 for (int i = 0; i < NodeCount; ++i)
                 {
                     ref var node = ref Nodes[i];
@@ -75,8 +71,8 @@ namespace BepuPhysics.Trees
                 throw new Exception($"Nonzero refine flag on node {nodeIndex}");
             ref var children = ref node.A;
             foundLeafCount = 0;
-            var badMinValue = new Vector3(float.MaxValue);
-            var badMaxValue = new Vector3(float.MinValue);
+            var badMinValue = new Vector3(Number.MaxValue);
+            var badMaxValue = new Vector3(Number.MinValue);
             var mergedMin = badMinValue; //Note- using isolated vectors instead of actual BoundingBox here to avoid a compiler bug: https://github.com/dotnet/coreclr/issues/12950
             var mergedMax = badMaxValue;
             var childCount = Math.Min(LeafCount, 2);
@@ -118,7 +114,7 @@ namespace BepuPhysics.Trees
             }
             var metric = ComputeBoundsMetric(ref mergedMin, ref mergedMax);
             if (foundLeafCount > 0 && //If there are no leaves, then calling the bounds 'bad' is silly. For this to happen, 
-                (float.IsNaN(metric) || float.IsInfinity(metric)))
+                (Number.IsNaN(metric) || Number.IsInfinity(metric)))
             {
                 throw new Exception($"Bad bounds: {metric} SAH. {mergedMin}, {mergedMax}.");
             }
@@ -210,7 +206,7 @@ namespace BepuPhysics.Trees
             return ComputeMaximumDepth(ref Nodes[0], 0);
         }
 
-        readonly unsafe void MeasureCacheQuality(int nodeIndex, out int foundNodes, out float nodeScore, out int scorableNodeCount)
+        readonly unsafe void MeasureCacheQuality(int nodeIndex, out int foundNodes, out Number nodeScore, out int scorableNodeCount)
         {
             ref var node = ref Nodes[nodeIndex];
             ref var children = ref node.A;
@@ -231,7 +227,7 @@ namespace BepuPhysics.Trees
                     {
                         ++correctlyPositionedImmediateChildren;
                     }
-                    MeasureCacheQuality(child.Index, out int childFoundNodes, out float childNodeScore, out int childScorableNodes);
+                    MeasureCacheQuality(child.Index, out int childFoundNodes, out Number childNodeScore, out int childScorableNodes);
                     foundNodes += childFoundNodes;
                     expectedChildIndex += childFoundNodes;
                     nodeScore += childNodeScore;
@@ -244,22 +240,22 @@ namespace BepuPhysics.Trees
             //Include this node.
             if (immediateInternalChildren > 0)
             {
-                nodeScore += correctlyPositionedImmediateChildren / (float)immediateInternalChildren;
+                nodeScore += correctlyPositionedImmediateChildren / (Number)immediateInternalChildren;
                 ++scorableNodeCount;
             }
         }
-        public readonly unsafe float MeasureCacheQuality()
+        public readonly unsafe Number MeasureCacheQuality()
         {
-            MeasureCacheQuality(0, out int foundNodes, out float nodeScore, out int scorableNodeCount);
+            MeasureCacheQuality(0, out int foundNodes, out Number nodeScore, out int scorableNodeCount);
             return scorableNodeCount > 0 ? nodeScore / scorableNodeCount : 1;
 
         }
 
-        public readonly unsafe float MeasureCacheQuality(int nodeIndex)
+        public readonly unsafe Number MeasureCacheQuality(int nodeIndex)
         {
             if (nodeIndex < 0 || nodeIndex >= NodeCount)
                 throw new ArgumentException("Measurement target index must be nonnegative and less than node count.");
-            MeasureCacheQuality(nodeIndex, out int foundNodes, out float nodeScore, out int scorableNodeCount);
+            MeasureCacheQuality(nodeIndex, out int foundNodes, out Number nodeScore, out int scorableNodeCount);
             return scorableNodeCount > 0 ? nodeScore / scorableNodeCount : 1;
         }
 

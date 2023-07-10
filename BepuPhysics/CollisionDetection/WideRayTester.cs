@@ -2,8 +2,7 @@
 using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Memory;
-using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection
@@ -30,7 +29,7 @@ namespace BepuPhysics.CollisionDetection
             RigidPoseWide poses;
             Vector3Wide.Broadcast(pose.Position, out poses.Position);
             QuaternionWide.Broadcast(pose.Orientation, out poses.Orientation);
-            for (int i = 0; i < raySource.RayCount; i += Vector<float>.Count)
+            for (int i = 0; i < raySource.RayCount; i += Vector<Number>.Count)
             {
                 var count = raySource.RayCount - i;
                 if (count < wide.MinimumWideRayCount)
@@ -46,8 +45,8 @@ namespace BepuPhysics.CollisionDetection
                 }
                 else
                 {
-                    if (count > Vector<float>.Count)
-                        count = Vector<float>.Count;
+                    if (count > Vector<Number>.Count)
+                        count = Vector<Number>.Count;
                     for (int j = 0; j < count; ++j)
                     {
                         GatherScatter.GetOffsetInstance(ref rayWide, j).Gather(raySource.GetRay(i + j));

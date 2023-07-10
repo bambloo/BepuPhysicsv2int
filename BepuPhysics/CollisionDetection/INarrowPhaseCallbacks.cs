@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using BepuUtilities;
-using BepuPhysics.Collidables;
+﻿using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -16,11 +13,11 @@ namespace BepuPhysics.CollisionDetection
         /// <summary>
         /// Coefficient of friction to apply for the constraint. Maximum friction force will be equal to the normal force times the friction coefficient.
         /// </summary>
-        public float FrictionCoefficient;
+        public Number FrictionCoefficient;
         /// <summary>
         /// Maximum relative velocity along the contact normal at which the collision constraint will recover from penetration. Clamps the velocity goal created from the spring settings.
         /// </summary>
-        public float MaximumRecoveryVelocity;
+        public Number MaximumRecoveryVelocity;
         /// <summary>
         /// Defines the constraint's penetration recovery spring properties.
         /// </summary>
@@ -32,7 +29,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="frictionCoefficient">Coefficient of friction to apply for the constraint. Maximum friction force will be equal to the normal force times the friction coefficient.</param>
         /// <param name="maximumRecoveryVelocity">Maximum relative velocity along the contact normal at which the collision constraint will recover from penetration. Clamps the velocity goal created from the spring settings. </param>
         /// <param name="springSettings">Defines the constraint's penetration recovery spring properties.</param>
-        public PairMaterialProperties(float frictionCoefficient, float maximumRecoveryVelocity, SpringSettings springSettings)
+        public PairMaterialProperties(Number frictionCoefficient, Number maximumRecoveryVelocity, SpringSettings springSettings)
         {
             FrictionCoefficient = frictionCoefficient;
             MaximumRecoveryVelocity = maximumRecoveryVelocity;
@@ -60,7 +57,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="speculativeMargin">Reference to the speculative margin used by the pair.
         /// The value was already initialized by the narrowphase by examining the speculative margins of the involved collidables, but it can be modified.</param>
         /// <returns>True if collision detection should proceed, false otherwise.</returns>
-        bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin);
+        bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin);
 
 
         /// <summary>

@@ -1,12 +1,7 @@
-﻿using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
-using BepuUtilities.Memory;
+﻿using BepuUtilities.Numerics;
 using DemoContentLoader;
-using DemoUtilities;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 
 namespace Demos.SpecializedTests;
 
@@ -14,7 +9,7 @@ static class HeadlessTest
 {
     public static void Test<T>(ContentArchive content, int runCount, int warmUpFrames, int frameCount) where T : Demo, new()
     {
-        var runFrameTimes = new double[runCount];
+        var runFrameTimes = new Number[runCount];
         ulong maximumMemoryUsedInMainPool = 0;
         ulong maximumMemoryUsedInThreadPools = 0;
         ulong maximumMemoryUsedInPools = 0;
@@ -28,7 +23,7 @@ static class HeadlessTest
                 demo.Update(null, null, null, Demo.TimestepDuration);
             }
             Console.WriteLine($"Warmup {runIndex} complete");
-            double time = 0;
+            Number time = 0;
             int largestOverlapCount = 0;
             Console.Write("Completed frames: ");
             for (int i = 0; i < frameCount; ++i)
@@ -37,7 +32,7 @@ static class HeadlessTest
                 var start = Stopwatch.GetTimestamp();
                 demo.Update(null, null, null, Demo.TimestepDuration);
                 var end = Stopwatch.GetTimestamp();
-                time += (end - start) / (double)Stopwatch.Frequency;
+                time += (end - start) / (Number)Stopwatch.Frequency;
                 if (i % 32 == 0)
                     Console.Write($"{i}, ");
                 var mainPoolSize = demo.BufferPool.GetTotalAllocatedByteCount();
@@ -57,8 +52,8 @@ static class HeadlessTest
             runFrameTimes[runIndex] = frameTime;
             demo.Dispose();
         }
-        var min = double.MaxValue;
-        var max = double.MinValue;
+        var min = Number.MaxValue;
+        var max = Number.MinValue;
         var sum = 0.0;
         var sumOfSquares = 0.0;
         for (int runIndex = 0; runIndex < runCount; ++runIndex)

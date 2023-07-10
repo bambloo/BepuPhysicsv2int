@@ -1,5 +1,6 @@
-﻿using System;
-using BepuPhysics;
+﻿using BepuPhysics;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 
 namespace Demos.Demos.Cars
 {
@@ -7,34 +8,34 @@ namespace Demos.Demos.Cars
     {
         public SimpleCar Car;
 
-        private float steeringAngle;
+        private Number steeringAngle;
 
-        public readonly float SteeringAngle { get { return steeringAngle; } }
+        public readonly Number SteeringAngle { get { return steeringAngle; } }
 
-        public float SteeringSpeed;
-        public float MaximumSteeringAngle;
+        public Number SteeringSpeed;
+        public Number MaximumSteeringAngle;
 
-        public float ForwardSpeed;
-        public float ForwardForce;
-        public float ZoomMultiplier;
-        public float BackwardSpeed;
-        public float BackwardForce;
-        public float IdleForce;
-        public float BrakeForce;
-        public float WheelBaseLength;
-        public float WheelBaseWidth;
+        public Number ForwardSpeed;
+        public Number ForwardForce;
+        public Number ZoomMultiplier;
+        public Number BackwardSpeed;
+        public Number BackwardForce;
+        public Number IdleForce;
+        public Number BrakeForce;
+        public Number WheelBaseLength;
+        public Number WheelBaseWidth;
         /// <summary>
         /// Fraction of Ackerman steering angle to apply to wheels. Using 0 does not modify the the steering angle at all, leaving the wheels pointed exactly along the steering angle, while 1 uses the full Ackerman angle.
         /// </summary>
-        public float AckermanSteering;
+        public Number AckermanSteering;
 
         //Track the previous state to force wakeups if the constraint targets have changed.
-        private float previousTargetSpeed;
-        private float previousTargetForce;
+        private Number previousTargetSpeed;
+        private Number previousTargetForce;
 
         public SimpleCarController(SimpleCar car,
-            float forwardSpeed, float forwardForce, float zoomMultiplier, float backwardSpeed, float backwardForce, float idleForce, float brakeForce,
-            float steeringSpeed, float maximumSteeringAngle, float wheelBaseLength, float wheelBaseWidth, float ackermanSteering)
+            Number forwardSpeed, Number forwardForce, Number zoomMultiplier, Number backwardSpeed, Number backwardForce, Number idleForce, Number brakeForce,
+            Number steeringSpeed, Number maximumSteeringAngle, Number wheelBaseLength, Number wheelBaseWidth, Number ackermanSteering)
         {
             Car = car;
             ForwardSpeed = forwardSpeed;
@@ -55,7 +56,7 @@ namespace Demos.Demos.Cars
             previousTargetSpeed = 0;
         }
 
-        public void Update(Simulation simulation, float dt, float targetSteeringAngle, float targetSpeedFraction, bool zoom, bool brake)
+        public void Update(Simulation simulation, Number dt, Number targetSteeringAngle, Number targetSpeedFraction, bool zoom, bool brake)
         {
             var steeringAngleDifference = targetSteeringAngle - steeringAngle;
             var maximumChange = SteeringSpeed * dt;
@@ -65,15 +66,15 @@ namespace Demos.Demos.Cars
             steeringAngle = MathF.Min(MaximumSteeringAngle, MathF.Max(-MaximumSteeringAngle, steeringAngle + steeringAngleChange));
             if (steeringAngle != previousSteeringAngle)
             {
-                float leftSteeringAngle;
-                float rightSteeringAngle;
+                Number leftSteeringAngle;
+                Number rightSteeringAngle;
 
-                float steeringAngleAbs = MathF.Abs(steeringAngle);
+                Number steeringAngleAbs = MathF.Abs(steeringAngle);
 
-                if (AckermanSteering > 0 && steeringAngleAbs > 1e-6)
+                if (AckermanSteering > 0 && steeringAngleAbs > 1e-6f)
                 {
-                    float turnRadius = MathF.Abs(WheelBaseLength * MathF.Tan(MathF.PI * 0.5f - steeringAngleAbs));
-                    var wheelBaseHalfWidth = WheelBaseWidth * 0.5f;
+                    Number turnRadius = MathF.Abs(WheelBaseLength * MathF.Tan(MathF.PI * Constants.C0p5 - steeringAngleAbs));
+                    var wheelBaseHalfWidth = WheelBaseWidth * Constants.C0p5;
                     if (steeringAngle > 0)
                     {
                         rightSteeringAngle = MathF.Atan(WheelBaseLength / (turnRadius - wheelBaseHalfWidth));
@@ -102,7 +103,7 @@ namespace Demos.Demos.Cars
                 Car.Steer(simulation, Car.FrontLeftWheel, leftSteeringAngle);
                 Car.Steer(simulation, Car.FrontRightWheel, rightSteeringAngle);
             }
-            float newTargetSpeed, newTargetForce;
+            Number newTargetSpeed, newTargetForce;
             bool allWheels;
             if (brake)
             {

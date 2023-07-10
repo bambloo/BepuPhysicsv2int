@@ -1,5 +1,5 @@
 ﻿using BepuUtilities;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics
@@ -21,15 +21,15 @@ namespace BepuPhysics
         public static void BuildOrthonormalBasis(in Vector3Wide normal, out Vector3Wide t1, out Vector3Wide t2)
         {
             //This could probably be improved.
-            var sign = Vector.ConditionalSelect(Vector.LessThan(normal.Z, Vector<float>.Zero), -Vector<float>.One, Vector<float>.One);
+            var sign = Vector.ConditionalSelect(Vector.LessThan(normal.Z, Vector<Number>.Zero), -Vector<Number>.One, Vector<Number>.One);
 
             //This has a discontinuity at z==0. Raw frisvad has only one discontinuity, though that region is more unpredictable than the revised version.
-            var scale = -Vector<float>.One / (sign + normal.Z);
+            var scale = -Vector<Number>.One / (sign + normal.Z);
             t1.X = normal.X * normal.Y * scale;
             t1.Y = sign + normal.Y * normal.Y * scale;
             t1.Z = -normal.Y;
 
-            t2.X = Vector<float>.One + sign * normal.X * normal.X * scale;
+            t2.X = Vector<Number>.One + sign * normal.X * normal.X * scale;
             t2.Y = sign * t1.X;
             t2.Z = -sign * normal.X;
         }
@@ -37,9 +37,9 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void FindPerpendicular(in Vector3Wide normal, out Vector3Wide perpendicular)
         {
-            var sign = Vector.ConditionalSelect(Vector.LessThan(normal.Z, Vector<float>.Zero), -Vector<float>.One, Vector<float>.One);
+            var sign = Vector.ConditionalSelect(Vector.LessThan(normal.Z, Vector<Number>.Zero), -Vector<Number>.One, Vector<Number>.One);
 
-            var scale = -Vector<float>.One / (sign + normal.Z);
+            var scale = -Vector<Number>.One / (sign + normal.Z);
             perpendicular.X = normal.X * normal.Y * scale;
             perpendicular.Y = sign + normal.Y * normal.Y * scale;
             perpendicular.Z = -normal.Y;
@@ -49,14 +49,14 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void BuildOrthonormalBasis(Vector3 normal, out Vector3 t1, out Vector3 t2)
         {
-            var sign = normal.Z < 0 ? -1f : 1f;
+            var sign = normal.Z < 0 ? Constants.Cm1 : Constants.C1;
 
-            var scale = -1f / (sign + normal.Z);
+            var scale = Constants.Cm1 / (sign + normal.Z);
             t1.X = normal.X * normal.Y * scale;
             t1.Y = sign + normal.Y * normal.Y * scale;
             t1.Z = -normal.Y;
 
-            t2.X = 1f + sign * normal.X * normal.X * scale;
+            t2.X = Constants.C1 + sign * normal.X * normal.X * scale;
             t2.Y = sign * t1.X;
             t2.Z = -sign * normal.X;
         }

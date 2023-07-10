@@ -1,8 +1,8 @@
-﻿using System;
-using System.Numerics;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuUtilities;
 using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 
 namespace Demos.Demos.Tanks
 {
@@ -30,7 +30,7 @@ namespace Demos.Demos.Tanks
         /// </summary>
         internal int HitPoints;
 
-        public void Update(Simulation simulation, CollidableProperty<TankDemoBodyProperties> bodyProperties, Random random, long frameIndex, in Vector2 playAreaMin, in Vector2 playAreaMax, int aiIndex, ref QuickList<AITank> aiTanks, ref int projectileCount)
+        public void Update(Simulation simulation, CollidableProperty<TankDemoBodyProperties> bodyProperties, System.Random random, long frameIndex, in Vector2 playAreaMin, in Vector2 playAreaMax, int aiIndex, ref QuickList<AITank> aiTanks, ref int projectileCount)
         {
             ref var currentPose = ref simulation.Bodies[Controller.Tank.Body].Pose;
             //tankBodyPose = localTankBodyPose * tankPose
@@ -61,10 +61,10 @@ namespace Demos.Demos.Tanks
                 //Change movement target. Pick a random point around the target's current location.
                 //Try to avoid being excessively close, though- that tends to make all the tanks bunch up in the middle.
                 Vector2 movementTargetOffset;
-                float offsetLengthSquared;
+                Number offsetLengthSquared;
                 do
                 {
-                    movementTargetOffset = new Vector2((float)(random.NextDouble() - 0.5) * 150, (float)(random.NextDouble() - 0.5) * 150);
+                    movementTargetOffset = new Vector2((Number)(random.NextDouble() - 0.5) * 150, (Number)(random.NextDouble() - 0.5) * 150);
                     offsetLengthSquared = movementTargetOffset.LengthSquared();
 
                 }
@@ -78,9 +78,9 @@ namespace Demos.Demos.Tanks
             var targetHorizontalMovementDirection = new Vector2(localMovementOffset.X, -localMovementOffset.Z);
             var targetDirectionLength = targetHorizontalMovementDirection.Length();
             targetHorizontalMovementDirection = targetDirectionLength > 1e-10f ? targetHorizontalMovementDirection / targetDirectionLength : new Vector2(0, 1);
-            var turnWeight = targetHorizontalMovementDirection.Y > 0 ? targetHorizontalMovementDirection.X : targetHorizontalMovementDirection.X > 0 ? 1f : -1f;
+            Number turnWeight = targetHorizontalMovementDirection.Y > 0 ? targetHorizontalMovementDirection.X : targetHorizontalMovementDirection.X > 0 ? 1f : -1f;
             //Set the leftTrack to 1 at turnWeight >= 0. At turnWeight -1, leftTrack should be -1.
-            var leftTrack = MathF.Min(1f, 2f * turnWeight + 1f);
+            var leftTrack = MathF.Min(1f, Constants.C0p3 * turnWeight + 1f);
             //rightTrack = 1 at turnWeight <= 0, rightTrack = -1 at turnWeight = 1.
             var rightTrack = MathF.Min(1f, -2f * turnWeight + 1f);
 

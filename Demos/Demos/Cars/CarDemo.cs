@@ -1,16 +1,17 @@
-﻿using System;
-using System.Diagnostics;
-using System.Numerics;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using OpenTK.Input;
+using System;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.Demos.Cars
 {
@@ -21,7 +22,7 @@ namespace Demos.Demos.Cars
         struct AIController
         {
             public SimpleCarController Controller;
-            public float LaneOffset;
+            public Number LaneOffset;
         }
 
         Buffer<AIController> aiControllers;
@@ -47,44 +48,44 @@ namespace Demos.Demos.Cars
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 2);
             builder.Add(new Box(1.85f, 0.7f, 4.73f), RigidPose.Identity, 10);
-            builder.Add(new Box(1.85f, 0.6f, 2.5f), new Vector3(0, 0.65f, -0.35f), 0.5f);
+            builder.Add(new Box(1.85f, 0.6f, 2.5f), new Vector3(0, 0.65f, -0.35f), Constants.C0p5);
             builder.BuildDynamicCompound(out var children, out var bodyInertia, out _);
             builder.Dispose();
             var bodyShape = new Compound(children);
             var bodyShapeIndex = Simulation.Shapes.Add(bodyShape);
             var wheelShape = new Cylinder(0.4f, .18f);
-            var wheelInertia = wheelShape.ComputeInertia(0.25f);
+            var wheelInertia = wheelShape.ComputeInertia(Constants.C0p25);
             var wheelShapeIndex = Simulation.Shapes.Add(wheelShape);
 
-            const float x = 0.9f;
-            const float y = -0.1f;
-            const float frontZ = 1.7f;
-            const float backZ = -1.7f;
-            const float wheelBaseWidth = x * 2;
-            const float wheelBaseLength = frontZ - backZ;
+            Number x = 0.9f;
+            Number y = -0.1f;
+            Number frontZ = 1.7f;
+            Number backZ = -1.7f;
+            Number wheelBaseWidth = x * 2;
+            Number wheelBaseLength = frontZ - backZ;
 
-            playerController = new SimpleCarController(SimpleCar.Create(Simulation, properties, new Vector3(0, 10, 0), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2f,
-                new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
-                new SpringSettings(5f, 0.7f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
-                forwardSpeed: 75, forwardForce: 6, zoomMultiplier: 2, backwardSpeed: 30, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f,
+            playerController = new SimpleCarController(SimpleCar.Create(Simulation, properties, new Vector3(0, 10, 0), bodyShapeIndex, bodyInertia, Constants.C0p5, wheelShapeIndex, wheelInertia, Constants.C0p3,
+                new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), Constants.C0p25,
+                new SpringSettings(5f, 0.7f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * Constants.C0p5)),
+                forwardSpeed: 75, forwardForce: 6, zoomMultiplier: 2, backwardSpeed: 30, backwardForce: 4, idleForce: Constants.C0p25, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f,
                 wheelBaseLength: wheelBaseLength, wheelBaseWidth: wheelBaseWidth, ackermanSteering: 1);
 
             //Create a bunch of AI cars to race against.
-            const int aiCount = 384;
+            const int aiCount = 100;
             BufferPool.Take(aiCount, out aiControllers);
 
 
             const int planeWidth = 257;
-            const float scale = 3;
-            Vector2 terrainPosition = new Vector2(1 - planeWidth, 1 - planeWidth) * scale * 0.5f;
-            raceTrack = new RaceTrack { QuadrantRadius = (planeWidth - 32) * scale * 0.25f, Center = default };
+            Number scale = 3;
+            Vector2 terrainPosition = new Vector2(1 - planeWidth, 1 - planeWidth) * scale * Constants.C0p5;
+            raceTrack = new RaceTrack { QuadrantRadius = (planeWidth - 32) * scale * Constants.C0p25, Center = default };
             var random = new Random(5);
 
             //Add some building-ish landmarks in the middle of each of the four racetrack quadrants.
             for (int i = 0; i < 4; ++i)
             {
                 var landmarkCenter = new Vector3((i & 1) * raceTrack.QuadrantRadius * 2 - raceTrack.QuadrantRadius, -20, (i & 2) * raceTrack.QuadrantRadius - raceTrack.QuadrantRadius);
-                var landmarkMin = landmarkCenter - new Vector3(raceTrack.QuadrantRadius * 0.5f, 0, raceTrack.QuadrantRadius * 0.5f);
+                var landmarkMin = landmarkCenter - new Vector3(raceTrack.QuadrantRadius * Constants.C0p5, 0, raceTrack.QuadrantRadius * Constants.C0p5);
                 var landmarkSpan = new Vector3(raceTrack.QuadrantRadius, 0, raceTrack.QuadrantRadius);
                 for (int j = 0; j < 25; ++j)
                 {
@@ -104,10 +105,10 @@ namespace Demos.Demos.Cars
                 //The AI cars are very similar, except... we handicap them a little to make the player feel good about themselves.
                 var position = min + span * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
                 var orientation = QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), random.NextSingle() * MathF.PI * 2);
-                aiControllers[i].Controller = new SimpleCarController(SimpleCar.Create(Simulation, properties, (position, orientation), bodyShapeIndex, bodyInertia, 0.5f, wheelShapeIndex, wheelInertia, 2f,
-                    new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), 0.25f,
-                    new SpringSettings(5, 0.7f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * 0.5f)),
-                    forwardSpeed: 50, forwardForce: 5, zoomMultiplier: 2, backwardSpeed: 10, backwardForce: 4, idleForce: 0.25f, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f,
+                aiControllers[i].Controller = new SimpleCarController(SimpleCar.Create(Simulation, properties, (position, orientation), bodyShapeIndex, bodyInertia, Constants.C0p5, wheelShapeIndex, wheelInertia, Constants.C0p3,
+                    new Vector3(-x, y, frontZ), new Vector3(x, y, frontZ), new Vector3(-x, y, backZ), new Vector3(x, y, backZ), new Vector3(0, -1, 0), Constants.C0p25,
+                    new SpringSettings(5, 0.7f), QuaternionEx.CreateFromAxisAngle(Vector3.UnitZ, MathF.PI * Constants.C0p5)),
+                    forwardSpeed: 50, forwardForce: 5, zoomMultiplier: 2, backwardSpeed: 10, backwardForce: 4, idleForce: Constants.C0p25, brakeForce: 7, steeringSpeed: 1.5f, maximumSteeringAngle: MathF.PI * 0.23f,
                     wheelBaseLength: wheelBaseLength, wheelBaseWidth: wheelBaseWidth, ackermanSteering: 1);
 
                 aiControllers[i].LaneOffset = random.NextSingle() * 20 - 10;
@@ -126,7 +127,7 @@ namespace Demos.Demos.Cars
                     var terrainHeight = octave0 + octave1 + octave2 + octave3 + octave4;
                     var vertexPosition = new Vector2(vX * scale, vY * scale) + terrainPosition;
                     var distanceToTrack = raceTrack.GetDistance(vertexPosition);
-                    var trackWeight = MathF.Min(1f, 3f / (distanceToTrack * 0.1f + 1f));
+                    var trackWeight = MathF.Min(1f, Constants.C3 / (distanceToTrack * 0.1f + 1f));
                     var height = trackWeight * -10f + terrainHeight * (1 - trackWeight);
                     return new Vector3(vertexPosition.X, height + edgeRamp, vertexPosition.Y);
 
@@ -135,7 +136,7 @@ namespace Demos.Demos.Cars
         }
 
         bool playerControlActive = true;
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             if (input != null)
             {
@@ -143,7 +144,7 @@ namespace Demos.Demos.Cars
                     playerControlActive = !playerControlActive;
                 if (playerControlActive)
                 {
-                    float steeringSum = 0;
+                    Number steeringSum = 0;
                     if (input.IsDown(Left))
                     {
                         steeringSum += 1;
@@ -169,7 +170,7 @@ namespace Demos.Demos.Cars
                 var forwardVelocity = Vector3.Dot(orientation.Z, body.Velocity.Linear);
                 var predictedLocation = new Vector2(pose.Position.X, pose.Position.Z) + new Vector2(orientation.Z.X, orientation.Z.Z) * (5 + forwardVelocity * 2);
                 raceTrack.GetClosestPoint(predictedLocation, ai.LaneOffset, out var closestPoint, out var flowDirection);
-                float steeringAngle;
+                Number steeringAngle;
                 if (flowDirection.X * orientation.Z.X + flowDirection.Y * orientation.Z.Z < 0)
                 {
                     //Don't drive against traffic!
@@ -182,7 +183,7 @@ namespace Demos.Demos.Cars
                     var forwardOffset = orientation.Z.X * toClosestPoint.X + orientation.Z.Z * toClosestPoint.Y;
                     steeringAngle = MathF.Atan2(horizontalOffset, forwardOffset);
                 }
-                var speedFraction = 0.25f + MathF.Min(0.75f, MathF.Max(0, 0.75f * (MathF.Abs(steeringAngle) - 0.2f) / -0.4f));
+                var speedFraction = Constants.C0p25 + MathF.Min(0.75f, MathF.Max(0, 0.75f * (MathF.Abs(steeringAngle) - 0.2f) / -0.4f));
                 if (orientation.Y.Y < 0.4f)
                     speedFraction = 0;
                 ai.Controller.Update(Simulation, TimestepDuration, steeringAngle, speedFraction, steeringAngle < 0.05f, steeringAngle > MathF.PI * 0.2f && forwardVelocity > ai.Controller.ForwardSpeed * 0.6f);
@@ -191,7 +192,7 @@ namespace Demos.Demos.Cars
             base.Update(window, camera, input, dt);
         }
 
-        void RenderControl(ref Vector2 position, float textHeight, string controlName, string controlValue, TextBuilder text, TextBatcher textBatcher, Font font)
+        void RenderControl(ref Vector2 position, Number textHeight, string controlName, string controlValue, TextBuilder text, TextBatcher textBatcher, Font font)
         {
             text.Clear().Append(controlName).Append(": ").Append(controlValue);
             textBatcher.Write(text, position, textHeight, new Vector3(1), font);

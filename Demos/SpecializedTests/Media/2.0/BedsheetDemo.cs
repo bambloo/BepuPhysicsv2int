@@ -2,12 +2,14 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Numerics;
+
+
 
 namespace Demos.Demos.Media
 {
@@ -19,10 +21,10 @@ namespace Demos.Demos.Media
     {
         delegate bool KinematicDecider(int rowIndex, int columnIndex, int width, int height);
 
-        BodyHandle[,] CreateBodyGrid(Vector3 position, Quaternion orientation, int width, int height, float spacing, float bodyRadius, float massPerBody,
+        BodyHandle[,] CreateBodyGrid(Vector3 position, Quaternion orientation, int width, int height, Number spacing, Number bodyRadius, Number massPerBody,
             int instanceId, CollidableProperty<ClothCollisionFilter> filters, KinematicDecider isKinematic)
         {
-            var description = BodyDescription.CreateKinematic(orientation, Simulation.Shapes.Add(new Sphere(bodyRadius)), 0.01f);
+            var description = BodyDescription.CreateKinematic(orientation, Simulation.Shapes.Add(new Sphere(bodyRadius)), Constants.C0p01);
             var inverseMass = 1f / massPerBody;
             BodyHandle[,] handles = new BodyHandle[height, width];
             for (int rowIndex = 0; rowIndex < height; ++rowIndex)

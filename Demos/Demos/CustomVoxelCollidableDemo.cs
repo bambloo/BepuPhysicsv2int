@@ -1,20 +1,20 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System.Numerics;
-using DemoContentLoader;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.CollisionDetection.CollisionTasks;
-using BepuPhysics.Trees;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
-using System.Runtime.CompilerServices;
-using DemoRenderer.UI;
-using DemoUtilities;
-using System;
 using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuPhysics.Constraints;
+using BepuPhysics.Trees;
+using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
+using DemoContentLoader;
+using DemoRenderer;
+using DemoRenderer.UI;
+using DemoUtilities;
+using System.Runtime.CompilerServices;
 
 namespace Demos.Demos
 {
@@ -83,8 +83,8 @@ namespace Demos.Demos
         public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var basis);
-            min = new Vector3(float.MaxValue);
-            max = new Vector3(float.MinValue);
+            min = new Vector3(Number.MaxValue);
+            max = new Vector3(Number.MinValue);
             for (int i = 0; i < VoxelIndices.Count; ++i)
             {
                 var localVoxelPosition = (VoxelIndices[i] + new Vector3(0.5f)) * VoxelSize;
@@ -109,7 +109,7 @@ namespace Demos.Demos
             public RayData OriginalRay;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, RayData* ray, float* maximumT)
+            public unsafe void TestLeaf(int leafIndex, RayData* ray, Number* maximumT)
             {
                 ref var voxelIndex = ref VoxelIndices[leafIndex];
                 //Note that you could make use of the voxel grid's regular structure to save some work dealing with orientations.
@@ -131,7 +131,7 @@ namespace Demos.Demos
         /// <param name="ray">Ray to test against the voxels.</param>
         /// <param name="maximumT">Maximum length of the ray in units of the ray direction length.</param>
         /// <param name="hitHandler">Callback to execute for every hit.</param>
-        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref Number maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             HitLeafTester<TRayHitHandler> leafTester;
             leafTester.VoxelIndices = VoxelIndices;
@@ -226,7 +226,7 @@ namespace Demos.Demos
             }
         }
 
-        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps
+        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, Number maximumT, BufferPool pool, Shapes shapes, void* overlaps) where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             //Similar to the non-swept FindLocalOverlaps function above, this just adds the overlaps to the provided collection.
             //Some unfortunate loss of type information due to some language limitations around generic pointers- pretend the overlaps pointer has type TOverlaps*.
@@ -372,7 +372,7 @@ namespace Demos.Demos
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-40, 40, -40);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
@@ -429,9 +429,9 @@ namespace Demos.Demos
             voxels = new Voxels(voxelIndices, new Vector3(1, 1, 1), BufferPool);
             handle = Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0, 0), Simulation.Shapes.Add(voxels)));
 
-            var random = new Random(5);
+            var random = new System.Random(5);
             var shapeToDrop = new Box(1, 1, 1);
-            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDrop.ComputeInertia(1), Simulation.Shapes.Add(shapeToDrop), 0.01f);
+            var descriptionToDrop = BodyDescription.CreateDynamic(new Vector3(), shapeToDrop.ComputeInertia(1), Simulation.Shapes.Add(shapeToDrop), Constants.C0p01);
             for (int i = 0; i < 4096; ++i)
             {
                 descriptionToDrop.Pose.Position = new Vector3(15 + 10 * random.NextSingle(), 45 + 150 * random.NextSingle(), 15 + 10 * random.NextSingle());

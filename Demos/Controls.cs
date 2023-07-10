@@ -1,10 +1,9 @@
-﻿using DemoUtilities;
-using OpenTK.Audio.OpenAL;
+﻿using BepuUtilities.Numerics;
+using DemoUtilities;
 using OpenTK.Input;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Demos
 {
@@ -455,10 +454,10 @@ namespace Demos
         public InstantBind MoveFaster;
         public HoldableBind Grab;
         public HoldableBind GrabRotate;
-        public float MouseSensitivity;
-        public float CameraSlowMoveSpeed;
-        public float CameraMoveSpeed;
-        public float CameraFastMoveSpeed;
+        public Number MouseSensitivity;
+        public Number CameraSlowMoveSpeed;
+        public Number CameraMoveSpeed;
+        public Number CameraFastMoveSpeed;
 
         public HoldableBind SlowTimesteps;
         public InstantBind LockMouse;
@@ -486,8 +485,8 @@ namespace Demos
                     MoveFaster = (MouseWheelAction.ScrollUp, Key.U),
                     Grab = MouseButton.Right,
                     GrabRotate = Key.Q,
-                    MouseSensitivity = 1.5e-3f,
-                    CameraSlowMoveSpeed = 0.5f,
+                    MouseSensitivity = (Number)1.5e-3f,
+                    CameraSlowMoveSpeed = (Number)0.5f,
                     CameraMoveSpeed = 5,
                     CameraFastMoveSpeed = 50,
                     SlowTimesteps = (MouseButton.Middle, Key.O),

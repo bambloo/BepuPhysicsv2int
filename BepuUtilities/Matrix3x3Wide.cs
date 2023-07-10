@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
@@ -22,29 +22,29 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Broadcast(in Matrix3x3 source, out Matrix3x3Wide broadcasted)
         {
-            broadcasted.X.X = new Vector<float>(source.X.X);
-            broadcasted.X.Y = new Vector<float>(source.X.Y);
-            broadcasted.X.Z = new Vector<float>(source.X.Z);
-            broadcasted.Y.X = new Vector<float>(source.Y.X);
-            broadcasted.Y.Y = new Vector<float>(source.Y.Y);
-            broadcasted.Y.Z = new Vector<float>(source.Y.Z);
-            broadcasted.Z.X = new Vector<float>(source.Z.X);
-            broadcasted.Z.Y = new Vector<float>(source.Z.Y);
-            broadcasted.Z.Z = new Vector<float>(source.Z.Z);
+            broadcasted.X.X = new Vector<Number>(source.X.X);
+            broadcasted.X.Y = new Vector<Number>(source.X.Y);
+            broadcasted.X.Z = new Vector<Number>(source.X.Z);
+            broadcasted.Y.X = new Vector<Number>(source.Y.X);
+            broadcasted.Y.Y = new Vector<Number>(source.Y.Y);
+            broadcasted.Y.Z = new Vector<Number>(source.Y.Z);
+            broadcasted.Z.X = new Vector<Number>(source.Z.X);
+            broadcasted.Z.Y = new Vector<Number>(source.Z.Y);
+            broadcasted.Z.Z = new Vector<Number>(source.Z.Z);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CreateIdentity(out Matrix3x3Wide identity)
         {
-            identity.X.X = Vector<float>.One;
-            identity.X.Y = Vector<float>.Zero;
-            identity.X.Z = Vector<float>.Zero;
-            identity.Y.X = Vector<float>.Zero;
-            identity.Y.Y = Vector<float>.One;
-            identity.Y.Z = Vector<float>.Zero;
-            identity.Z.X = Vector<float>.Zero;
-            identity.Z.Y = Vector<float>.Zero;
-            identity.Z.Z = Vector<float>.One;
+            identity.X.X = Vector<Number>.One;
+            identity.X.Y = Vector<Number>.Zero;
+            identity.X.Z = Vector<Number>.Zero;
+            identity.Y.X = Vector<Number>.Zero;
+            identity.Y.Y = Vector<Number>.One;
+            identity.Y.Z = Vector<Number>.Zero;
+            identity.Z.X = Vector<Number>.Zero;
+            identity.Z.Y = Vector<Number>.Zero;
+            identity.Z.Z = Vector<Number>.One;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -145,7 +145,7 @@ namespace BepuUtilities
             var m11 = m.Y.Y * m.Z.Z - m.Z.Y * m.Y.Z;
             var m21 = m.Y.Z * m.Z.X - m.Z.Z * m.Y.X;
             var m31 = m.Y.X * m.Z.Y - m.Z.X * m.Y.Y;
-            var determinantInverse = Vector<float>.One / (m11 * m.X.X + m21 * m.X.Y + m31 * m.X.Z);
+            var determinantInverse = Vector<Number>.One / (m11 * m.X.X + m21 * m.X.Y + m31 * m.X.Z);
 
             var m12 = m.Z.Y * m.X.Z - m.X.Y * m.Z.Z;
             var m22 = m.Z.Z * m.X.X - m.X.Z * m.Z.X;
@@ -169,30 +169,30 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CreateCrossProduct(in Vector3Wide v, out Matrix3x3Wide skew)
         {
-            skew.X.X = Vector<float>.Zero;
+            skew.X.X = Vector<Number>.Zero;
             skew.X.Y = -v.Z;
             skew.X.Z = v.Y;
             skew.Y.X = v.Z;
-            skew.Y.Y = Vector<float>.Zero;
+            skew.Y.Y = Vector<Number>.Zero;
             skew.Y.Z = -v.X;
             skew.Z.X = -v.Y;
             skew.Z.Y = v.X;
-            skew.Z.Z = Vector<float>.Zero;
+            skew.Z.Z = Vector<Number>.Zero;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Matrix3x3Wide CreateCrossProduct(in Vector3Wide v) //TODO: this has some weird codegen on .NET 6 preview 5.
         {
             Matrix3x3Wide skew;
-            skew.X.X = Vector<float>.Zero;
+            skew.X.X = Vector<Number>.Zero;
             skew.X.Y = -v.Z;
             skew.X.Z = v.Y;
             skew.Y.X = v.Z;
-            skew.Y.Y = Vector<float>.Zero;
+            skew.Y.Y = Vector<Number>.Zero;
             skew.Y.Z = -v.X;
             skew.Z.X = -v.Y;
             skew.Z.Y = v.X;
-            skew.Z.Z = Vector<float>.Zero;
+            skew.Z.Z = Vector<Number>.Zero;
             return skew;
         }
 
@@ -222,7 +222,7 @@ namespace BepuUtilities
         /// <param name="scale">Scaling value to apply to the matrix's components.</param>
         /// <param name="result">Resulting matrix with scaled components.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Matrix3x3Wide m, in Vector<float> scale, out Matrix3x3Wide result)
+        public static void Scale(in Matrix3x3Wide m, in Vector<Number> scale, out Matrix3x3Wide result)
         {
             result.X.X = m.X.X * scale;
             result.X.Y = m.X.Y * scale;
@@ -244,7 +244,7 @@ namespace BepuUtilities
 
             var YY = qY2 * quaternion.Y;
             var ZZ = qZ2 * quaternion.Z;
-            result.X.X = Vector<float>.One - YY - ZZ;
+            result.X.X = Vector<Number>.One - YY - ZZ;
             var XY = qX2 * quaternion.Y;
             var ZW = qZ2 * quaternion.W;
             result.X.Y = XY + ZW;
@@ -254,14 +254,14 @@ namespace BepuUtilities
 
             var XX = qX2 * quaternion.X;
             result.Y.X = XY - ZW;
-            result.Y.Y = Vector<float>.One - XX - ZZ;
+            result.Y.Y = Vector<Number>.One - XX - ZZ;
             var XW = qX2 * quaternion.W;
             var YZ = qY2 * quaternion.Z;
             result.Y.Z = YZ + XW;
 
             result.Z.X = XZ + YW;
             result.Z.Y = YZ - XW;
-            result.Z.Z = Vector<float>.One - XX - YY;
+            result.Z.Z = Vector<Number>.One - XX - YY;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

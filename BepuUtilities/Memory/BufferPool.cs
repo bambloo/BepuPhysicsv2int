@@ -1,10 +1,11 @@
-﻿using BepuUtilities.Collections;
+﻿using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuUtilities.Memory
 {
@@ -87,7 +88,7 @@ namespace BepuUtilities.Memory
 
             public void EnsureCapacity(int capacity)
             {
-                var neededBlockCount = (int)Math.Ceiling((double)capacity / BlockSize);
+                var neededBlockCount = (int)Math.Ceiling((Number)capacity / BlockSize);
                 if (BlockCount < neededBlockCount)
                 {
                     if (neededBlockCount > Blocks.Length)

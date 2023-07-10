@@ -1,15 +1,14 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System.Numerics;
-using System;
-using DemoContentLoader;
-using Demos.Demos;
-using DemoUtilities;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
+using DemoContentLoader;
+using DemoRenderer;
 using DemoRenderer.UI;
+using DemoUtilities;
 
 namespace Demos.Demos
 {
@@ -27,7 +26,7 @@ namespace Demos.Demos
             //Note the lowered material stiffness compared to many of the other demos. Ragdolls aren't made of concrete.
             //Increasing the maximum recovery velocity helps keep deeper contacts strong, stopping objects from interpenetrating.
             //Higher friction helps the bodies clump and flop, rather than just sliding down the slope in the tube.
-            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks(filters, new PairMaterialProperties(2, float.MaxValue, new SpringSettings(10, 1))), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
+            Simulation = Simulation.Create(BufferPool, new SubgroupFilteredCallbacks(filters, new PairMaterialProperties(2, Number.MaxValue, new SpringSettings(10, 1))), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
 
             int ragdollIndex = 0;
             var spacing = new Vector3(1.7f, 1.8f, 0.5f);
@@ -52,7 +51,7 @@ namespace Demos.Demos
 
             var tubeCenter = new Vector3(0, 8, 0);
             const int panelCount = 20;
-            const float tubeRadius = 6;
+            Number tubeRadius = 6;
             var panelShape = new Box(MathF.PI * 2 * tubeRadius / panelCount, 1, 80);
             var panelShapeIndex = Simulation.Shapes.Add(panelShape);
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, panelCount + 1);
@@ -66,7 +65,7 @@ namespace Demos.Demos
             builder.AddForKinematic(Simulation.Shapes.Add(new Box(1, 2, panelShape.Length)), new Vector3(0, tubeRadius - 1, 0), 0);
             builder.BuildKinematicCompound(out var children);
             var compound = new BigCompound(children, Simulation.Shapes, BufferPool);
-            var tubeHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(tubeCenter, (default, new Vector3(0, 0, .25f)), Simulation.Shapes.Add(compound), 0f));
+            var tubeHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(tubeCenter, (default, new Vector3(0, 0, .25f)), Simulation.Shapes.Add(compound), Constants.C0));
             filters[tubeHandle] = new SubgroupCollisionFilter(int.MaxValue);
             builder.Dispose();
 
@@ -88,7 +87,7 @@ namespace Demos.Demos
             renderer.TextBatcher.Write(text.Clear().Append("Ragdoll body count:"), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Ragdoll constraint count:"), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Collision constraint count:"), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
-            const float xOffset = 192;
+            Number xOffset = 192;
             renderer.TextBatcher.Write(text.Clear().Append(ragdollCount), new Vector2(xOffset, resolution.Y - 64), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append(ragdollBodyCount), new Vector2(xOffset, resolution.Y - 48), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append(ragdollConstraintCount), new Vector2(xOffset, resolution.Y - 32), 16, Vector3.One, font);

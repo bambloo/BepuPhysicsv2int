@@ -1,17 +1,14 @@
 ﻿using BepuPhysics.Collidables;
-using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public interface ICompoundPairOverlapFinder
     {
-        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps);
+        void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, Number dt, out CompoundPairOverlaps overlaps);
     }
 
     public unsafe interface ICompoundPairContinuationHandler<TContinuation> where TContinuation : struct, ICollisionTestContinuation

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BepuUtilities.Numerics;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -93,10 +94,10 @@ namespace BepuUtilities.Collections
                 var bTemp = Unsafe.As<T, double>(ref b);
                 return aTemp > bTemp ? 1 : aTemp < bTemp ? -1 : 0;
             }
-            if (typeof(T) == typeof(float))
+            if (typeof(T) == typeof(Number))
             {
-                var aTemp = Unsafe.As<T, float>(ref a);
-                var bTemp = Unsafe.As<T, float>(ref b);
+                var aTemp = Unsafe.As<T, Number>(ref a);
+                var bTemp = Unsafe.As<T, Number>(ref b);
                 return aTemp > bTemp ? 1 : aTemp < bTemp ? -1 : 0;
             }
             Debug.Assert(false, "Should only use the supported primitive types with the primitive comparer.");
@@ -158,9 +159,9 @@ namespace BepuUtilities.Collections
             {
                 return Unsafe.As<T, double>(ref a) == Unsafe.As<T, double>(ref b);
             }
-            if (typeof(T) == typeof(float))
+            if (typeof(T) == typeof(Number))
             {
-                return Unsafe.As<T, float>(ref a) == Unsafe.As<T, float>(ref b);
+                return Unsafe.As<T, Number>(ref a) == Unsafe.As<T, Number>(ref b);
             }
             Debug.Assert(false, "Should only use the supported primitive types with the primitive comparer.");
             return false;
@@ -222,9 +223,9 @@ namespace BepuUtilities.Collections
             {
                 return Unsafe.As<T, double>(ref item).GetHashCode();
             }
-            if (typeof(T) == typeof(float))
+            if (typeof(T) == typeof(Number))
             {
-                return Unsafe.As<T, float>(ref item).GetHashCode();
+                return Unsafe.As<T, Number>(ref item).GetHashCode();
             }
             Debug.Assert(false, "Should only use the supported primitive types with the primitive comparer.");
             return 0;

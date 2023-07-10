@@ -1,7 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
@@ -11,13 +11,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         public int BatchSize => 32;
 
-        public void Test(ref SphereWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public void Test(ref SphereWide a, ref BoxWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Test(ref SphereWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public void Test(ref SphereWide a, ref BoxWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             //Clamp the position of the sphere to the box.
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var orientationMatrixB);
@@ -31,7 +31,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Implicit negation to make the normal point from B to A, following convention.
             Vector3Wide.Subtract(clampedLocalOffsetB, localOffsetB, out var outsideNormal);
             Vector3Wide.Length(outsideNormal, out var distance);
-            var inverseDistance = Vector<float>.One / distance;
+            var inverseDistance = Vector<Number>.One / distance;
             Vector3Wide.Scale(outsideNormal, inverseDistance, out outsideNormal);
             var outsideDepth = a.Radius - distance;
 
@@ -46,12 +46,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useZ = Vector.OnesComplement(Vector.BitwiseOr(useX, useY));
             Vector3Wide insideNormal;
             //A faster sign test would be nice.
-            insideNormal.X = Vector.ConditionalSelect(useX, Vector.ConditionalSelect(Vector.LessThan(localOffsetB.X, Vector<float>.Zero), new Vector<float>(1f), new Vector<float>(-1f)), Vector<float>.Zero);
-            insideNormal.Y = Vector.ConditionalSelect(useY, Vector.ConditionalSelect(Vector.LessThan(localOffsetB.Y, Vector<float>.Zero), new Vector<float>(1f), new Vector<float>(-1f)), Vector<float>.Zero);
-            insideNormal.Z = Vector.ConditionalSelect(useZ, Vector.ConditionalSelect(Vector.LessThan(localOffsetB.Z, Vector<float>.Zero), new Vector<float>(1f), new Vector<float>(-1f)), Vector<float>.Zero);
+            insideNormal.X = Vector.ConditionalSelect(useX, Vector.ConditionalSelect(Vector.LessThan(localOffsetB.X, Vector<Number>.Zero), new Vector<Number>(Constants.C1), new Vector<Number>(Constants.Cm1)), Vector<Number>.Zero);
+            insideNormal.Y = Vector.ConditionalSelect(useY, Vector.ConditionalSelect(Vector.LessThan(localOffsetB.Y, Vector<Number>.Zero), new Vector<Number>(Constants.C1), new Vector<Number>(Constants.Cm1)), Vector<Number>.Zero);
+            insideNormal.Z = Vector.ConditionalSelect(useZ, Vector.ConditionalSelect(Vector.LessThan(localOffsetB.Z, Vector<Number>.Zero), new Vector<Number>(Constants.C1), new Vector<Number>(Constants.Cm1)), Vector<Number>.Zero);
 
             insideDepth += a.Radius;
-            var useInside = Vector.Equals(distance, Vector<float>.Zero);
+            var useInside = Vector.Equals(distance, Vector<Number>.Zero);
             Vector3Wide.ConditionalSelect(useInside, insideNormal, outsideNormal, out var localNormal);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientationMatrixB, out manifold.Normal);
             manifold.Depth = Vector.ConditionalSelect(useInside, insideDepth, outsideDepth);
@@ -59,12 +59,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //The contact position relative to object A (the sphere) is computed as the average of the extreme point along the normal toward the opposing shape on each shape, averaged.
             //For capsule-sphere, this can be computed from the normal and depth.
-            var negativeOffsetFromSphere = manifold.Depth * 0.5f - a.Radius;
+            var negativeOffsetFromSphere = manifold.Depth * Constants.C0p5 - a.Radius;
             Vector3Wide.Scale(manifold.Normal, negativeOffsetFromSphere, out manifold.OffsetA);
             manifold.ContactExists = Vector.GreaterThan(manifold.Depth, -speculativeMargin);
         }
 
-        public void Test(ref SphereWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
+        public void Test(ref SphereWide a, ref BoxWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex1ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

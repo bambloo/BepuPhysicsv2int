@@ -1,11 +1,10 @@
-﻿using BepuUtilities;
+﻿using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
+
 using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
 
 namespace Demos
 {
@@ -15,7 +14,7 @@ namespace Demos
         {
             public Vector3 Position;
             public string Description;
-            public float PreviewOffset;
+            public Number PreviewOffset;
             public string Preview;
         }
 
@@ -26,7 +25,12 @@ namespace Demos
             descriptions = new List<RolloverDescription>();
         }
 
-        public void Add(Vector3 position, string description, float previewOffset = -1.2f, string previewText = "Info...")
+        public void Add(Vector3 position, string description)
+        {
+            Add(position, description, -1.2f, "Info...");
+        }
+
+        public void Add(Vector3 position, string description, Number previewOffset, string previewText)
         {
             this.descriptions.Add(new RolloverDescription { Position = position, Description = description, PreviewOffset = previewOffset, Preview = previewText });
         }
@@ -36,7 +40,7 @@ namespace Demos
             var resolution = new Vector2(renderer.Surface.Resolution.X, renderer.Surface.Resolution.Y);
             var screenLocations = stackalloc Vector2[descriptions.Count];
             int closestIndex = -1;
-            float closestDistance = MathF.Max(resolution.X, resolution.Y) * 0.1f;
+            Number closestDistance = MathF.Max(resolution.X, resolution.Y) * 0.1f;
             for (int i = 0; i < descriptions.Count; ++i)
             {
                 var textPosition = descriptions[i].Position;
@@ -50,8 +54,8 @@ namespace Demos
                 }
             }
 
-            const float infoHeight = 8;
-            const float descriptionHeight = 16;
+            Number infoHeight = 8;
+            Number descriptionHeight = 16;
             for (int i = 0; i < descriptions.Count; ++i)
             {
                 if (i != closestIndex)

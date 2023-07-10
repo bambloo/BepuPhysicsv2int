@@ -2,7 +2,6 @@
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
-using System.Numerics;
 
 namespace DemoRenderer.Background
 {
@@ -10,14 +9,14 @@ namespace DemoRenderer.Background
     {
         VertexShader vertexShader;
         PixelShader pixelShader;
-        ConstantsBuffer<Matrix> constants;
+        ConstantsBuffer<MatrixFloat> constants;
         public BackgroundRenderer(Device device, ShaderCache cache)
         {
             vertexShader = new VertexShader(device, cache.GetShader(@"Background\RenderBackground.hlsl.vshader"));
             vertexShader.DebugName = "BackgroundVS";
             pixelShader = new PixelShader(device, cache.GetShader(@"Background\RenderBackground.hlsl.pshader"));
             pixelShader.DebugName = "BackgroundPS";
-            constants = new ConstantsBuffer<Matrix>(device, debugName: "BackgroundRenderer Constants");
+            constants = new ConstantsBuffer<MatrixFloat>(device, debugName: "BackgroundRenderer Constants");
         }
 
 

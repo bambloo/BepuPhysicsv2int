@@ -2,7 +2,7 @@
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 
@@ -26,11 +26,11 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// Minimum angle between B's axis to measure and A's measurement axis. 
         /// </summary>
-        public float MinimumAngle;
+        public Number MinimumAngle;
         /// <summary>
         /// Maximum angle between B's axis to measure and A's measurement axis. 
         /// </summary>
-        public float MaximumAngle;
+        public Number MaximumAngle;
         /// <summary>
         /// Spring frequency and damping parameters.
         /// </summary>
@@ -78,16 +78,16 @@ namespace BepuPhysics.Constraints
     {
         public QuaternionWide LocalBasisA;
         public QuaternionWide LocalBasisB;
-        public Vector<float> MinimumAngle;
-        public Vector<float> MaximumAngle;
+        public Vector<Number> MinimumAngle;
+        public Vector<Number> MaximumAngle;
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct TwistLimitFunctions : ITwoBodyConstraintFunctions<TwistLimitPrestepData, Vector<float>>
+    public struct TwistLimitFunctions : ITwoBodyConstraintFunctions<TwistLimitPrestepData, Vector<Number>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void ComputeJacobian(in QuaternionWide orientationA, in QuaternionWide orientationB,
-            in QuaternionWide localBasisA, in QuaternionWide localBasisB, in Vector<float> minimumAngle, in Vector<float> maximumAngle, out Vector<float> error, out Vector3Wide jacobianA)
+            in QuaternionWide localBasisA, in QuaternionWide localBasisB, in Vector<Number> minimumAngle, in Vector<Number> maximumAngle, out Vector<Number> error, out Vector3Wide jacobianA)
         {
             TwistServoFunctions.ComputeJacobian(orientationA, orientationB, localBasisA, localBasisB, out var basisBX, out var basisBZ, out var basisA, out jacobianA);
             TwistServoFunctions.ComputeCurrentAngle(basisBX, basisBZ, basisA, out var angle);
@@ -102,7 +102,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Negate(jacobianA, out var negatedJacobianA);
             Vector3Wide.ConditionalSelect(useMin, negatedJacobianA, jacobianA, out jacobianA);
         }
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TwistLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TwistLimitPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(orientationA, orientationB, prestep.LocalBasisA, prestep.LocalBasisB, prestep.MinimumAngle, prestep.MaximumAngle, out _, out var jacobianA);
             Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out var impulseToVelocityA);
@@ -110,7 +110,7 @@ namespace BepuPhysics.Constraints
             TwistServoFunctions.ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, impulseToVelocityA, negatedImpulseToVelocityB, accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TwistLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, Number dt, Number inverseDt, ref TwistLimitPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(orientationA, orientationB, prestep.LocalBasisA, prestep.LocalBasisB, prestep.MinimumAngle, prestep.MaximumAngle, out var error, out var jacobianA);
 
@@ -119,7 +119,7 @@ namespace BepuPhysics.Constraints
                 out var positionErrorToVelocity, out var softnessImpulseScale, out var effectiveMass, out var velocityToImpulseA);
 
             //In the speculative case, allow the limit to be approached.
-            var biasVelocity = Vector.ConditionalSelect(Vector.LessThan(error, Vector<float>.Zero), error * inverseDt, error * positionErrorToVelocity);
+            var biasVelocity = Vector.ConditionalSelect(Vector.LessThan(error, Vector<Number>.Zero), error * inverseDt, error * positionErrorToVelocity);
             var biasImpulse = biasVelocity * effectiveMass;
 
             Vector3Wide.Subtract(wsvA.Angular, wsvB.Angular, out var netVelocity);
@@ -133,10 +133,10 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TwistLimitPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TwistLimitPrestepData prestepData) { }
     }
 
-    public class TwistLimitTypeProcessor : TwoBodyTypeProcessor<TwistLimitPrestepData, Vector<float>, TwistLimitFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
+    public class TwistLimitTypeProcessor : TwoBodyTypeProcessor<TwistLimitPrestepData, Vector<Number>, TwistLimitFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 27;
     }

@@ -2,12 +2,14 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Numerics;
+
+
 using System.Runtime.CompilerServices;
 
 namespace Demos.Demos
@@ -46,7 +48,7 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
         {
             var aFilter = Filters[a];
             var bFilter = Filters[b];
@@ -90,7 +92,7 @@ namespace Demos.Demos
 
             var filters = new CollidableProperty<RopeFilter>();
             Simulation = Simulation.Create(BufferPool,
-                new RopeNarrowPhaseCallbacks(filters, new PairMaterialProperties(0.0f, float.MaxValue, new SpringSettings(1200, 1))),
+                new RopeNarrowPhaseCallbacks(filters, new PairMaterialProperties(0.0f, Number.MaxValue, new SpringSettings(1200, 1))),
                 new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 60));
 
             for (int twistIndex = 0; twistIndex < 1; ++twistIndex)
@@ -102,11 +104,11 @@ namespace Demos.Demos
                 //This wrecking ball is much, much heavier.
                 var bigWreckingBallInertia = bigWreckingBall.ComputeInertia(10000);
                 var bigWreckingBallIndex = Simulation.Shapes.Add(bigWreckingBall);
-                const float ropeBodySpacing = -0.1f;
-                const float ropeBodyRadius = 0.1f;
+                Number ropeBodySpacing = -0.1f;
+                Number ropeBodyRadius = 0.1f;
                 const int ropeBodyCount = 130;
                 var wreckingBallPosition = startLocation - new Vector3(0, ropeBodyRadius + (ropeBodyRadius * 2 + ropeBodySpacing) * ropeBodyCount + bigWreckingBall.Radius, 0);
-                var description = BodyDescription.CreateDynamic(wreckingBallPosition, bigWreckingBallInertia, bigWreckingBallIndex, 0.01f);
+                var description = BodyDescription.CreateDynamic(wreckingBallPosition, bigWreckingBallInertia, bigWreckingBallIndex, Constants.C0p01);
                 var wreckingBallBodyHandle = Simulation.Bodies.Add(description);
                 var wreckingBallBody = Simulation.Bodies[wreckingBallBodyHandle];
                 wreckingBallBody.Velocity.Angular = new Vector3(0, 20, 0);
@@ -115,7 +117,7 @@ namespace Demos.Demos
                 for (int ropeIndex = 0; ropeIndex < ropeCount; ++ropeIndex)
                 {
                     var angle = ropeIndex * MathF.PI * 2 / ropeCount;
-                    const float ropeDistributionRadius = 1f;
+                    Number ropeDistributionRadius = 1f;
                     var horizontalOffset = ropeDistributionRadius * new Vector3(MathF.Sin(angle), 0, MathF.Cos(angle));
                     var ropeStartLocation = startLocation + horizontalOffset;
 
@@ -158,7 +160,7 @@ namespace Demos.Demos
                         var maximumDistance = Vector3.Distance(
                             new BodyReference(bodyHandles[targetBodyHandleIndex], Simulation.Bodies).Pose.Position,
                             ropeConnectionToBall);
-                        Simulation.Solver.Add(bodyHandles[targetBodyHandleIndex], wreckingBallBodyHandle, new DistanceLimit(default, wreckingBallConnectionOffset, 0.01f, maximumDistance, springSettings));
+                        Simulation.Solver.Add(bodyHandles[targetBodyHandleIndex], wreckingBallBodyHandle, new DistanceLimit(default, wreckingBallConnectionOffset, Constants.C0p01, maximumDistance, springSettings));
                     }
 
                 }

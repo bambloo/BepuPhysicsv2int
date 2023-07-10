@@ -1,10 +1,9 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace DemoRenderer.UI
@@ -38,14 +37,14 @@ namespace DemoRenderer.UI
             //If you want to use this for a game where you can't guarantee that everything's in frame, this packing range would need to be modified.
             //One simple option is to just set the mapped region to extend beyond the rendered target. It reduces the precision density a bit, but that's not too important.
             PackedMinimum = (uint)(start.X * screenToPackedScale.X) | ((uint)(start.Y * screenToPackedScale.Y) << 16);
-            var scaledAxisX = (uint)(horizontalAxis.X * 32767f + 32767f);
-            var scaledAxisY = (uint)(horizontalAxis.Y * 32767f + 32767f);
+            var scaledAxisX = (uint)(horizontalAxis.X * 32767 + 32767);
+            var scaledAxisY = (uint)(horizontalAxis.Y * 32767 + 32767);
             Debug.Assert(scaledAxisX <= 65534);
             Debug.Assert(scaledAxisY <= 65534);
             PackedHorizontalAxis = scaledAxisX | (scaledAxisY << 16);
-            const float sizeScale = 65535f / 4096f;
-            var scaledSize = size * sizeScale;
-            var clampedSize = Vector2.Max(Vector2.Zero, Vector2.Min(new Vector2(65535f), scaledSize));
+            Number sizeScale = (Number)65535f / (Number)4096f;
+            var scaledSize = size * (Number)sizeScale;
+            var clampedSize = Vector2.Max(Vector2.Zero, Vector2.Min(new Vector2(65535), scaledSize));
             PackedSize = (uint)clampedSize.X | (((uint)clampedSize.Y) << 16);           
             PackedColor = Helpers.PackColor(color);
         }
@@ -55,8 +54,8 @@ namespace DemoRenderer.UI
     {
         struct VertexConstants
         {
-            public Vector2 PackedToScreenScale;
-            public Vector2 ScreenToNDCScale;
+            public System.Numerics.Vector2 PackedToScreenScale;
+            public System.Numerics.Vector2 ScreenToNDCScale;
         }
         ConstantsBuffer<VertexConstants> vertexConstants;
 
@@ -104,8 +103,8 @@ namespace DemoRenderer.UI
             {
                 //These first two scales could be uploaded once, but it would require another buffer. Not important enough.
                 //The packed minimum must permit subpixel locations. So, distribute the range 0 to 65535 over the pixel range 0 to resolution.
-                PackedToScreenScale = new Vector2(screenResolution.X / 65535f, screenResolution.Y / 65535f),
-                ScreenToNDCScale = new Vector2(2f / screenResolution.X, -2f / screenResolution.Y)
+                PackedToScreenScale = new System.Numerics.Vector2(screenResolution.X / 65535f, screenResolution.Y / 65535f),
+                ScreenToNDCScale = new System.Numerics.Vector2((float)(Constants.C2 / screenResolution.X), -2f / screenResolution.Y)
             };
             vertexConstants.Update(context, ref vertexConstantsData);
             context.PixelShader.SetShaderResource(0, image.SRV);
@@ -114,7 +113,7 @@ namespace DemoRenderer.UI
             var start = 0;
             while (count > 0)
             {
-                var batchCount = Math.Min(this.instances.Capacity, count);
+                var batchCount = System.Math.Min(this.instances.Capacity, count);
                 this.instances.Update(context, instances.Slice(start, batchCount));
                 context.DrawIndexed(batchCount * 6, 0, 0);
                 count -= batchCount;

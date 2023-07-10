@@ -3,7 +3,7 @@ using BepuUtilities;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
@@ -88,7 +88,7 @@ namespace BepuPhysics.Constraints
         {
             //[ csi ] * [ I, skew(offsetA),   -I, -skew(offsetB)    ]
             //          [ 0, swivelA x hingeB, 0, -swivelA x hingeB ]
-            ref var ballSocketCSI = ref Unsafe.As<Vector<float>, Vector3Wide>(ref csi.X);
+            ref var ballSocketCSI = ref Unsafe.As<Vector<Number>, Vector3Wide>(ref csi.X);
             Vector3Wide.Scale(ballSocketCSI, inertiaA.InverseMass, out var linearChangeA);
             Vector3Wide.Add(velocityA.Linear, linearChangeA, out velocityA.Linear);
 
@@ -120,7 +120,7 @@ namespace BepuPhysics.Constraints
             Vector3Wide.CrossWithoutOverlap(swivelAxis, hingeAxis, out swivelHingeJacobian);
             //If the axes are aligned, then it'll be zero length and the effective mass can get NaNsploded.
             var lengthSquared = swivelHingeJacobian.LengthSquared();
-            var useFallbackJacobian = Vector.LessThan(lengthSquared, new Vector<float>(1e-3f));
+            var useFallbackJacobian = Vector.LessThan(lengthSquared, new Vector<Number>(Constants.C1em3));
             //This causes a discontinuity, but a discontinuity is better than a NaNsplode.
             swivelHingeJacobian = Vector3Wide.ConditionalSelect(useFallbackJacobian, hingeAxis, swivelHingeJacobian);
         }
@@ -132,7 +132,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(offsetA, offsetB, swivelHingeJacobian, inertiaA, inertiaB, ref accumulatedImpulses, ref wsvA, ref wsvB);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref SwivelHingePrestepData prestep, ref Vector4Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, Number dt, Number inverseDt, ref SwivelHingePrestepData prestep, ref Vector4Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //4x12 jacobians, from BallSocket and AngularSwivelHinge:
             //[ I, skew(offsetA),   -I, -skew(offsetB)    ]
@@ -211,7 +211,7 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref SwivelHingePrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref SwivelHingePrestepData prestepData) { }
     }
 
     public class SwivelHingeTypeProcessor : TwoBodyTypeProcessor<SwivelHingePrestepData, Vector4Wide, SwivelHingeFunctions, AccessNoPosition, AccessNoPosition, AccessAll, AccessAll>

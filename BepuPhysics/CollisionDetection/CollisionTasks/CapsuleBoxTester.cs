@@ -1,7 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
@@ -32,22 +32,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var clampedDot = Vector.Min(a.HalfLength, Vector.Max(-a.HalfLength, dot));
             Vector3Wide.Scale(capsuleAxis, clampedDot, out var offsetToCapsuleFromBox);
             Vector3Wide.Subtract(localOffsetA, offsetToCapsuleFromBox, out offsetToCapsuleFromBox);
-            edgeCenters.X = Vector.ConditionalSelect(Vector.LessThan(offsetToCapsuleFromBox.X, Vector<float>.Zero), -b.HalfWidth, b.HalfWidth);
-            edgeCenters.Y = Vector.ConditionalSelect(Vector.LessThan(offsetToCapsuleFromBox.Y, Vector<float>.Zero), -b.HalfHeight, b.HalfHeight);
-            edgeCenters.Z = Vector.ConditionalSelect(Vector.LessThan(offsetToCapsuleFromBox.Z, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+            edgeCenters.X = Vector.ConditionalSelect(Vector.LessThan(offsetToCapsuleFromBox.X, Vector<Number>.Zero), -b.HalfWidth, b.HalfWidth);
+            edgeCenters.Y = Vector.ConditionalSelect(Vector.LessThan(offsetToCapsuleFromBox.Y, Vector<Number>.Zero), -b.HalfHeight, b.HalfHeight);
+            edgeCenters.Z = Vector.ConditionalSelect(Vector.LessThan(offsetToCapsuleFromBox.Z, Vector<Number>.Zero), -b.HalfLength, b.HalfLength);
         }
 
         //Hideous parameter list because this function is used with swizzled vectors.
         //It's built to handle the Z edge hardcoded, so we just reorient things at the point of use to handle X and Y.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static void TestBoxEdge(
-            ref Vector<float> offsetAX, ref Vector<float> offsetAY, ref Vector<float> offsetAZ,
-            ref Vector<float> capsuleAxisX, ref Vector<float> capsuleAxisY, ref Vector<float> capsuleAxisZ,
-            ref Vector<float> capsuleHalfLength, ref Vector<float> boxEdgeCenterX, ref Vector<float> boxEdgeCenterY,
-            ref Vector<float> boxHalfWidth, ref Vector<float> boxHalfHeight, ref Vector<float> boxHalfLength,
-            out Vector<float> taMin, out Vector<float> taMax, out Vector3Wide closestPointOnA,
-            out Vector<float> nX, out Vector<float> nY, out Vector<float> nZ,
-            out Vector<float> ta, out Vector<float> epsilon)
+            ref Vector<Number> offsetAX, ref Vector<Number> offsetAY, ref Vector<Number> offsetAZ,
+            ref Vector<Number> capsuleAxisX, ref Vector<Number> capsuleAxisY, ref Vector<Number> capsuleAxisZ,
+            ref Vector<Number> capsuleHalfLength, ref Vector<Number> boxEdgeCenterX, ref Vector<Number> boxEdgeCenterY,
+            ref Vector<Number> boxHalfWidth, ref Vector<Number> boxHalfHeight, ref Vector<Number> boxHalfLength,
+            out Vector<Number> taMin, out Vector<Number> taMax, out Vector3Wide closestPointOnA,
+            out Vector<Number> nX, out Vector<Number> nY, out Vector<Number> nZ,
+            out Vector<Number> ta, out Vector<Number> epsilon)
         {
             //From CapsulePairCollisionTask, point of closest approach along the capsule axis, unbounded:
             //ta = (da * (b - a) + (db * (a - b)) * (da * db)) / (1 - ((da * db) * (da * db))  
@@ -58,7 +58,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var daOffsetB = capsuleAxisX * abX + capsuleAxisY * abY - capsuleAxisZ * offsetAZ;
             //Note potential division by zero. Even though ta is not mathematically relevant when parallel (or even coplanar),
             //the max is a very easy way to stop NaNs from infecting later calculations.
-            ta = (daOffsetB + offsetAZ * capsuleAxisZ) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - capsuleAxisZ * capsuleAxisZ);
+            ta = (daOffsetB + offsetAZ * capsuleAxisZ) / Vector.Max(new Vector<Number>(Constants.C1em15), Vector<Number>.One - capsuleAxisZ * capsuleAxisZ);
             //tb = ta * (da * db) - db * (b - a)
             var tb = ta * capsuleAxisZ + offsetAZ;
 
@@ -88,22 +88,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //(That simplifies to (-capsuleAxisY, capsuleAxisX, 0) thanks to the fact that boxEdge is (0,0,1).)
             var fallbackSquaredLength = capsuleAxisY * capsuleAxisY + capsuleAxisX * capsuleAxisX;
             //But that can ALSO be zero length if the axes are parallel. If both those conditions are met, then we just pick (1,0,0).
-            epsilon = new Vector<float>(1e-10f);
+            epsilon = new Vector<Number>(Constants.C1em10);
             var useFallback = Vector.LessThan(squaredLength, epsilon);
             var useSecondFallback = Vector.BitwiseAnd(useFallback, Vector.LessThan(fallbackSquaredLength, epsilon));
-            squaredLength = Vector.ConditionalSelect(useSecondFallback, Vector<float>.One, Vector.ConditionalSelect(useFallback, fallbackSquaredLength, squaredLength));
-            nX = Vector.ConditionalSelect(useSecondFallback, Vector<float>.One, Vector.ConditionalSelect(useFallback, -capsuleAxisY, nX));
-            nY = Vector.ConditionalSelect(useSecondFallback, Vector<float>.Zero, Vector.ConditionalSelect(useFallback, capsuleAxisX, nY));
-            nZ = Vector.ConditionalSelect(useSecondFallback, Vector<float>.Zero, Vector.ConditionalSelect(useFallback, Vector<float>.Zero, nZ));
+            squaredLength = Vector.ConditionalSelect(useSecondFallback, Vector<Number>.One, Vector.ConditionalSelect(useFallback, fallbackSquaredLength, squaredLength));
+            nX = Vector.ConditionalSelect(useSecondFallback, Vector<Number>.One, Vector.ConditionalSelect(useFallback, -capsuleAxisY, nX));
+            nY = Vector.ConditionalSelect(useSecondFallback, Vector<Number>.Zero, Vector.ConditionalSelect(useFallback, capsuleAxisX, nY));
+            nZ = Vector.ConditionalSelect(useSecondFallback, Vector<Number>.Zero, Vector.ConditionalSelect(useFallback, Vector<Number>.Zero, nZ));
 
             //Calibrate the normal to point from B to A.
             var calibrationDot = nX * offsetAX + nY * offsetAY + nZ * offsetAZ;
-            var shouldNegate = Vector.LessThan(calibrationDot, Vector<float>.Zero);
+            var shouldNegate = Vector.LessThan(calibrationDot, Vector<Number>.Zero);
             nX = Vector.ConditionalSelect(shouldNegate, -nX, nX);
             nY = Vector.ConditionalSelect(shouldNegate, -nY, nY);
             nZ = Vector.ConditionalSelect(shouldNegate, -nZ, nZ);
 
-            var inverseLength = Vector<float>.One / Vector.SquareRoot(squaredLength);
+            var inverseLength = Vector<Number>.One / Vector.SquareRoot(squaredLength);
             nX *= inverseLength;
             nY *= inverseLength;
             nZ *= inverseLength;
@@ -112,12 +112,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TestAndRefineBoxEdge(
-            ref Vector<float> offsetAX, ref Vector<float> offsetAY, ref Vector<float> offsetAZ,
-            ref Vector<float> capsuleAxisX, ref Vector<float> capsuleAxisY, ref Vector<float> capsuleAxisZ,
-            ref Vector<float> capsuleHalfLength,
-            ref Vector<float> boxEdgeCenterX, ref Vector<float> boxEdgeCenterY,
-            ref Vector<float> boxHalfWidth, ref Vector<float> boxHalfHeight, ref Vector<float> boxHalfLength,
-            out Vector<float> ta, out Vector<float> depth, out Vector<float> nX, out Vector<float> nY, out Vector<float> nZ)
+            ref Vector<Number> offsetAX, ref Vector<Number> offsetAY, ref Vector<Number> offsetAZ,
+            ref Vector<Number> capsuleAxisX, ref Vector<Number> capsuleAxisY, ref Vector<Number> capsuleAxisZ,
+            ref Vector<Number> capsuleHalfLength,
+            ref Vector<Number> boxEdgeCenterX, ref Vector<Number> boxEdgeCenterY,
+            ref Vector<Number> boxHalfWidth, ref Vector<Number> boxHalfHeight, ref Vector<Number> boxHalfLength,
+            out Vector<Number> ta, out Vector<Number> depth, out Vector<Number> nX, out Vector<Number> nY, out Vector<Number> nZ)
 
         {
             TestBoxEdge(
@@ -136,21 +136,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void TestBoxFace(ref Vector<float> offsetAZ,
-            ref Vector<float> capsuleAxisZ, ref Vector<float> capsuleHalfLength,
-            ref Vector<float> boxHalfLength,
-            out Vector<float> depth, out Vector<float> normalSign)
+        static void TestBoxFace(ref Vector<Number> offsetAZ,
+            ref Vector<Number> capsuleAxisZ, ref Vector<Number> capsuleHalfLength,
+            ref Vector<Number> boxHalfLength,
+            out Vector<Number> depth, out Vector<Number> normalSign)
         {
-            normalSign = Vector.ConditionalSelect(Vector.GreaterThan(offsetAZ, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f));
+            normalSign = Vector.ConditionalSelect(Vector.GreaterThan(offsetAZ, Vector<Number>.Zero), Vector<Number>.One, new Vector<Number>(Constants.Cm1));
             depth = boxHalfLength + Vector.Abs(capsuleAxisZ) * capsuleHalfLength - normalSign * offsetAZ;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Select(
-            ref Vector<float> depth, ref Vector<float> ta,
-            ref Vector<float> localNormalX, ref Vector<float> localNormalY, ref Vector<float> localNormalZ,
-            ref Vector<float> depthCandidate, ref Vector<float> taCandidate, 
-            ref Vector<float> localNormalCandidateX, ref Vector<float> localNormalCandidateY, ref Vector<float> localNormalCandidateZ)
+            ref Vector<Number> depth, ref Vector<Number> ta,
+            ref Vector<Number> localNormalX, ref Vector<Number> localNormalY, ref Vector<Number> localNormalZ,
+            ref Vector<Number> depthCandidate, ref Vector<Number> taCandidate, 
+            ref Vector<Number> localNormalCandidateX, ref Vector<Number> localNormalCandidateY, ref Vector<Number> localNormalCandidateZ)
         {
             var useCandidate = Vector.LessThan(depthCandidate, depth);
             ta = Vector.ConditionalSelect(useCandidate, taCandidate, ta);
@@ -161,10 +161,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Select(
-         ref Vector<float> depth,
-         ref Vector<float> localNormalX, ref Vector<float> localNormalY, ref Vector<float> localNormalZ,
-         ref Vector<float> depthCandidate,
-         ref Vector<float> localNormalCandidateX, ref Vector<float> localNormalCandidateY, ref Vector<float> localNormalCandidateZ)
+         ref Vector<Number> depth,
+         ref Vector<Number> localNormalX, ref Vector<Number> localNormalY, ref Vector<Number> localNormalZ,
+         ref Vector<Number> depthCandidate,
+         ref Vector<Number> localNormalCandidateX, ref Vector<Number> localNormalCandidateY, ref Vector<Number> localNormalCandidateZ)
         {
             var useCandidate = Vector.LessThan(depthCandidate, depth);
             depth = Vector.ConditionalSelect(useCandidate, depthCandidate, depth);
@@ -175,7 +175,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(
-            ref CapsuleWide a, ref BoxWide b, ref Vector<float> speculativeMargin,
+            ref CapsuleWide a, ref BoxWide b, ref Vector<Number> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex2ContactManifoldWide manifold)
         {
@@ -208,7 +208,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Select(ref depth, ref ta, ref localNormal.X, ref localNormal.Y, ref localNormal.Z,
                 ref ezDepth, ref ezta, ref eznX, ref eznY, ref eznZ);
 
-            var zero = Vector<float>.Zero;
+            var zero = Vector<Number>.Zero;
             //Face X
             TestBoxFace(ref localOffsetA.X,
                 ref capsuleAxis.X, ref a.HalfLength,
@@ -248,7 +248,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //unprojectedAxis = capsuleAxis - localNormal * dot(capsuleAxis, faceNormal) / dot(localNormal, faceNormal)
             //unprojectedCenter = capsuleCenter - localNormal * dot(capsuleCenter - pointOnFace, faceNormal) / dot(localNormal, faceNormal)
             var faceNormalDotLocalNormal = Vector.ConditionalSelect(useX, xDot, Vector.ConditionalSelect(useY, yDot, zDot));
-            var inverseFaceNormalDotLocalNormal = Vector<float>.One / Vector.Max(new Vector<float>(1e-15f), faceNormalDotLocalNormal);
+            var inverseFaceNormalDotLocalNormal = Vector<Number>.One / Vector.Max(new Vector<Number>(Constants.C1em15), faceNormalDotLocalNormal);
             var capsuleAxisDotFaceNormal = Vector.ConditionalSelect(useX, capsuleAxis.X * fxn, Vector.ConditionalSelect(useY, capsuleAxis.Y * fyn, capsuleAxis.Z * fzn));
             var capsuleCenterDotFaceNormal = Vector.ConditionalSelect(useX, localOffsetA.X * fxn, Vector.ConditionalSelect(useY, localOffsetA.Y * fyn, localOffsetA.Z * fzn));
             var facePlaneOffset = Vector.ConditionalSelect(useX, b.HalfWidth, Vector.ConditionalSelect(useY, b.HalfHeight, b.HalfLength));
@@ -270,14 +270,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             tangentSpaceCenter.Y = Vector.ConditionalSelect(useZ, unprojectedCenter.Y, unprojectedCenter.Z);
             //Slightly boost the size of the face to avoid minor numerical issues that could block coplanar contacts.
             var epsilonScale = Vector.Min(Vector.Max(b.HalfWidth, Vector.Max(b.HalfHeight, b.HalfLength)), Vector.Max(a.HalfLength, a.Radius));
-            var epsilon = epsilonScale * 1e-3f;
+            var epsilon = epsilonScale * Constants.C1em3;
             var halfExtentX = epsilon + Vector.ConditionalSelect(useX, b.HalfHeight, b.HalfWidth);
             var halfExtentY = epsilon + Vector.ConditionalSelect(useZ, b.HalfHeight, b.HalfLength);
 
             //Compute interval bounded by edge normals pointing along tangentX.
             //tX = -dot(tangentSpaceCenter +- halfExtentX, edgeNormal) / dot(unprojectedCapsuleAxis, edgeNormal)
 
-            var negativeOne = new Vector<float>(-1);
+            var negativeOne = new Vector<Number>(-1);
             var inverseAxisX = negativeOne / tangentSpaceAxis.X;
             var inverseAxisY = negativeOne / tangentSpaceAxis.Y;
             var tX0 = (tangentSpaceCenter.X - halfExtentX) * inverseAxisX;
@@ -289,12 +289,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var minY = Vector.Min(tY0, tY1);
             var maxY = Vector.Max(tY0, tY1);
             //Protect against division by zero. If the unprojected capsule is within the slab, use an infinite interval. If it's outside and parallel, use an invalid interval.
-            var useFallbackX = Vector.LessThan(Vector.Abs(tangentSpaceAxis.X), new Vector<float>(1e-15f));
-            var useFallbackY = Vector.LessThan(Vector.Abs(tangentSpaceAxis.Y), new Vector<float>(1e-15f));
+            var useFallbackX = Vector.LessThan(Vector.Abs(tangentSpaceAxis.X), new Vector<Number>(Constants.C1em15));
+            var useFallbackY = Vector.LessThan(Vector.Abs(tangentSpaceAxis.Y), new Vector<Number>(Constants.C1em15));
             var centerContainedX = Vector.LessThanOrEqual(Vector.Abs(tangentSpaceCenter.X), halfExtentX);
             var centerContainedY = Vector.LessThanOrEqual(Vector.Abs(tangentSpaceCenter.Y), halfExtentY);
-            var largeNegative = new Vector<float>(-float.MaxValue);
-            var largePositive = new Vector<float>(float.MaxValue);
+            var largeNegative = new Vector<Number>(-Number.MaxValue);
+            var largePositive = new Vector<Number>(Number.MaxValue);
             minX = Vector.ConditionalSelect(useFallbackX, Vector.ConditionalSelect(centerContainedX, largeNegative, largePositive), minX);
             maxX = Vector.ConditionalSelect(useFallbackX, Vector.ConditionalSelect(centerContainedX, largePositive, largeNegative), maxX);
             minY = Vector.ConditionalSelect(useFallbackY, Vector.ConditionalSelect(centerContainedY, largeNegative, largePositive), minY);
@@ -330,8 +330,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformWithoutOverlap(localA1, orientationMatrixB, out manifold.OffsetA1);
 
             //Apply the normal offset to the contact positions.           
-            var negativeOffsetFromA0 = manifold.Depth0 * 0.5f - a.Radius;
-            var negativeOffsetFromA1 = manifold.Depth1 * 0.5f - a.Radius;
+            var negativeOffsetFromA0 = manifold.Depth0 * Constants.C0p5 - a.Radius;
+            var negativeOffsetFromA1 = manifold.Depth1 * Constants.C0p5 - a.Radius;
             Vector3Wide.Scale(manifold.Normal, negativeOffsetFromA0, out var normalPush0);
             Vector3Wide.Scale(manifold.Normal, negativeOffsetFromA1, out var normalPush1);
             Vector3Wide.Add(manifold.OffsetA0, normalPush0, out manifold.OffsetA0);
@@ -341,15 +341,15 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.Contact0Exists = Vector.GreaterThanOrEqual(manifold.Depth0, minimumAcceptedDepth);
             manifold.Contact1Exists = Vector.BitwiseAnd(
                 Vector.GreaterThanOrEqual(manifold.Depth1, minimumAcceptedDepth),
-                Vector.GreaterThan(tMax - tMin, new Vector<float>(1e-7f) * a.HalfLength));
+                Vector.GreaterThan(tMax - tMin, new Vector<Number>(Constants.C1em7) * a.HalfLength));
         }
 
-        public void Test(ref CapsuleWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
+        public void Test(ref CapsuleWide a, ref BoxWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref CapsuleWide a, ref BoxWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex2ContactManifoldWide manifold)
+        public void Test(ref CapsuleWide a, ref BoxWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

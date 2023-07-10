@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -14,27 +14,27 @@ namespace BepuUtilities
         /// <summary>
         /// First row, first column of the matrix.
         /// </summary>
-        public Vector<float> XX;
+        public Vector<Number> XX;
         /// <summary>
         /// Second row, first column of the matrix.
         /// </summary>
-        public Vector<float> YX;
+        public Vector<Number> YX;
         /// <summary>
         /// Second row, second column of the matrix.
         /// </summary>
-        public Vector<float> YY;
+        public Vector<Number> YY;
         /// <summary>
         /// Third row, first column of the matrix.
         /// </summary>
-        public Vector<float> ZX;
+        public Vector<Number> ZX;
         /// <summary>
         /// Third row, second column of the matrix.
         /// </summary>
-        public Vector<float> ZY;
+        public Vector<Number> ZY;
         /// <summary>
         /// Third row, third column of the matrix.
         /// </summary>
-        public Vector<float> ZZ;
+        public Vector<Number> ZZ;
 
         /// <summary>
         /// Inverts the matrix as if it is a symmetric matrix where M32 == M23, M13 == M31, and M21 == M12.
@@ -47,7 +47,7 @@ namespace BepuUtilities
             var xx = m.YY * m.ZZ - m.ZY * m.ZY;
             var yx = m.ZY * m.ZX - m.ZZ * m.YX;
             var zx = m.YX * m.ZY - m.ZX * m.YY;
-            var determinantInverse = Vector<float>.One / (xx * m.XX + yx * m.YX + zx * m.ZX);
+            var determinantInverse = Vector<Number>.One / (xx * m.XX + yx * m.YX + zx * m.ZX);
 
             var yy = m.ZZ * m.XX - m.ZX * m.ZX;
             var zy = m.ZX * m.YX - m.XX * m.ZY;
@@ -135,7 +135,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Symmetric3x3Wide m, in Vector<float> scale, out Symmetric3x3Wide result)
+        public static void Scale(in Symmetric3x3Wide m, in Vector<Number> scale, out Symmetric3x3Wide result)
         {
             result.XX = m.XX * scale;
             result.YX = m.YX * scale;
@@ -146,7 +146,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Symmetric3x3Wide operator *(in Symmetric3x3Wide m, in Vector<float> scale) //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
+        public static Symmetric3x3Wide operator *(in Symmetric3x3Wide m, in Vector<Number> scale) //TODO: without in decoration, this had some really peculiar codegen in .net 6 preview 5.
         {
             Symmetric3x3Wide result;
             result.XX = m.XX * scale;
@@ -214,7 +214,7 @@ namespace BepuUtilities
         /// <param name="sandwich">Result of v * m * transpose(v) for a symmetric matrix m.</param>
         /// <remarks>Since I called the other one a skew sandwich, I really don't have a choice in the naming convention anymore.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void VectorSandwich(in Vector3Wide v, in Symmetric3x3Wide m, out Vector<float> sandwich)
+        public static void VectorSandwich(in Vector3Wide v, in Symmetric3x3Wide m, out Vector<Number> sandwich)
         {
             //This isn't actually fewer flops than the equivalent explicit operation, but it does avoid some struct locals and it's a pretty common operation.
             //(And at the moment, avoiding struct locals is unfortunately helpful for codegen reasons.)

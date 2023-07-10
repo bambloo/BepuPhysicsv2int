@@ -1,15 +1,12 @@
-﻿using BepuUtilities.Memory;
-using System;
-using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using BepuPhysics.Constraints;
-using BepuPhysics.Collidables;
+﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuUtilities;
-using static BepuUtilities.GatherScatter;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {
@@ -193,7 +190,7 @@ namespace BepuPhysics
                 //Out of room; need to resize.
                 ResizeHandles(HandleToLocation.Length << 1);
             }
-            Debug.Assert(Math.Abs(description.Pose.Orientation.Length() - 1) < 1e-6f, "Orientation should be initialized to a unit length quaternion.");
+            Debug.Assert(Math.Abs(description.Pose.Orientation.Length() - 1) < Constants.C1em6, "Orientation should be initialized to a unit length quaternion.");
 
             //All new bodies are active for simplicity. Someday, it may be worth offering an optimized path for inactives, but it adds complexity.
             //(Directly adding inactive bodies can be helpful in some networked open world scenarios.)
@@ -329,7 +326,7 @@ namespace BepuPhysics
         {
             return Vector.Equals(Vector.BitwiseOr(
                 Vector.BitwiseOr(Vector.BitwiseOr(inertia.InverseMass, inertia.InverseInertiaTensor.XX), Vector.BitwiseOr(inertia.InverseInertiaTensor.YX, inertia.InverseInertiaTensor.YY)),
-                Vector.BitwiseOr(Vector.BitwiseOr(inertia.InverseInertiaTensor.ZX, inertia.InverseInertiaTensor.ZY), inertia.InverseInertiaTensor.ZZ)), Vector<float>.Zero);
+                Vector.BitwiseOr(Vector.BitwiseOr(inertia.InverseInertiaTensor.ZX, inertia.InverseInertiaTensor.ZY), inertia.InverseInertiaTensor.ZZ)), Vector<Number>.Zero);
         }
 
         /// <summary>
@@ -340,16 +337,16 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static bool IsKinematic(BodyInertia* inertia)
         {
-            if (Avx.IsSupported)
-            {
-                var inertiaVector = Avx.LoadVector256((float*)inertia);
-                var masked = Avx.CompareEqual(inertiaVector, Vector256<float>.Zero);
-                return (Avx.MoveMask(masked) & 0x7F) == 0x7F;
-            }
-            else
-            {
+            //if (Avx.IsSupported)
+            //{
+            //    var inertiaVector = Avx.LoadVector256((Number*)inertia);
+            //    var masked = Avx.CompareEqual(inertiaVector, Vector256<Number>.Zero);
+            //    return (Avx.MoveMask(masked) & 0x7F) == 0x7F;
+            //}
+            //else
+            //{
                 return inertia->InverseMass == 0 && HasLockedInertia(&inertia->InverseInertiaTensor);
-            }
+            //}
         }
 
         /// <summary>
@@ -371,21 +368,21 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static bool HasLockedInertia(Symmetric3x3* inertia)
         {
-            if (Avx.IsSupported)
-            {
-                var inertiaVector = Avx.LoadVector256((float*)inertia);
-                var masked = Avx.CompareEqual(inertiaVector, Vector256<float>.Zero);
-                return (Avx.MoveMask(masked) & 0x3F) == 0x3F;
-            }
-            else
-            {
+            //if (Avx.IsSupported)
+            //{
+            //    var inertiaVector = Avx.LoadVector256((Number*)inertia);
+            //    var masked = Avx.CompareEqual(inertiaVector, Vector256<Number>.Zero);
+            //    return (Avx.MoveMask(masked) & 0x3F) == 0x3F;
+            //}
+            //else
+            //{
                 return inertia->XX == 0 &&
                        inertia->YX == 0 &&
                        inertia->YY == 0 &&
                        inertia->ZX == 0 &&
                        inertia->ZY == 0 &&
                        inertia->ZZ == 0;
-            }
+            //}
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,9 +1,8 @@
-﻿using BepuPhysics.CollisionDetection;
-using BepuUtilities;
+﻿using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 
@@ -21,7 +20,7 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// Target relative angular velocity around the axis.
         /// </summary>
-        public float TargetVelocity;
+        public Number TargetVelocity;
         /// <summary>
         /// Motor control parameters.
         /// </summary>
@@ -63,21 +62,21 @@ namespace BepuPhysics.Constraints
     public struct AngularAxisMotorPrestepData
     {
         public Vector3Wide LocalAxisA;
-        public Vector<float> TargetVelocity;
+        public Vector<Number> TargetVelocity;
         public MotorSettingsWide Settings;
     }
 
-    public struct AngularAxisMotorFunctions : ITwoBodyConstraintFunctions<AngularAxisMotorPrestepData, Vector<float>>
+    public struct AngularAxisMotorFunctions : ITwoBodyConstraintFunctions<AngularAxisMotorPrestepData, Vector<Number>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(in Vector3Wide impulseToVelocityA, in Vector3Wide negatedImpulseToVelocityB, in Vector<float> csi, ref Vector3Wide angularVelocityA, ref Vector3Wide angularVelocityB)
+        public static void ApplyImpulse(in Vector3Wide impulseToVelocityA, in Vector3Wide negatedImpulseToVelocityB, in Vector<Number> csi, ref Vector3Wide angularVelocityA, ref Vector3Wide angularVelocityB)
         {
             angularVelocityA += impulseToVelocityA * csi;
             angularVelocityB -= negatedImpulseToVelocityB * csi;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref AngularAxisMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref AngularAxisMotorPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var axis);
             Symmetric3x3Wide.TransformWithoutOverlap(axis, inertiaA.InverseInertiaTensor, out var jIA);
@@ -86,7 +85,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref AngularAxisMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, Number dt, Number inverseDt, ref AngularAxisMotorPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalAxisA, orientationA, out var jA);
             Symmetric3x3Wide.TransformWithoutOverlap(jA, inertiaA.InverseInertiaTensor, out var jIA);
@@ -103,10 +102,10 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularAxisMotorPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularAxisMotorPrestepData prestepData) { }
     }
 
-    public class AngularAxisMotorTypeProcessor : TwoBodyTypeProcessor<AngularAxisMotorPrestepData, Vector<float>, AngularAxisMotorFunctions, AccessOnlyAngular, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngular>
+    public class AngularAxisMotorTypeProcessor : TwoBodyTypeProcessor<AngularAxisMotorPrestepData, Vector<Number>, AngularAxisMotorFunctions, AccessOnlyAngular, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 41;
     }

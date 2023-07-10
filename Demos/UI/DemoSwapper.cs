@@ -1,10 +1,7 @@
-﻿using DemoRenderer.UI;
+﻿using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
+using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Numerics;
-using System.Text;
 
 namespace Demos.UI
 {
@@ -57,7 +54,7 @@ namespace Demos.UI
 
         }
 
-        public void Draw(TextBuilder text, TextBatcher textBatcher, DemoSet demoSet, Vector2 position, float textHeight, Vector3 textColor, Font font)
+        public void Draw(TextBuilder text, TextBatcher textBatcher, DemoSet demoSet, Vector2 position, Number textHeight, Vector3 textColor, Font font)
         {
             if (TrackingInput)
             {

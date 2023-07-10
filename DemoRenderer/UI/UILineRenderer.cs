@@ -1,10 +1,8 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
-using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace DemoRenderer.UI
@@ -46,8 +44,8 @@ namespace DemoRenderer.UI
         struct VertexConstants
         {
             //Splitting these two scales (Packed->Screen followed by Screen->NDC) makes handling the radius easy, since it's in uniform screen pixels.
-            public Vector2 PackedToScreenScale;
-            public Vector2 ScreenToNDCScale;
+            public System.Numerics.Vector2 PackedToScreenScale;
+            public System.Numerics.Vector2 ScreenToNDCScale;
         }
         ConstantsBuffer<VertexConstants> vertexConstants;
 
@@ -79,15 +77,15 @@ namespace DemoRenderer.UI
             var vertexConstantsData = new VertexConstants
             {
                 //The packed minimum must permit subpixel locations. So, distribute the range 0 to 65535 over the pixel range 0 to resolution.
-                PackedToScreenScale = new Vector2(screenResolution.X / 65535f, screenResolution.Y / 65535f),
-                ScreenToNDCScale = new Vector2(2f / screenResolution.X, -2f / screenResolution.Y),
+                PackedToScreenScale = new System.Numerics.Vector2(screenResolution.X / 65535f, screenResolution.Y / 65535f),
+                ScreenToNDCScale = new System.Numerics.Vector2(2f / screenResolution.X, -2f / screenResolution.Y),
             };
             vertexConstants.Update(context, ref vertexConstantsData);
             context.PixelShader.Set(pixelShader);
 
             while (count > 0)
             {
-                var batchCount = Math.Min(instances.Capacity, count);
+                var batchCount = System.Math.Min(instances.Capacity, count);
                 instances.Update(context, lines, batchCount, start);
                 context.DrawIndexed(batchCount * 6, 0, 0);
                 count -= batchCount;

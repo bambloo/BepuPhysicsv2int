@@ -1,6 +1,6 @@
 ﻿using DemoContentLoader;
 using SharpDX.Direct3D11;
-using System.Numerics;
+
 using System.Runtime.InteropServices;
 
 namespace DemoRenderer.ShapeDrawing
@@ -10,11 +10,11 @@ namespace DemoRenderer.ShapeDrawing
     public struct BoxInstance
     {
         [FieldOffset(0)]
-        public Vector3 Position;
+        public System.Numerics.Vector3 Position;
         [FieldOffset(12)]
         public uint PackedColor;
         [FieldOffset(16)]
-        public Quaternion Orientation;
+        public System.Numerics.Quaternion Orientation;
         [FieldOffset(32)]
         public float HalfWidth;
         [FieldOffset(36)]

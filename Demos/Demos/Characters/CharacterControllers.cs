@@ -4,11 +4,14 @@ using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.Demos.Characters
 {
@@ -43,27 +46,27 @@ namespace Demos.Demos.Characters
         /// <summary>
         /// Velocity at which the character pushes off the support during a jump.
         /// </summary>
-        public float JumpVelocity;
+        public Number JumpVelocity;
         /// <summary>
         /// Maximum force the character can apply tangent to the supporting surface to move.
         /// </summary>
-        public float MaximumHorizontalForce;
+        public Number MaximumHorizontalForce;
         /// <summary>
         /// Maximum force the character can apply to glue itself to the supporting surface.
         /// </summary>
-        public float MaximumVerticalForce;
+        public Number MaximumVerticalForce;
         /// <summary>
         /// Cosine of the maximum slope angle that the character can treat as a support.
         /// </summary>
-        public float CosMaximumSlope;
+        public Number CosMaximumSlope;
         /// <summary>
         /// Depth threshold beyond which a contact is considered a support if it the normal allows it.
         /// </summary>
-        public float MinimumSupportDepth;
+        public Number MinimumSupportDepth;
         /// <summary>
         /// Depth threshold beyond which a contact is considered a support if the previous frame had support, even if it isn't deep enough to meet the MinimumSupportDepth.
         /// </summary>
-        public float MinimumSupportContinuationDepth;
+        public Number MinimumSupportContinuationDepth;
 
         /// <summary>
         /// Whether the character is currently supported.
@@ -223,7 +226,7 @@ namespace Demos.Demos.Characters
         struct SupportCandidate
         {
             public Vector3 OffsetFromCharacter;
-            public float Depth;
+            public Number Depth;
             public Vector3 OffsetFromSupport;
             public Vector3 Normal;
             public CollidableReference Support;
@@ -239,7 +242,7 @@ namespace Demos.Demos.Characters
                 for (int i = 0; i < maximumCharacterCount; ++i)
                 {
                     //Initialize the depths to a value that guarantees replacement.
-                    SupportCandidates[i].Depth = float.MinValue;
+                    SupportCandidates[i].Depth = Number.MinValue;
                 }
             }
 
@@ -336,7 +339,7 @@ namespace Demos.Demos.Characters
                         //If the character is collidable B, then we need to negate the comparison.
                         //This manifold has a slope that is potentially supportive.
                         //Can the maximum depth contact be used as a support?
-                        var maximumDepth = float.MinValue;
+                        var maximumDepth = Number.MinValue;
                         var maximumDepthIndex = -1;
                         for (int i = 0; i < nonconvexManifold.Count; ++i)
                         {
@@ -454,7 +457,7 @@ namespace Demos.Demos.Characters
         /// <summary>
         /// Preallocates space for support data collected during the narrow phase. Should be called before the narrow phase executes.
         /// </summary>
-        void PrepareForContacts(float dt, IThreadDispatcher threadDispatcher = null)
+        void PrepareForContacts(Number dt, IThreadDispatcher threadDispatcher = null)
         {
             Debug.Assert(!contactCollectionWorkerCaches.Allocated, "Worker caches were already allocated; did you forget to call AnalyzeContacts after collision detection to flush the previous frame's results?");
             var threadCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
@@ -584,7 +587,7 @@ namespace Demos.Demos.Characters
                     //2) The character was previously supported by a body, and is now supported by a different body.
                     //3) The character was previously supported by a static, and is now supported by a body.
                     //4) The character was previously supported by a body, and is now supported by a static.
-                    var shouldRemove = character.Supported && (character.TryJump || supportCandidate.Depth == float.MinValue || character.Support.Packed != supportCandidate.Support.Packed);
+                    var shouldRemove = character.Supported && (character.TryJump || supportCandidate.Depth == Number.MinValue || character.Support.Packed != supportCandidate.Support.Packed);
                     if (shouldRemove)
                     {
                         //Mark the constraint for removal.
@@ -592,7 +595,7 @@ namespace Demos.Demos.Characters
                     }
 
                     //If the character is jumping, don't create a constraint.
-                    if (supportCandidate.Depth > float.MinValue && character.TryJump)
+                    if (supportCandidate.Depth > Number.MinValue && character.TryJump)
                     {
                         QuaternionEx.Transform(character.LocalUp, Simulation.Bodies.ActiveSet.DynamicsState[bodyLocation.Index].Motion.Pose.Orientation, out var characterUp);
                         //Note that we assume that character orientations are constant. This isn't necessarily the case in all uses, but it's a decent approximation.
@@ -635,7 +638,7 @@ namespace Demos.Demos.Characters
                         }
                         character.Supported = false;
                     }
-                    else if (supportCandidate.Depth > float.MinValue)
+                    else if (supportCandidate.Depth > Number.MinValue)
                     {
                         //If a support currently exists and there is still an old constraint, then update it.
                         //If a support currently exists and there is not an old constraint, add the new constraint.
@@ -751,7 +754,7 @@ namespace Demos.Demos.Characters
         /// Updates all character support states and motion constraints based on the current character goals and all the contacts collected since the last call to AnalyzeContacts. 
         /// Attach to a simulation callback where the most recent contact is available and before the solver executes.
         /// </summary>
-        void AnalyzeContacts(float dt, IThreadDispatcher threadDispatcher)
+        void AnalyzeContacts(Number dt, IThreadDispatcher threadDispatcher)
         {
             //var start = Stopwatch.GetTimestamp();
             Debug.Assert(contactCollectionWorkerCaches.Allocated, "Worker caches weren't properly allocated; did you forget to call PrepareForContacts before collision detection?");

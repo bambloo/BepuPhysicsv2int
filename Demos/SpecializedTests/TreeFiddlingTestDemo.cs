@@ -1,16 +1,18 @@
-﻿using BepuUtilities;
-using BepuUtilities.Memory;
-using System;
-using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
+﻿using BepuPhysics;
+using BepuPhysics.Collidables;
+using BepuPhysics.Constraints;
 using BepuPhysics.Trees;
+using BepuUtilities;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.TaskScheduling;
 using DemoContentLoader;
 using DemoRenderer;
-using BepuPhysics;
-using BepuPhysics.Constraints;
-using BepuPhysics.Collidables;
-using BepuUtilities.TaskScheduling;
+using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.SpecializedTests;
 
@@ -66,7 +68,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
 
     Buffer<Triangle> CreateDeformedPlaneTriangles(int width, int height, Vector3 scale)
     {
-        Vector3 Deform(int x, int y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f);
+        Vector3 Deform(int x, int y) => new Vector3(x - width * scale.X * 0.5f, 2f * (Number)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f);
         BufferPool.Take<Vector3>(width * height, out var vertices);
         for (int i = 0; i < width; ++i)
         {
@@ -113,7 +115,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
     }
 
 
-    Buffer<Triangle> CreateRandomSoupTriangles(BoundingBox bounds, int triangleCount, float minimumSize, float maximumSize)
+    Buffer<Triangle> CreateRandomSoupTriangles(BoundingBox bounds, int triangleCount, Number minimumSize, Number maximumSize)
     {
         Random random = new Random(5);
         BufferPool.Take<Triangle>(triangleCount, out var triangles);
@@ -144,7 +146,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
     public override void Initialize(ContentArchive content, Camera camera)
     {
         camera.Position = new Vector3(-10, 3, -10);
-        camera.Yaw = MathHelper.Pi * 3f / 4;
+        camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
         camera.Pitch = 0;
         Tree.Times = new Tree.NodeTimes[1 << 22];
         for (int i = 0; i < 2; ++i)
@@ -157,7 +159,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
             var width = 1024;
             var height = 1024;
             var scale = new Vector3(1, 1, 1);
-            //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
+            //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 2f * (Number)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
             //DemoMeshHelper.CreateDeformedPlane(width, height, (x, y) => new Vector3(x - width * scale.X * 0.5f, 0, y - height * scale.Y * 0.5f), scale, BufferPool, out var mesh);
 
             //var triangles = CreateDeformedPlaneTriangles(width, height, scale);
@@ -313,7 +315,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
         Console.WriteLine($"{name} time per execution (ms): {(accumulatedTime) * 1e3 / (testCount * Stopwatch.Frequency)}");
 
         var sum = tree.Nodes[0].A.Min * 5 + tree.Nodes[0].A.Max * 7 + tree.Nodes[0].B.Min * 13 + tree.Nodes[0].B.Max * 17;
-        var hash = Unsafe.As<float, int>(ref sum.X) * 31 + Unsafe.As<float, int>(ref sum.Y) * 37 + Unsafe.As<float, int>(ref sum.Z) * 41;
+        var hash = Unsafe.As<Number, int>(ref sum.X) * 31 + Unsafe.As<Number, int>(ref sum.Y) * 37 + Unsafe.As<Number, int>(ref sum.Z) * 41;
         Console.WriteLine($"{name} bounds 0 hash: {hash}, A ({tree.Nodes[0].A.Min}, {tree.Nodes[0].B.Max}), B ({tree.Nodes[0].B.Min}, {tree.Nodes[0].B.Max})");
     }
 
@@ -338,7 +340,7 @@ public unsafe class TreeFiddlingTestDemo : Demo
         {
             var index = (int)(((ulong)i * 941083987 + accumulator * 797003413) % (ulong)tree.NodeCount);
             var localSum = tree.Nodes[index].A.Min * 5 + tree.Nodes[index].A.Max * 7 + tree.Nodes[index].B.Min * 13 + tree.Nodes[index].B.Max * 17;
-            var hash = Unsafe.As<float, int>(ref localSum.X) * 31 + Unsafe.As<float, int>(ref localSum.Y) * 37 + Unsafe.As<float, int>(ref localSum.Z) * 41;
+            var hash = Unsafe.As<Number, int>(ref localSum.X) * 31 + Unsafe.As<Number, int>(ref localSum.Y) * 37 + Unsafe.As<Number, int>(ref localSum.Z) * 41;
             accumulator = ((accumulator << 7) | (accumulator >> (64 - 7))) + (ulong)hash;
         }
         Console.WriteLine($"{name} bounds hash: {accumulator}, A ({tree.Nodes[0].A.Min}, {tree.Nodes[0].B.Max}), B ({tree.Nodes[0].B.Min}, {tree.Nodes[0].B.Max})");

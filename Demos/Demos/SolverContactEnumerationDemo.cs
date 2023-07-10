@@ -6,12 +6,14 @@ using BepuPhysics.Constraints.Contact;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Numerics;
+
+
 
 namespace Demos.Demos;
 
@@ -27,12 +29,12 @@ public class SolverContactEnumerationDemo : Demo
     struct ExtractedContact
     {
         public Vector3 OffsetA;
-        public float Depth;
+        public Number Depth;
         //For the purposes of the demo, we'll store a normal for every single contact, even though the original manifold might have been convex (and so shared one normal across all its contacts).
         public Vector3 Normal;
-        public float PenetrationImpulse;
+        public Number PenetrationImpulse;
         //We'll also derive friction impulse from different sources depending on convexity- convex manifolds have a single twist/tangent friction constraint, while nonconvex manifolds have a per-contact tangent friction.
-        public float FrictionImpulseMagnitude;
+        public Number FrictionImpulseMagnitude;
     }
 
     /// <summary>
@@ -96,7 +98,7 @@ public class SolverContactEnumerationDemo : Demo
             Vector3Wide.ReadFirst(prestep.GetNormal(ref prestep), out var normal);
 
             //We'll approximate the per-contact friction by allocating the shared friction impulses to contacts weighted by their penetration impulse.
-            float totalPenetrationImpulse = 0;
+            Number totalPenetrationImpulse = 0;
             for (int i = 0; i < prestep.ContactCount; ++i)
             {
                 ref var sourceContact = ref prestep.GetContact(ref prestep, i);
@@ -215,7 +217,7 @@ public class SolverContactEnumerationDemo : Demo
                 Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(
                     (-columnCount * 0.5f + columnIndex) * boxShape.Width,
                     (rowIndex + 0.5f) * boxShape.Height + 10, 0),
-                    boxInertia, boxIndex, 0.01f));
+                    boxInertia, boxIndex, Constants.C0p01));
             }
         }
 
@@ -227,7 +229,7 @@ public class SolverContactEnumerationDemo : Demo
         var planeMesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
             (int x, int y) =>
             {
-                return new Vector3(x - planeWidth / 2, 1 * MathF.Cos(x / 2f) * MathF.Sin(y / 2f), y - planeHeight / 2);
+                return new Vector3(x - planeWidth / 2, 1 * MathF.Cos(x / Constants.C0p3) * MathF.Sin(y / Constants.C0p3), y - planeHeight / 2);
             }, new Vector3(2, 1, 2), BufferPool);
         Simulation.Statics.Add(new StaticDescription(new Vector3(0, -2, 0), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
     }

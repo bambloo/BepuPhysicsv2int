@@ -1,9 +1,9 @@
 ﻿using BepuUtilities;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System;
-using System.Diagnostics;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Trees
 {
@@ -82,7 +82,7 @@ namespace BepuPhysics.Trees
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe BestInsertionChoice ComputeBestInsertionChoice(ref BoundingBox bounds, float newLeafCost, ref NodeChild child, out BoundingBox mergedCandidate, out float costChange)
+        private static unsafe BestInsertionChoice ComputeBestInsertionChoice(ref BoundingBox bounds, Number newLeafCost, ref NodeChild child, out BoundingBox mergedCandidate, out Number costChange)
         {
             CreateMerged(ref child.Min, ref child.Max, ref bounds.Min, ref bounds.Max, out mergedCandidate);
             var newCost = ComputeBoundsMetric(ref mergedCandidate);
@@ -177,19 +177,21 @@ namespace BepuPhysics.Trees
 
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static float ComputeBoundsMetric(ref BoundingBox bounds)
+        internal static Number ComputeBoundsMetric(ref BoundingBox bounds)
         {
             return ComputeBoundsMetric(ref bounds.Min, ref bounds.Max);
         }
         [MethodImpl(MethodImplOptions.NoInlining)]
-        internal static float ComputeBoundsMetric(ref Vector3 min, ref Vector3 max)
+        internal static Number ComputeBoundsMetric(ref Vector3 min, ref Vector3 max)
         {
             //Note that we just use the SAH. While we are primarily interested in volume queries for the purposes of collision detection, the topological difference
             //between a volume heuristic and surface area heuristic isn't huge. There is, however, one big annoying issue that volume heuristics run into:
             //all bounding boxes with one extent equal to zero have zero cost. Surface area approaches avoid this hole simply.
             var offset = max - min;
             //Note that this is merely proportional to surface area. Being scaled by a constant factor is irrelevant.
-            return offset.X * offset.Y + offset.Y * offset.Z + offset.X * offset.Z;
+            var res = offset.X * offset.Y + offset.Y * offset.Z + offset.X * offset.Z;
+            //Debug.Assert(!Number.IsNaN(res));
+            return res;
         }
     }
 }

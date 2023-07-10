@@ -1,8 +1,8 @@
-﻿using BepuUtilities;
-using DemoUtilities;
+﻿
+
+using BepuUtilities.Numerics;
 using System;
-using System.Numerics;
-using System.Text;
+using Math = BepuUtilities.Utils.Math;
 
 namespace DemoRenderer.UI
 {
@@ -33,13 +33,13 @@ namespace DemoRenderer.UI
             GlyphCount = 0;
         }
 
-        public static float MeasureLength(ReadOnlySpan<char> characters, Font font, float height)
+        public static Number MeasureLength(ReadOnlySpan<char> characters, Font font, Number height)
         {
             if (characters.Length > 0)
             {
                 var previousCharacter = characters[0];
-                var scale = height * font.Content.InverseSizeInTexels;
-                float length = 0;
+                var scale = height * (Number)font.Content.InverseSizeInTexels;
+                Number length = 0;
                 if (font.Content.Characters.TryGetValue(previousCharacter, out var firstCharacterData))
                     length += firstCharacterData.Advance;
                 for (int i = 1; i < characters.Length; ++i)
@@ -57,9 +57,9 @@ namespace DemoRenderer.UI
         }
 
         public void Add(ReadOnlySpan<char> characters, int start, int count, Vector2 screenToPackedScale,
-            Vector2 startingPosition, Vector2 horizontalAxis, Vector4 color, float height, Font font)
+            Vector2 startingPosition, Vector2 horizontalAxis, Vector4 color, Number height, Font font)
         {
-            var scale = height * font.Content.InverseSizeInTexels;
+            var scale = height * (Number)font.Content.InverseSizeInTexels;
             //Note that we don't actually include glyphs for spaces, so this could result in an oversized allocation. Not very concerning; no effect on correctness.
             var potentiallyRequiredCapacity = GlyphCount + count;
             if (potentiallyRequiredCapacity > glyphs.Length)
@@ -90,7 +90,7 @@ namespace DemoRenderer.UI
                         glyph = new GlyphInstance(ref minimum, ref horizontalAxis, scale, font.GetSourceId(character), ref color, ref screenToPackedScale);
                     }
                     //Move the pen to the next character.
-                    float advance = characterData.Advance;
+                    Number advance = characterData.Advance;
                     if (nextCharacterIndex < characterEnd)
                         advance += font.Content.GetKerningInTexels(character, characters[nextCharacterIndex]);
                     penPosition += horizontalAxis * (scale * advance);

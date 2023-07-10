@@ -1,11 +1,12 @@
-﻿using BepuUtilities.Memory;
-using DemoRenderer;
-using DemoUtilities;
-using BepuPhysics;
-using System;
-using DemoRenderer.UI;
-using DemoContentLoader;
+﻿using BepuPhysics;
 using BepuUtilities;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
+using DemoRenderer;
+using DemoRenderer.UI;
+using DemoUtilities;
+using System;
 
 namespace Demos
 {
@@ -53,8 +54,10 @@ namespace Demos
 
         public abstract void Initialize(ContentArchive content, Camera camera);
 
-        public const float TimestepDuration = 1 / 60f;
-        public virtual void Update(Window window, Camera camera, Input input, float dt)
+        public static readonly Number TimestepDuration = 1 / (Number)60f;
+
+        static int i = 0;
+        public virtual void Update(Window window, Camera camera, Input input, Number dt)
         {
             //In the demos, we use one time step per frame. We don't bother modifying the physics time step duration for different monitors so different refresh rates
             //change the rate of simulation. This doesn't actually change the result of the simulation, though, and the simplicity is a good fit for the demos.
@@ -62,12 +65,14 @@ namespace Demos
             //fully decouple simulation and rendering rates across different threads.
             //(In either case, you'd also want to interpolate or extrapolate simulation results during rendering for smoothness.)
             //Note that taking steps of variable length can reduce stability. Gradual or one-off changes can work reasonably well.
+            
+            Console.WriteLine(i++);
             Simulation.Timestep(TimestepDuration, ThreadDispatcher);
 
             ////Here's an example of how it would look to use more frequent updates, but still with a fixed amount of time simulated per update call:
-            //const float timeToSimulate = 1 / 60f;
+            //Number timeToSimulate = 1 / 60f;
             //const int timestepsPerUpdate = 2;
-            //const float timePerTimestep = timeToSimulate / timestepsPerUpdate;
+            //Number timePerTimestep = timeToSimulate / timestepsPerUpdate;
             //for (int i = 0; i < timestepsPerUpdate; ++i)
             //{
             //    Simulation.Timestep(timePerTimestep, ThreadDispatcher);
@@ -86,7 +91,7 @@ namespace Demos
             //var interpolationWeight = timeAccumulator / targetTimestepDuration;
         }
         //If you're using the accumulator-based timestep approach above, you'll need this field.
-        //float timeAccumulator;
+        //Number timeAccumulator;
 
         public virtual void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
@@ -105,7 +110,7 @@ namespace Demos
                 disposed = true;
                 OnDispose();
                 Simulation.Dispose();
-                ThreadDispatcher.Dispose();
+                ThreadDispatcher?.Dispose();
                 BufferPool.Clear();
             }
         }

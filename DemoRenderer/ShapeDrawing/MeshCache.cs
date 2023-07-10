@@ -1,12 +1,10 @@
 ﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using SharpDX.Direct3D11;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.InteropServices;
-using System.Text;
+
 
 namespace DemoRenderer.ShapeDrawing
 {

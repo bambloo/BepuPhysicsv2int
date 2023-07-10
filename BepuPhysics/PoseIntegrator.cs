@@ -4,18 +4,19 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using BepuUtilities.Collections;
 using BepuPhysics.Constraints;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {
     public interface IPoseIntegrator
     {
-        void PredictBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
-        void IntegrateAfterSubstepping(IndexSet constrainedBodies, float dt, int substepCount, IThreadDispatcher threadDispatcher = null);
+        void PredictBoundingBoxes(Number dt, BufferPool pool, IThreadDispatcher threadDispatcher = null);
+        void IntegrateAfterSubstepping(IndexSet constrainedBodies, Number dt, int substepCount, IThreadDispatcher threadDispatcher = null);
     }
 
     /// <summary>
@@ -76,7 +77,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="dt">Current integration time step duration.</param>
         /// <remarks>This is typically used for precomputing anything expensive that will be used across velocity integration.</remarks>
-        void PrepareForIntegration(float dt);
+        void PrepareForIntegration(Number dt);
 
         /// <summary>
         /// Callback for a bundle of bodies being integrated.
@@ -91,7 +92,7 @@ namespace BepuPhysics
         /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
         void IntegrateVelocity(
             Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia,
-            Vector<int> integrationMask, int workerIndex, Vector<float> dt, ref BodyVelocityWide velocity);
+            Vector<int> integrationMask, int workerIndex, Vector<Number> dt, ref BodyVelocityWide velocity);
     }
 
     /// <summary>
@@ -111,7 +112,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Integrate(Vector3 position, Vector3 linearVelocity, float dt, out Vector3 integratedPosition)
+        public static void Integrate(Vector3 position, Vector3 linearVelocity, Number dt, out Vector3 integratedPosition)
         {
             position.Validate();
             linearVelocity.Validate();
@@ -120,16 +121,16 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Integrate(Quaternion orientation, Vector3 angularVelocity, float dt, out Quaternion integratedOrientation)
+        public static void Integrate(Quaternion orientation, Vector3 angularVelocity, Number dt, out Quaternion integratedOrientation)
         {
             orientation.ValidateOrientation();
             angularVelocity.Validate();
             //Note that we don't bother with conservation of angular momentum or the gyroscopic term or anything else. All orientation integration assumes a series of piecewise linear integrations
             //That's not entirely correct, but it's a reasonable approximation that means we don't have to worry about conservation of angular momentum or gyroscopic terms when dealing with CCD sweeps.
             var speed = angularVelocity.Length();
-            if (speed > 1e-15f)
+            if (speed > Constants.C1em15)
             {
-                var halfAngle = speed * dt * 0.5f;
+                var halfAngle = speed * dt * Constants.C0p5;
                 Unsafe.SkipInit(out Quaternion q);
                 Unsafe.As<Quaternion, Vector3>(ref q) = angularVelocity * (MathHelper.Sin(halfAngle) / speed);
                 q.W = MathHelper.Cos(halfAngle);
@@ -144,7 +145,7 @@ namespace BepuPhysics
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Integrate(in QuaternionWide start, in Vector3Wide angularVelocity, in Vector<float> halfDt, out QuaternionWide integrated)
+        public static void Integrate(in QuaternionWide start, in Vector3Wide angularVelocity, in Vector<Number> halfDt, out QuaternionWide integrated)
         {
             Vector3Wide.Length(angularVelocity, out var speed);
             var halfAngle = speed * halfDt;
@@ -157,7 +158,7 @@ namespace BepuPhysics
             q.W = MathHelper.Cos(halfAngle);
             QuaternionWide.ConcatenateWithoutOverlap(start, q, out var end);
             end = QuaternionWide.Normalize(end);
-            var speedValid = Vector.GreaterThan(speed, new Vector<float>(1e-15f));
+            var speedValid = Vector.GreaterThan(speed, new Vector<Number>(Constants.C1em15));
             integrated.X = Vector.ConditionalSelect(speedValid, end.X, start.X);
             integrated.Y = Vector.ConditionalSelect(speedValid, end.Y, start.Y);
             integrated.Z = Vector.ConditionalSelect(speedValid, end.Z, start.Z);
@@ -181,7 +182,7 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void FallbackIfInertiaIncompatible(in Vector3Wide previousAngularVelocity, ref Vector3Wide angularVelocity)
         {
-            var infinity = new Vector<float>(float.PositiveInfinity);
+            var infinity = new Vector<Number>(Number.PositiveInfinity);
             var useNewVelocity = Vector.BitwiseAnd(Vector.LessThan(Vector.Abs(angularVelocity.X), infinity), Vector.BitwiseAnd(
                 Vector.LessThan(Vector.Abs(angularVelocity.Y), infinity),
                 Vector.LessThan(Vector.Abs(angularVelocity.Z), infinity)));
@@ -208,7 +209,7 @@ namespace BepuPhysics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(
-            in QuaternionWide orientation, in Symmetric3x3Wide localInverseInertia, ref Vector3Wide angularVelocity, in Vector<float> dt)
+            in QuaternionWide orientation, in Symmetric3x3Wide localInverseInertia, ref Vector3Wide angularVelocity, in Vector<Number> dt)
         {
             //Integrating the gyroscopic force explicitly can result in some instability, so we'll use an approximate implicit approach.
             //angularVelocity1 * inertia1 = angularVelocity0 * inertia1 + dt * ((angularVelocity1 * inertia1) x angularVelocity1)
@@ -254,7 +255,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, float dt, out RigidPose integratedPose)
+        public static unsafe void Integrate(in RigidPose pose, in BodyVelocity velocity, Number dt, out RigidPose integratedPose)
         {
             Integrate(pose.Position, velocity.Linear, dt, out integratedPose.Position);
             Integrate(pose.Orientation, velocity.Angular, dt, out integratedPose.Orientation);
@@ -285,7 +286,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        void UpdateSleepCandidacy(float velocityHeuristic, ref BodyActivity activity)
+        void UpdateSleepCandidacy(Number velocityHeuristic, ref BodyActivity activity)
         {
             if (velocityHeuristic > activity.SleepThreshold)
             {
@@ -305,17 +306,17 @@ namespace BepuPhysics
             }
         }
 
-        unsafe void PredictBoundingBoxes(int startBundleIndex, int endBundleIndex, float dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
+        unsafe void PredictBoundingBoxes(int startBundleIndex, int endBundleIndex, Number dt, ref BoundingBoxBatcher boundingBoxBatcher, int workerIndex)
         {
             var activities = bodies.ActiveSet.Activity;
             var collidables = bodies.ActiveSet.Collidables;
 
             Helpers.FillVectorWithLaneIndices(out var laneIndexOffsets);
-            var dtWide = new Vector<float>(dt);
+            var dtWide = new Vector<Number>(dt);
             var bodyCount = bodies.ActiveSet.Count;
             for (int bundleIndex = startBundleIndex; bundleIndex < endBundleIndex; ++bundleIndex)
             {
-                var bundleStartBodyIndex = bundleIndex * Vector<float>.Count;
+                var bundleStartBodyIndex = bundleIndex * Vector<Number>.Count;
                 var countInBundle = bodyCount - bundleStartBodyIndex;
                 if (countInBundle > Vector<int>.Count)
                     countInBundle = Vector<int>.Count;
@@ -369,7 +370,7 @@ namespace BepuPhysics
         }
 
 
-        float cachedDt;
+        Number cachedDt;
         int jobSize;
         int substepCount;
         IThreadDispatcher threadDispatcher;
@@ -406,7 +407,7 @@ namespace BepuPhysics
             boundingBoxUpdater.Flush();
         }
 
-        void PrepareForMultithreadedExecution(int loopIterationCount, float dt, int workerCount, int substepCount = 1)
+        void PrepareForMultithreadedExecution(int loopIterationCount, Number dt, int workerCount, int substepCount = 1)
         {
             cachedDt = dt;
             this.substepCount = substepCount;
@@ -420,7 +421,7 @@ namespace BepuPhysics
                 ++availableJobCount;
         }
 
-        public void PredictBoundingBoxes(float dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
+        public void PredictBoundingBoxes(Number dt, BufferPool pool, IThreadDispatcher threadDispatcher = null)
         {
             var workerCount = threadDispatcher == null ? 1 : threadDispatcher.ThreadCount;
 
@@ -447,12 +448,12 @@ namespace BepuPhysics
         /// Integrates the velocities of kinematic bodies as a prepass to the first substep during solving.
         /// Kinematics have to be integrated ahead of time since they don't block constraint batch membership; the same kinematic could appear in the batch multiple times.
         /// </summary>
-        internal unsafe void IntegrateKinematicVelocities(Buffer<int> bodyHandles, int bundleStartIndex, int bundleEndIndex, float substepDt, int workerIndex)
+        internal unsafe void IntegrateKinematicVelocities(Buffer<int> bodyHandles, int bundleStartIndex, int bundleEndIndex, Number substepDt, int workerIndex)
         {
             var bodyCount = bodyHandles.Length;
             var bundleCount = BundleIndexing.GetBundleCount(bodyCount);
-            var bundleDt = new Vector<float>(substepDt);
-            var halfDt = bundleDt * new Vector<float>(0.5f);
+            var bundleDt = new Vector<Number>(substepDt);
+            var halfDt = bundleDt * new Vector<Number>(Constants.C0p5);
 
             int* bodyIndices = stackalloc int[Vector<int>.Count];
             var bodyIndicesSpan = new Span<int>(bodyIndices, Vector<int>.Count);
@@ -462,8 +463,8 @@ namespace BepuPhysics
 
             for (int bundleIndex = bundleStartIndex; bundleIndex < bundleEndIndex; ++bundleIndex)
             {
-                var bundleBaseIndex = bundleIndex * Vector<float>.Count;
-                var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<float>.Count);
+                var bundleBaseIndex = bundleIndex * Vector<Number>.Count;
+                var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<Number>.Count);
                 for (int i = 0; i < countInBundle; ++i)
                 {
                     bodyIndices[i] = handleToLocation[bodyHandles[bundleBaseIndex + i]].Index;
@@ -489,12 +490,12 @@ namespace BepuPhysics
         /// Integrates the poses *then* velocities of kinematic bodies as a prepass to the second or later substeps during solving.
         /// Kinematics have to be integrated ahead of time since they don't block constraint batch membership; the same kinematic could appear in the batch multiple times.
         /// </summary>
-        internal unsafe void IntegrateKinematicPosesAndVelocities(Buffer<int> bodyHandles, int bundleStartIndex, int bundleEndIndex, float substepDt, int workerIndex)
+        internal unsafe void IntegrateKinematicPosesAndVelocities(Buffer<int> bodyHandles, int bundleStartIndex, int bundleEndIndex, Number substepDt, int workerIndex)
         {
             var bodyCount = bodyHandles.Length;
             var bundleCount = BundleIndexing.GetBundleCount(bodyCount);
-            var bundleDt = new Vector<float>(substepDt);
-            var halfDt = bundleDt * new Vector<float>(0.5f);
+            var bundleDt = new Vector<Number>(substepDt);
+            var halfDt = bundleDt * new Vector<Number>(Constants.C0p5);
 
             int* bodyIndices = stackalloc int[Vector<int>.Count];
             var bodyIndicesSpan = new Span<int>(bodyIndices, Vector<int>.Count);
@@ -504,8 +505,8 @@ namespace BepuPhysics
 
             for (int bundleIndex = bundleStartIndex; bundleIndex < bundleEndIndex; ++bundleIndex)
             {
-                var bundleBaseIndex = bundleIndex * Vector<float>.Count;
-                var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<float>.Count);
+                var bundleBaseIndex = bundleIndex * Vector<Number>.Count;
+                var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<Number>.Count);
                 for (int i = 0; i < countInBundle; ++i)
                 {
                     bodyIndices[i] = handleToLocation[bodyHandles[bundleBaseIndex + i]].Index;
@@ -533,12 +534,12 @@ namespace BepuPhysics
             }
         }
 
-        unsafe void IntegrateBundlesAfterSubstepping(ref IndexSet mergedConstrainedBodyHandles, int bundleStartIndex, int bundleEndIndex, float dt, float substepDt, int substepCount, int workerIndex)
+        unsafe void IntegrateBundlesAfterSubstepping(ref IndexSet mergedConstrainedBodyHandles, int bundleStartIndex, int bundleEndIndex, Number dt, Number substepDt, int substepCount, int workerIndex)
         {
             var bodyCount = bodies.ActiveSet.Count;
             var bundleCount = BundleIndexing.GetBundleCount(bodyCount);
-            var bundleDt = new Vector<float>(dt);
-            var bundleSubstepDt = new Vector<float>(substepDt);
+            var bundleDt = new Vector<Number>(dt);
+            var bundleSubstepDt = new Vector<Number>(substepDt);
 
             int* unconstrainedMaskPointer = stackalloc int[Vector<int>.Count];
             int* bodyIndicesPointer = stackalloc int[Vector<int>.Count];
@@ -550,8 +551,8 @@ namespace BepuPhysics
 
             for (int i = bundleStartIndex; i < bundleEndIndex; ++i)
             {
-                var bundleBaseIndex = i * Vector<float>.Count;
-                var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<float>.Count);
+                var bundleBaseIndex = i * Vector<Number>.Count;
+                var countInBundle = Math.Min(bodyCount - bundleBaseIndex, Vector<Number>.Count);
                 //This is executed at the end of the frame, after all constraints are complete.
                 //It covers both constrained and unconstrained bodies.
                 //There is no need to write world inertia, since the solver is done.
@@ -587,7 +588,7 @@ namespace BepuPhysics
                     unconstrainedMask = Vector.AndNot(unconstrainedMask, trailingMask);
                 }
 
-                Vector<float> bundleEffectiveDt;
+                Vector<Number> bundleEffectiveDt;
                 if (callbacks.AllowSubstepsForUnconstrainedBodies)
                 {
                     bundleEffectiveDt = bundleSubstepDt;
@@ -596,7 +597,7 @@ namespace BepuPhysics
                 {
                     bundleEffectiveDt = Vector.ConditionalSelect(unconstrainedMask, bundleDt, bundleSubstepDt);
                 }
-                var halfDt = bundleEffectiveDt * new Vector<float>(0.5f);
+                var halfDt = bundleEffectiveDt * new Vector<Number>(Constants.C0p5);
                 bodies.GatherState<AccessAll>(bodyIndices, false, out var position, out var orientation, out var velocity, out var localInertia);
 
 
@@ -702,7 +703,7 @@ namespace BepuPhysics
             }
         }
 
-        public void IntegrateAfterSubstepping(IndexSet constrainedBodies, float dt, int substepCount, IThreadDispatcher threadDispatcher)
+        public void IntegrateAfterSubstepping(IndexSet constrainedBodies, Number dt, int substepCount, IThreadDispatcher threadDispatcher)
         {
             //The only bodies undergoing *velocity* integration during the post-integration step are unconstrained.
             var substepDt = dt / substepCount;

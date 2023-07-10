@@ -1,13 +1,12 @@
-﻿using BepuUtilities;
-using BepuUtilities.Memory;
-using System;
-using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using BepuPhysics.Constraints;
-using BepuPhysics.Collidables;
-using BepuUtilities.Collections;
+﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
+using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {
@@ -398,7 +397,7 @@ namespace BepuPhysics
                 var newSize = HandleToIndex.Length << 1;
                 InternalResize(newSize);
             }
-            Debug.Assert(Math.Abs(description.Pose.Orientation.Length() - 1) < 1e-6f, "Orientation should be initialized to a unit length quaternion.");
+            Debug.Assert(Math.Abs(description.Pose.Orientation.Length() - 1) < Constants.C1em6, "Orientation should be initialized to a unit length quaternion.");
             var handle = new StaticHandle(HandlePool.Take());
             var index = Count++;
             HandleToIndex[handle.Value] = index;

@@ -1,7 +1,6 @@
 ﻿using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuUtilities;
-using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection
@@ -10,7 +9,7 @@ namespace BepuPhysics.CollisionDetection
     {
         public Vector3Wide OffsetA;
         public Vector3Wide Normal;
-        public Vector<float> Depth;
+        public Vector<Number> Depth;
         //Note that feature ids are a little bit questionable for single contact manifolds. We only keep them because:
         //1) it costs ~nothing, and
         //2) some pairs use feature ids to pass metadata (like triangles in meshes).
@@ -59,8 +58,8 @@ namespace BepuPhysics.CollisionDetection
         public Vector3Wide OffsetA0;
         public Vector3Wide OffsetA1;
         public Vector3Wide Normal;
-        public Vector<float> Depth0;
-        public Vector<float> Depth1;
+        public Vector<Number> Depth0;
+        public Vector<Number> Depth1;
         public Vector<int> FeatureId0;
         public Vector<int> FeatureId1;
         public Vector<int> Contact0Exists;
@@ -121,10 +120,10 @@ namespace BepuPhysics.CollisionDetection
         public Vector3Wide OffsetA2;
         public Vector3Wide OffsetA3;
         public Vector3Wide Normal;
-        public Vector<float> Depth0;
-        public Vector<float> Depth1;
-        public Vector<float> Depth2;
-        public Vector<float> Depth3;
+        public Vector<Number> Depth0;
+        public Vector<Number> Depth1;
+        public Vector<Number> Depth2;
+        public Vector<Number> Depth3;
         public Vector<int> FeatureId0;
         public Vector<int> FeatureId1;
         public Vector<int> FeatureId2;

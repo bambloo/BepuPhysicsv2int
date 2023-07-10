@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
@@ -9,9 +9,9 @@ namespace BepuUtilities
     /// </summary>
     public struct Symmetric2x2Wide
     {
-        public Vector<float> XX;
-        public Vector<float> YX;
-        public Vector<float> YY;
+        public Vector<Number> XX;
+        public Vector<Number> YX;
+        public Vector<Number> YY;
 
         /// <summary>
         /// Computes m * scale * mT. 
@@ -21,7 +21,7 @@ namespace BepuUtilities
         /// <param name="result">Result of m * scale * mT.</param>
         /// <remarks>This is a peculiar operation, but it's useful for computing linear effective mass contributions in 2DOF constraints.</remarks>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void SandwichScale(in Matrix2x3Wide m, in Vector<float> scale, out Symmetric2x2Wide result)
+        public static void SandwichScale(in Matrix2x3Wide m, in Vector<Number> scale, out Symmetric2x2Wide result)
         {
             result.XX = scale * (m.X.X * m.X.X + m.X.Y * m.X.Y + m.X.Z * m.X.Z);
             result.YX = scale * (m.Y.X * m.X.X + m.Y.Y * m.X.Y + m.Y.Z * m.X.Z);
@@ -29,7 +29,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Symmetric2x2Wide t, in Vector<float> scale, out Symmetric2x2Wide result)
+        public static void Scale(in Symmetric2x2Wide t, in Vector<Number> scale, out Symmetric2x2Wide result)
         {
             result.XX = t.XX * scale;
             result.YX = t.YX * scale;
@@ -55,7 +55,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void InvertWithoutOverlap(in Symmetric2x2Wide m, out Symmetric2x2Wide inverse)
         {
-            var denom = Vector<float>.One / (m.YX * m.YX - m.XX * m.YY);
+            var denom = Vector<Number>.One / (m.YX * m.YX - m.XX * m.YY);
             inverse.XX = -m.YY * denom;
             inverse.YX = m.YX * denom;
             inverse.YY = -m.XX * denom;

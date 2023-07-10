@@ -1,13 +1,9 @@
-﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
-using System.Runtime.CompilerServices;
+﻿using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
-using System.Diagnostics;
-using System.Numerics;
-using BepuPhysics.Collidables;
+using BepuUtilities.Numerics;
 using System;
-using BepuPhysics.Constraints.Contact;
-using BepuUtilities;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -22,74 +18,74 @@ namespace BepuPhysics.CollisionDetection
 
     public struct ContactImpulses1
     {
-        public float Impulse0;
+        public Number Impulse0;
     }
     public struct ContactImpulses2
     {
-        public float Impulse0;
-        public float Impulse1;
+        public Number Impulse0;
+        public Number Impulse1;
     }
     public struct ContactImpulses3
     {
-        public float Impulse0;
-        public float Impulse1;
-        public float Impulse2;
+        public Number Impulse0;
+        public Number Impulse1;
+        public Number Impulse2;
     }
     public struct ContactImpulses4
     {
-        public float Impulse0;
-        public float Impulse1;
-        public float Impulse2;
-        public float Impulse3;
+        public Number Impulse0;
+        public Number Impulse1;
+        public Number Impulse2;
+        public Number Impulse3;
     }
     public struct ContactImpulses5
     {
-        public float Impulse0;
-        public float Impulse1;
-        public float Impulse2;
-        public float Impulse3;
-        public float Impulse4;
+        public Number Impulse0;
+        public Number Impulse1;
+        public Number Impulse2;
+        public Number Impulse3;
+        public Number Impulse4;
     }
     public struct ContactImpulses6
     {
-        public float Impulse0;
-        public float Impulse1;
-        public float Impulse2;
-        public float Impulse3;
-        public float Impulse4;
-        public float Impulse5;
+        public Number Impulse0;
+        public Number Impulse1;
+        public Number Impulse2;
+        public Number Impulse3;
+        public Number Impulse4;
+        public Number Impulse5;
     }
     public struct ContactImpulses7
     {
-        public float Impulse0;
-        public float Impulse1;
-        public float Impulse2;
-        public float Impulse3;
-        public float Impulse4;
-        public float Impulse5;
-        public float Impulse6;
+        public Number Impulse0;
+        public Number Impulse1;
+        public Number Impulse2;
+        public Number Impulse3;
+        public Number Impulse4;
+        public Number Impulse5;
+        public Number Impulse6;
     }
     public struct ContactImpulses8
     {
-        public float Impulse0;
-        public float Impulse1;
-        public float Impulse2;
-        public float Impulse3;
-        public float Impulse4;
-        public float Impulse5;
-        public float Impulse6;
-        public float Impulse7;
+        public Number Impulse0;
+        public Number Impulse1;
+        public Number Impulse2;
+        public Number Impulse3;
+        public Number Impulse4;
+        public Number Impulse5;
+        public Number Impulse6;
+        public Number Impulse7;
     }
 
     public partial class NarrowPhase<TCallbacks> where TCallbacks : struct, INarrowPhaseCallbacks
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe void RedistributeImpulses<TContactImpulses>(
-            int oldContactCount, int* oldFeatureIds, float* oldImpulses,
+            int oldContactCount, int* oldFeatureIds, Number* oldImpulses,
             int newContactCount, ref int newFeatureIds, ref TContactImpulses newImpulsesContainer)
         {
             //Map the new contacts to the old contacts.
-            ref var newImpulses = ref Unsafe.As<TContactImpulses, float>(ref newImpulsesContainer);
+            ref var newImpulses = ref Unsafe.As<TContactImpulses, Number>(ref newImpulsesContainer);
             //Note that the pointer casts below are not actually GC holes:
             //contact manifolds passed down here from the collision batcher and friends are all stored either on the stack or in pinned buffers.
             int unmatchedCount = 0;
@@ -116,7 +112,7 @@ namespace BepuPhysics.CollisionDetection
             //Distribute any missing impulse evenly over the remaining unmatched contacts.
             if (unmatchedCount > 0)
             {
-                float unmatchedImpulse = 0;
+                Number unmatchedImpulse = 0;
                 for (int i = 0; i < oldContactCount; ++i)
                 {
                     unmatchedImpulse += oldImpulses[i];
@@ -169,7 +165,7 @@ namespace BepuPhysics.CollisionDetection
                     "Handle-retrieved constraint reference must point to a constraint of expected type, or else something is corrupted.");
                 var newImpulses = default(TContactImpulses);
                 var accessor = contactConstraintAccessors[constraintReference.TypeBatch.TypeId];
-                var oldImpulses = stackalloc float[accessor.ContactCount];
+                var oldImpulses = stackalloc Number[accessor.ContactCount];
                 accessor.GatherOldImpulses(ref constraintReference, oldImpulses);
 #if DEBUG
                 for (int i = 0; i < accessor.ContactCount; ++i)

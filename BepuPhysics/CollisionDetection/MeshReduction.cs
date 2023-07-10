@@ -1,14 +1,12 @@
 ﻿using BepuPhysics.Collidables;
-using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System;
-using System.Collections.Generic;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -21,7 +19,7 @@ namespace BepuPhysics.CollisionDetection
         /// <summary>
         /// Minimum dot product between a triangle face and the contact normal for a collision to be considered a triangle face contact.
         /// </summary>
-        public const float MinimumDotForFaceCollision = 0.999999f;
+        public static readonly Number MinimumDotForFaceCollision = new Number(0.999999f);
         public Buffer<Triangle> Triangles;
         //MeshReduction relies on all of a mesh's triangles being in slot B, as they appear in the mesh collision tasks.
         //However, the original user may have provided this pair in unknown order and triggered a flip. We'll compensate for that when examining contact positions.
@@ -97,7 +95,7 @@ namespace BepuPhysics.CollisionDetection
             public Vector4 NX;
             public Vector4 NY;
             public Vector4 NZ;
-            public float DistanceThreshold;
+            public Number DistanceThreshold;
             public int ChildIndex;
             /// <summary>
             /// True if the manifold associated with this triangle has been blocked due to its detected infringement on another triangle, false otherwise.
@@ -119,7 +117,7 @@ namespace BepuPhysics.CollisionDetection
                 var bc = triangle.C - triangle.B;
                 var ca = triangle.A - triangle.C;
                 //TODO: This threshold might result in bumps when dealing with small triangles. May want to include a different source of scale information, like from the original convex test.
-                DistanceThreshold = 1e-3f * (float)Math.Sqrt(MathHelper.Max(triangle.A.LengthSquared() * 1e-4f, MathHelper.Max(ab.LengthSquared(), ca.LengthSquared())));
+                DistanceThreshold = Constants.C1em3 * (Number)Math.Sqrt(MathHelper.Max(triangle.A.LengthSquared() * Constants.C1em4, MathHelper.Max(ab.LengthSquared(), ca.LengthSquared())));
                 var n = Vector3.Cross(ab, ca);
                 //Edge normals point outward.
                 var edgeNormalAB = Vector3.Cross(n, ab);
@@ -181,7 +179,7 @@ namespace BepuPhysics.CollisionDetection
                 //Note that we are stricter about being on the edge than we were about being nearby.
                 //That's because infringement checks require a normal infringement along every edge that the contact is on;
                 //being too aggressive about edge classification would cause infringements to sometimes be ignored.
-                var negativeThreshold = triangle.DistanceThreshold * -1e-2f;
+                var negativeThreshold = triangle.DistanceThreshold * Constants.Cm1em2;
                 var onAB = distanceAlongNormal.Y >= negativeThreshold;
                 var onBC = distanceAlongNormal.Z >= negativeThreshold;
                 var onCA = distanceAlongNormal.W >= negativeThreshold;
@@ -200,7 +198,7 @@ namespace BepuPhysics.CollisionDetection
                     //Remember, the contact has been pushed into mesh space. The position is on the surface of the triangle, and the normal points from convex to mesh.
                     //The edge plane normals point outward from the triangle, so if the contact normal is detected as pointing along the edge plane normal,
                     //then it is infringing.
-                    const float infringementEpsilon = 1e-6f;
+                    Number infringementEpsilon = Constants.C1em6;
                     //In order to block a contact, it must be infringing on every edge that it is on top of.
                     //In other words, when a contact is on a vertex, it's not good enough to infringe only one of the edges; in that case, the contact normal isn't 
                     //actually infringing on the triangle face.
@@ -210,7 +208,7 @@ namespace BepuPhysics.CollisionDetection
                     //the normal is aligned with an edge.
                     if ((onAB && normalDot.Y > infringementEpsilon) || (onBC && normalDot.Z > infringementEpsilon) || (onCA && normalDot.W > infringementEpsilon))
                     {
-                        const float secondaryInfringementEpsilon = -1e-2f;
+                        Number secondaryInfringementEpsilon = Constants.Cm1em2;
                         //At least one edge is infringed. Are all contact-touched edges at least nearly infringed?
                         if ((!onAB || normalDot.Y > secondaryInfringementEpsilon) && (!onBC || normalDot.Z > secondaryInfringementEpsilon) && (!onCA || normalDot.W > secondaryInfringementEpsilon))
                         {
@@ -331,7 +329,7 @@ namespace BepuPhysics.CollisionDetection
                 //Console.WriteLine($"Mesh reduction child count: {count}");
                 //for (int i = 0; i < count; ++i)
                 //{
-                //    var maxDepth = float.MinValue;
+                //    var maxDepth = Number.MinValue;
                 //    for (int j = 0; j < children[i].Manifold.Count; ++j)
                 //    {
                 //        var depth = children[i].Manifold.GetDepth(ref children[i].Manifold, j);
@@ -414,7 +412,7 @@ namespace BepuPhysics.CollisionDetection
                 //For numerical reasons, expand each contact by an epsilon to capture relevant triangles.
                 var span = queryBounds.Max - queryBounds.Min;
                 var maxSpan = MathF.Max(span.X, MathF.Max(span.Y, span.Z));
-                var contactExpansion = new Vector3(maxSpan * 1e-4f);
+                var contactExpansion = new Vector3(maxSpan * Constants.C1em4);
 
                 //We're guaranteed to encounter all the triangles with contacts that we collected, so go ahead and create their entries.
                 if (requiresFlip)

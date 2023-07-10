@@ -3,13 +3,15 @@ using DemoRenderer;
 using DemoUtilities;
 using BepuPhysics;
 using BepuPhysics.Collidables;
-using System;
-using System.Numerics;
+
+
 using System.Diagnostics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using DemoContentLoader;
 using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 
 namespace Demos.SpecializedTests
 {
@@ -19,7 +21,7 @@ namespace Demos.SpecializedTests
         {
             camera.Position = new Vector3(-10, 5, -10);
             //camera.Yaw = MathHelper.Pi ; 
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             //camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
@@ -36,24 +38,24 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         var location = new Vector3(1.5f, 1.5f, 4.4f) * new Vector3(i, j, k) + new Vector3(-width * 0.5f, 0.5f, -length * 0.5f);
-                        var bodyDescription = BodyDescription.CreateDynamic((location, QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2)), localInertia, new(shapeIndex, 50, 50), -1);
+                        var bodyDescription = BodyDescription.CreateDynamic((location, QuaternionEx.CreateFromAxisAngle(new Vector3(1, 0, 0), MathF.PI / 2)), localInertia, new(shapeIndex, 50, 50), Constants.Cm1);
                         Simulation.Bodies.Add(bodyDescription);
 
                     }
                 }
             }
             var boxShape = new Box(0.5f, 0.5f, 2.5f);
-            var boxDescription = BodyDescription.CreateDynamic(new Vector3(1, -0.5f, 0), boxShape.ComputeInertia(1), new(Simulation.Shapes.Add(boxShape), 50, 50), -1);
+            var boxDescription = BodyDescription.CreateDynamic(new Vector3(1, -0.5f, 0), boxShape.ComputeInertia(1), new(Simulation.Shapes.Add(boxShape), 50, 50), Constants.Cm1);
             Simulation.Bodies.Add(boxDescription);
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -3, 0), Simulation.Shapes.Add(new Box(4, 1, 4))));
 
         }
 
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             if (input.WasDown(OpenTK.Input.Key.P))
-                Console.WriteLine("$");
+                System.Console.WriteLine("$");
             base.Update(window, camera, input, dt);
         }
     }

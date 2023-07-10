@@ -1,24 +1,19 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
+﻿
+using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuPhysics.Constraints;
+using BepuUtilities;
 using BepuUtilities.Collections;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
-using BepuPhysics;
-using DemoRenderer.UI;
-using DemoUtilities;
-using DemoRenderer.Constraints;
-using static BepuPhysics.Collidables.ConvexHullHelper;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using BepuUtilities;
-using BepuPhysics.Constraints.Contact;
-using BepuPhysics.Constraints;
-using Demos.Demos;
-using BepuUtilities.Memory;
-using System.Text.Json;
 using System.IO;
+using System.Text.Json;
+using static BepuPhysics.Collidables.ConvexHullHelper;
 
 namespace Demos.SpecializedTests;
 
@@ -56,7 +51,7 @@ public class ConvexHullTestDemo : Demo
         return points;
     }
 
-    unsafe Buffer<Vector3> CreateBoxConvexHull(float boxScale)
+    unsafe Buffer<Vector3> CreateBoxConvexHull(Number boxScale)
     {
         BufferPool.Take<Vector3>(8, out var points);
         points[0] = new Vector3(0, 0, 0);
@@ -289,12 +284,12 @@ public class ConvexHullTestDemo : Demo
         if (File.Exists(filePath))
         {
             string jsonContent = File.ReadAllText(filePath);
-            List<List<double>> rawPoints = JsonSerializer.Deserialize<List<List<double>>>(jsonContent);
-            foreach (List<double> point in rawPoints)
+            List<List<Number>> rawPoints = JsonSerializer.Deserialize<List<List<Number>>>(jsonContent);
+            foreach (List<Number> point in rawPoints)
             {
                 if (point.Count == 3)
                 {
-                    Vector3 vector3Point = new Vector3((float)point[0], (float)point[1], (float)point[2]);
+                    Vector3 vector3Point = new Vector3((Number)point[0], (Number)point[1], (Number)point[2]);
                     points.Add(vector3Point);
                 }
             }
@@ -329,7 +324,7 @@ public class ConvexHullTestDemo : Demo
         //var hullPoints = CreateTestConvexHull2();
         //var hullPoints = CreateBoxConvexHull(2);
         var hullShape = new ConvexHull(hullPoints, BufferPool, out _);
-        //float largestError = 0;
+        //Number largestError = 0;
         //for (int i = 0; i < hullShape.FaceToVertexIndicesStart.Length; ++i)
         //{
         //    hullShape.GetVertexIndicesForFace(i, out var faceVertices);
@@ -397,8 +392,8 @@ public class ConvexHullTestDemo : Demo
         var hullShapeIndex = Simulation.Shapes.Add(hullShape);
         var boxHullShapeIndex = Simulation.Shapes.Add(boxHullShape);
         var inertia = hullShape.ComputeInertia(1);
-        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 5), inertia, new(hullShapeIndex, 20, 20), -0.01f));
-        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 3), boxHullShape.ComputeInertia(1), new(boxHullShapeIndex, 20, 20), -0.01f));
+        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 5), inertia, new(hullShapeIndex, 20, 20), -Constants.C0p01));
+        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 0, 3), boxHullShape.ComputeInertia(1), new(boxHullShapeIndex, 20, 20), -Constants.C0p01));
 
         Simulation.Statics.Add(new StaticDescription(new Vector3(-25, -5, 0), Simulation.Shapes.Add(new Sphere(2))));
         Simulation.Statics.Add(new StaticDescription(new Vector3(-20, -5, 0), Simulation.Shapes.Add(new Capsule(0.5f, 2))));
@@ -409,7 +404,7 @@ public class ConvexHullTestDemo : Demo
         Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 0), hullShapeIndex));
         Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5, 5), Simulation.Shapes.Add(boxHullShape)));
 
-        var spacing = new Vector3(3f, 3f, 3);
+        var spacing = new Vector3(Constants.C3, Constants.C3, 3);
         int width = 16;
         int height = 16;
         int length = 0;
@@ -422,7 +417,7 @@ public class ConvexHullTestDemo : Demo
                 {
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(
                         (origin + spacing * new Vector3(i, j, k), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathHelper.Pi * 0.05f)),
-                        inertia, hullShapeIndex, 0.01f));
+                        inertia, hullShapeIndex, Constants.C0p01));
                 }
             }
         }
@@ -460,7 +455,7 @@ public class ConvexHullTestDemo : Demo
 
     //int stepIndex = 0;
 
-    //public override void Update(Window window, Camera camera, Input input, float dt)
+    //public override void Update(Window window, Camera camera, Input input, Number dt)
     //{
     //    if (input.TypedCharacters.Contains('x'))
     //    {

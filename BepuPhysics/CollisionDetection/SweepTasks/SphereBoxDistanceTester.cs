@@ -1,13 +1,13 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
-using System.Numerics;
+using BepuUtilities.Numerics;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
     public struct SphereBoxDistanceTester : IPairDistanceTester<SphereWide, BoxWide>
     {
         public void Test(in SphereWide a, in BoxWide b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
-            out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
+            out Vector<int> intersected, out Vector<Number> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             //Clamp the position of the sphere to the box.
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var orientationMatrixB);
@@ -21,13 +21,13 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             //Implicit negation to make the normal point from B to A, following convention.
             Vector3Wide.Subtract(clampedLocalOffsetB, localOffsetB, out var localNormal);
             Vector3Wide.Length(localNormal, out var innerDistance);
-            var inverseDistance = Vector<float>.One / innerDistance;
+            var inverseDistance = Vector<Number>.One / innerDistance;
             Vector3Wide.Scale(localNormal, inverseDistance, out localNormal);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientationMatrixB, out normal);
             var negativeRadius = -a.Radius;
             Vector3Wide.Scale(normal, negativeRadius, out closestA);
             distance = innerDistance - a.Radius;
-            intersected = Vector.LessThanOrEqual(distance, Vector<float>.Zero);
+            intersected = Vector.LessThanOrEqual(distance, Vector<Number>.Zero);
         }
     }
 

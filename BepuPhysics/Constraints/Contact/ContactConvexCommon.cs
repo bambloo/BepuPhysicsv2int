@@ -1,23 +1,19 @@
-﻿using BepuPhysics.CollisionDetection;
-using BepuUtilities;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
+﻿using BepuUtilities;
+using BepuUtilities.Numerics;
 
 namespace BepuPhysics.Constraints.Contact
 {
     public struct ConvexContactWide
     {
         public Vector3Wide OffsetA;
-        public Vector<float> Depth;
+        public Vector<Number> Depth;
     }
 
     public struct MaterialPropertiesWide
     {
-        public Vector<float> FrictionCoefficient;
+        public Vector<Number> FrictionCoefficient;
         public SpringSettingsWide SpringSettings;
-        public Vector<float> MaximumRecoveryVelocity;
+        public Vector<Number> MaximumRecoveryVelocity;
     }
 
     public interface IContactPrestep<TPrestep> where TPrestep : struct, IContactPrestep<TPrestep>
@@ -48,8 +44,8 @@ namespace BepuPhysics.Constraints.Contact
     public interface IConvexContactAccumulatedImpulses<TAccumulatedImpulses> : IContactAccumulatedImpulses<TAccumulatedImpulses> where TAccumulatedImpulses : struct, IConvexContactAccumulatedImpulses<TAccumulatedImpulses>
     {
         ref Vector2Wide GetTangentFriction(ref TAccumulatedImpulses impulses);
-        ref Vector<float> GetTwistFriction(ref TAccumulatedImpulses impulses);
-        ref Vector<float> GetPenetrationImpulseForContact(ref TAccumulatedImpulses impulses, int index);
+        ref Vector<Number> GetTwistFriction(ref TAccumulatedImpulses impulses);
+        ref Vector<Number> GetPenetrationImpulseForContact(ref TAccumulatedImpulses impulses, int index);
     }
 
 }

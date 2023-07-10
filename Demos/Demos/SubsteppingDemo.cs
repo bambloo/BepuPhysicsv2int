@@ -4,12 +4,14 @@ using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Numerics;
+
+
 namespace Demos.Demos
 {
     /// <summary>
@@ -24,19 +26,19 @@ namespace Demos.Demos
             camera.Position = new Vector3(0, 25, 80);
             camera.Yaw = 0;
             camera.Pitch = 0;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(640, 480), float.MaxValue, 1), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(2, 48));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(640, 480), Number.MaxValue, 1), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(2, 48));
 
             rolloverInfo = new RolloverInfo();
             {
                 //We'll create a 0 level arm rope like the one from the RopeStabilityDemo. No skip constraints, though- and the mass ratio will be 10000:1 instead of 100:1!
                 var startLocation = new Vector3(15, 40, 0);
-                const float bodySpacing = 0.3f;
-                const float bodyRadius = 0.5f;
+                Number bodySpacing = 0.3f;
+                Number bodyRadius = 0.5f;
                 var springSettings = new SpringSettings(480, 480);
                 var bodyHandles = RopeStabilityDemo.BuildRope(Simulation, startLocation, 12, bodyRadius, bodySpacing, 0, 1, 0, springSettings);
 
                 var bigWreckingBall = new Sphere(5);
-                const float mass = 10000;
+                Number mass = 10000;
                 var bigWreckingBallInertia = bigWreckingBall.ComputeInertia(mass);
 
                 RopeStabilityDemo.AttachWreckingBall(Simulation, bodyHandles, bodyRadius, bodySpacing, 0, bigWreckingBall.Radius, bigWreckingBallInertia, Simulation.Shapes.Add(bigWreckingBall), springSettings);
@@ -49,17 +51,17 @@ namespace Demos.Demos
                 //(Note that the demos timestep frequency is 60hz, so 4 substeps is a 240hz solve rate- twice the 120hz contact frequency.)
                 var boxShape = new Box(4, 0.5f, 6f);
                 var boxInertia = boxShape.ComputeInertia(1);
-                var boxDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, Simulation.Shapes.Add(boxShape), 0.01f);
+                var boxDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, Simulation.Shapes.Add(boxShape), Constants.C0p01);
                 for (int i = 0; i < 20; ++i)
                 {
                     boxDescription.Pose = (new Vector3(0, 0.5f + boxShape.Height * (i + 0.5f), 0), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.05f * i));
                     Simulation.Bodies.Add(boxDescription);
                 }
                 var topBlockShape = new Box(8, 2, 8);
-                const float mass = 10000;
+                Number mass = 10000;
                 Simulation.Bodies.Add(
                     BodyDescription.CreateDynamic(boxDescription.Pose.Position + new Vector3(0, boxShape.HalfHeight + 1f, 0), topBlockShape.ComputeInertia(mass),
-                    Simulation.Shapes.Add(topBlockShape), .01f));
+                    Simulation.Shapes.Add(topBlockShape), Constants.C0p01));
 
                 rolloverInfo.Add(boxDescription.Pose.Position + new Vector3(0, 4, 0), $"{mass}:1 mass ratio");
             }
@@ -68,15 +70,15 @@ namespace Demos.Demos
                 //Now a weird rotating multi-arm thing. Long constraint sequences with high leverages under stress are a really tough problem for iterative velocity solvers.
                 //(Fortunately, all 5 degrees of freedom of each hinge constraint are solved analytically, so the convergence issues aren't quite as bad as they could be.)
                 var basePosition = new Vector3(-20, 20, 0);
-                var boxShape = new Box(0.5f, 0.5f, 3f);
+                var boxShape = new Box(0.5f, 0.5f, Constants.C3);
                 var boxShapeIndex = Simulation.Shapes.Add(boxShape);
                 var boxInertia = boxShape.ComputeInertia(1);
-                var linkDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, boxShapeIndex, 0.01f);
+                var linkDescription = BodyDescription.CreateDynamic(new Vector3(), boxInertia, boxShapeIndex, Constants.C0p01);
 
                 for (int chainIndex = 0; chainIndex < 4; ++chainIndex)
                 {
                     linkDescription.Pose.Position = basePosition + new Vector3(0, 0, chainIndex * 15);
-                    var previousLinkHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(linkDescription.Pose.Position, boxShapeIndex, 0.01f));
+                    var previousLinkHandle = Simulation.Bodies.Add(BodyDescription.CreateKinematic(linkDescription.Pose.Position, boxShapeIndex, Constants.C0p01));
                     for (int linkIndex = 0; linkIndex < 8; ++linkIndex)
                     {
                         var offset = new Vector3(boxShape.Width * 1.05f, 0, boxShape.Length - boxShape.Width);
@@ -95,7 +97,7 @@ namespace Demos.Demos
                         {
                             LocalAxisA = Vector3.UnitX,
                             TargetVelocity = .25f,
-                            Settings = new MotorSettings(float.MaxValue, 0.00001f)
+                            Settings = new MotorSettings(Number.MaxValue, 0.00001f)
                         });
                         previousLinkHandle = linkHandle;
                     }
@@ -125,10 +127,10 @@ namespace Demos.Demos
             Simulation.Awakener.AwakenSets(ref sleepingSets);
         }
 
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
-            var substepCountChange = (int)MathF.Max(1f, Simulation.Solver.SubstepCount * 0.25f);
-            var iterationCountChange = (int)MathF.Max(1f, Simulation.Solver.VelocityIterationCount * 0.25f);
+            var substepCountChange = (int)MathF.Max(1f, Simulation.Solver.SubstepCount * Constants.C0p25);
+            var iterationCountChange = (int)MathF.Max(1f, Simulation.Solver.VelocityIterationCount * Constants.C0p25);
             if (input.WasPushed(OpenTK.Input.Key.Z))
             {
                 Simulation.Solver.SubstepCount = Math.Max(1, Simulation.Solver.SubstepCount - substepCountChange);

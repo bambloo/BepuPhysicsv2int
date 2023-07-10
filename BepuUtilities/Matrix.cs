@@ -1,9 +1,28 @@
-﻿using System;
-using System.Numerics;
+﻿using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuUtilities
 {
+    public struct MatrixFloat
+    {
+        /// <summary>
+        /// Row 1 of the matrix.
+        /// </summary>
+        public System.Numerics.Vector4 X;
+        /// <summary>
+        /// Row 2 of the matrix.
+        /// </summary>
+        public System.Numerics.Vector4 Y;
+        /// <summary>
+        /// Row 3 of the matrix.
+        /// </summary>
+        public System.Numerics.Vector4 Z;
+        /// <summary>
+        /// Row 4 of the matrix.
+        /// </summary>
+        public System.Numerics.Vector4 W;
+    }
     /// <summary>
     /// Provides SIMD-aware 4x4 matrix math.
     /// </summary>
@@ -58,7 +77,7 @@ namespace BepuUtilities
             }
         }
 
-        struct M
+        struct MFloat
         {
             public float M11, M12, M13, M14;
             public float M21, M22, M23, M24;
@@ -66,47 +85,55 @@ namespace BepuUtilities
             public float M41, M42, M43, M44;
         }
 
+        struct MNumber
+        {
+            public Number M11, M12, M13, M14;
+            public Number M21, M22, M23, M24;
+            public Number M31, M32, M33, M34;
+            public Number M41, M42, M43, M44;
+        }
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        unsafe static void Transpose(M* m, M* transposed)
+        unsafe static void Transpose(MNumber* m, MFloat* transposed)
         {
             //A weird function! Why?
             //1) Missing some helpful instructions for actual SIMD accelerated transposition.
             //2) Difficult to get SIMD types to generate competitive codegen due to lots of componentwise access.
 
-            float m12 = m->M12;
-            float m13 = m->M13;
-            float m14 = m->M14;
-            float m23 = m->M23;
-            float m24 = m->M24;
-            float m34 = m->M34;
-            transposed->M11 = m->M11;
-            transposed->M12 = m->M21;
-            transposed->M13 = m->M31;
-            transposed->M14 = m->M41;
+            Number m12 = m->M12;
+            Number m13 = m->M13;
+            Number m14 = m->M14;
+            Number m23 = m->M23;
+            Number m24 = m->M24;
+            Number m34 = m->M34;
+            transposed->M11 = (float)m->M11;
+            transposed->M12 = (float)m->M21;
+            transposed->M13 = (float)m->M31;
+            transposed->M14 = (float)m->M41;
 
-            transposed->M21 = m12;
-            transposed->M22 = m->M22;
-            transposed->M23 = m->M32;
-            transposed->M24 = m->M42;
+            transposed->M21 = (float)m12;
+            transposed->M22 = (float)m->M22;
+            transposed->M23 = (float)m->M32;
+            transposed->M24 = (float)m->M42;
 
-            transposed->M31 = m13;
-            transposed->M32 = m23;
-            transposed->M33 = m->M33;
-            transposed->M34 = m->M43;
+            transposed->M31 = (float)m13;
+            transposed->M32 = (float)m23;
+            transposed->M33 = (float)m->M33;
+            transposed->M34 = (float)m->M43;
 
-            transposed->M41 = m14;
-            transposed->M42 = m24;
-            transposed->M43 = m34;
-            transposed->M44 = m->M44;
+            transposed->M41 = (float)m14;
+            transposed->M42 = (float)m24;
+            transposed->M43 = (float)m34;
+            transposed->M44 = (float)m->M44;
 
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static void Transpose(Matrix* m, Matrix* transposed)
+        public unsafe static void Transpose(Matrix* m, MatrixFloat* transposed)
         {
-            Transpose((M*)m, (M*)transposed);
+            Transpose((MNumber*)m, (MFloat*)transposed);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -127,9 +154,9 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe static Matrix Transpose(Matrix m)
+        public unsafe static MatrixFloat Transpose(Matrix m)
         {
-            Matrix transposed;
+            MatrixFloat transposed;
             Transpose(&m, &transposed);
             return transposed;
         }
@@ -228,18 +255,18 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromAxisAngle(Vector3 axis, float angle, out Matrix result)
+        public static void CreateFromAxisAngle(Vector3 axis, Number angle, out Matrix result)
         {
             //TODO: Could be better simdified.
-            float xx = axis.X * axis.X;
-            float yy = axis.Y * axis.Y;
-            float zz = axis.Z * axis.Z;
-            float xy = axis.X * axis.Y;
-            float xz = axis.X * axis.Z;
-            float yz = axis.Y * axis.Z;
+            Number xx = axis.X * axis.X;
+            Number yy = axis.Y * axis.Y;
+            Number zz = axis.Z * axis.Z;
+            Number xy = axis.X * axis.Y;
+            Number xz = axis.X * axis.Z;
+            Number yz = axis.Y * axis.Z;
 
-            float sinAngle = (float)Math.Sin(angle);
-            float oneMinusCosAngle = 1 - (float)Math.Cos(angle);
+            Number sinAngle = (Number)Math.Sin(angle);
+            Number oneMinusCosAngle = 1 - (Number)Math.Cos(angle);
 
             result.X = new Vector4(
                 1 + oneMinusCosAngle * (xx - 1),
@@ -263,7 +290,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Matrix CreateFromAxisAngle(Vector3 axis, float angle)
+        public static Matrix CreateFromAxisAngle(Vector3 axis, Number angle)
         {
             CreateFromAxisAngle(axis, angle, out Matrix result);
             return result;
@@ -273,18 +300,18 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CreateFromQuaternion(Quaternion quaternion, out Matrix result)
         {
-            float qX2 = quaternion.X + quaternion.X;
-            float qY2 = quaternion.Y + quaternion.Y;
-            float qZ2 = quaternion.Z + quaternion.Z;
-            float XX = qX2 * quaternion.X;
-            float YY = qY2 * quaternion.Y;
-            float ZZ = qZ2 * quaternion.Z;
-            float XY = qX2 * quaternion.Y;
-            float XZ = qX2 * quaternion.Z;
-            float XW = qX2 * quaternion.W;
-            float YZ = qY2 * quaternion.Z;
-            float YW = qY2 * quaternion.W;
-            float ZW = qZ2 * quaternion.W;
+            Number qX2 = quaternion.X + quaternion.X;
+            Number qY2 = quaternion.Y + quaternion.Y;
+            Number qZ2 = quaternion.Z + quaternion.Z;
+            Number XX = qX2 * quaternion.X;
+            Number YY = qY2 * quaternion.Y;
+            Number ZZ = qZ2 * quaternion.Z;
+            Number XY = qX2 * quaternion.Y;
+            Number XZ = qX2 * quaternion.Z;
+            Number XW = qX2 * quaternion.W;
+            Number YZ = qY2 * quaternion.Z;
+            Number YW = qY2 * quaternion.W;
+            Number ZW = qZ2 * quaternion.W;
 
             result.X = new Vector4(
                 1 - YY - ZZ,
@@ -341,11 +368,11 @@ namespace BepuUtilities
         /// <param name="farClip">Far clip plane of the perspective.</param>
         /// <param name="perspective">Resulting perspective matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreatePerspectiveFieldOfView(float fieldOfView, float aspectRatio, float nearClip, float farClip, out Matrix perspective)
+        public static void CreatePerspectiveFieldOfView(Number fieldOfView, Number aspectRatio, Number nearClip, Number farClip, out Matrix perspective)
         {
-            float h = 1f / ((float)Math.Tan(fieldOfView * 0.5f));
-            float w = h / aspectRatio;
-            float m33 = farClip / (nearClip - farClip);
+            Number h = Constants.C1 / ((Number)Math.Tan(fieldOfView * Constants.C0p5));
+            Number w = h / aspectRatio;
+            Number m33 = farClip / (nearClip - farClip);
             perspective.X = new Vector4(w, 0, 0, 0);
             perspective.Y = new Vector4(0, h, 0, 0);
             perspective.Z = new Vector4(0, 0, m33, -1);
@@ -362,11 +389,11 @@ namespace BepuUtilities
         /// <param name="farClip">Far clip plane of the perspective.</param>
         /// <param name="perspective">Resulting perspective matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreatePerspectiveFieldOfViewLH(float fieldOfView, float aspectRatio, float nearClip, float farClip, out Matrix perspective)
+        public static void CreatePerspectiveFieldOfViewLH(Number fieldOfView, Number aspectRatio, Number nearClip, Number farClip, out Matrix perspective)
         {
-            float h = 1f / ((float)Math.Tan(fieldOfView * 0.5f));
-            float w = h / aspectRatio;
-            float m33 = farClip / (farClip - nearClip);
+            Number h = Constants.C1 / ((Number)Math.Tan(fieldOfView * Constants.C0p5));
+            Number w = h / aspectRatio;
+            Number m33 = farClip / (farClip - nearClip);
             perspective.X = new Vector4(w, 0, 0, 0);
             perspective.Y = new Vector4(0, h, 0, 0);
             perspective.Z = new Vector4(0, 0, m33, 1);
@@ -383,7 +410,7 @@ namespace BepuUtilities
         /// <param name="farClip">Far clip plane of the perspective.</param>
         /// <returns>Resulting perspective matrix.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Matrix CreatePerspectiveFromFieldOfViews(float verticalFieldOfView, float horizontalFieldOfView, float nearClip, float farClip)
+        public static Matrix CreatePerspectiveFromFieldOfViews(Number verticalFieldOfView, Number horizontalFieldOfView, Number nearClip, Number farClip)
         {
             Matrix perspective;
             CreatePerspectiveFromFieldOfViews(verticalFieldOfView, horizontalFieldOfView, nearClip, farClip, out perspective);
@@ -400,11 +427,11 @@ namespace BepuUtilities
         /// <param name="farClip">Far clip plane of the perspective.</param>
         /// <param name="perspective">Resulting perspective matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreatePerspectiveFromFieldOfViews(float verticalFieldOfView, float horizontalFieldOfView, float nearClip, float farClip, out Matrix perspective)
+        public static void CreatePerspectiveFromFieldOfViews(Number verticalFieldOfView, Number horizontalFieldOfView, Number nearClip, Number farClip, out Matrix perspective)
         {
-            float h = 1f / ((float)Math.Tan(verticalFieldOfView * 0.5f));
-            float w = 1f / ((float)Math.Tan(horizontalFieldOfView * 0.5f));
-            float m33 = farClip / (nearClip - farClip);
+            Number h = Constants.C1 / ((Number)Math.Tan(verticalFieldOfView * Constants.C0p5));
+            Number w = Constants.C1 / ((Number)Math.Tan(horizontalFieldOfView * Constants.C0p5));
+            Number m33 = farClip / (nearClip - farClip);
             perspective.X = new Vector4(w, 0, 0, 0);
             perspective.Y = new Vector4(0, h, 0, 0);
             perspective.Z = new Vector4(0, 0, m33, -1);
@@ -421,7 +448,7 @@ namespace BepuUtilities
         /// <param name="farClip">Far clip plane of the perspective.</param>
         /// <returns>Resulting perspective matrix.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Matrix CreatePerspectiveFieldOfView(float fieldOfView, float aspectRatio, float nearClip, float farClip)
+        public static Matrix CreatePerspectiveFieldOfView(Number fieldOfView, Number aspectRatio, Number nearClip, Number farClip)
         {
             Matrix toReturn;
             CreatePerspectiveFieldOfView(fieldOfView, aspectRatio, nearClip, farClip, out toReturn);
@@ -438,15 +465,15 @@ namespace BepuUtilities
         /// <param name="zNear">Near plane of the projection.</param>
         /// <param name="zFar">Far plane of the projection.</param>
         /// <param name="projection">The resulting orthographic projection matrix.</param>
-        public static void CreateOrthographic(float left, float right, float bottom, float top, float zNear, float zFar, out Matrix projection)
+        public static void CreateOrthographic(Number left, Number right, Number bottom, Number top, Number zNear, Number zFar, out Matrix projection)
         {
-            float width = right - left;
-            float height = top - bottom;
-            float depth = zFar - zNear;
-            projection.X = new Vector4(2f / width, 0, 0, 0);
-            projection.Y = new Vector4(0, 2f / height, 0, 0);
-            projection.Z = new Vector4(0, 0, -1f / depth, 0);
-            projection.W = new Vector4((left + right) / -width, (top + bottom) / -height, zNear / -depth, 1f);
+            Number width = right - left;
+            Number height = top - bottom;
+            Number depth = zFar - zNear;
+            projection.X = new Vector4(Constants.C2 / width, 0, 0, 0);
+            projection.Y = new Vector4(0, Constants.C2 / height, 0, 0);
+            projection.Z = new Vector4(0, 0, Constants.Cm1 / depth, 0);
+            projection.W = new Vector4((left + right) / -width, (top + bottom) / -height, zNear / -depth, Constants.C1);
 
         }
 
@@ -459,35 +486,35 @@ namespace BepuUtilities
         public static void Invert(in Matrix m, out Matrix inverted)
         {
             //TODO: This could be quite a bit faster, especially once shuffles exist... But inverting a 4x4 matrix should approximately never occur.
-            float s0 = m.X.X * m.Y.Y - m.Y.X * m.X.Y;
-            float s1 = m.X.X * m.Y.Z - m.Y.X * m.X.Z;
-            float s2 = m.X.X * m.Y.W - m.Y.X * m.X.W;
-            float s3 = m.X.Y * m.Y.Z - m.Y.Y * m.X.Z;
-            float s4 = m.X.Y * m.Y.W - m.Y.Y * m.X.W;
-            float s5 = m.X.Z * m.Y.W - m.Y.Z * m.X.W;
+            Number s0 = m.X.X * m.Y.Y - m.Y.X * m.X.Y;
+            Number s1 = m.X.X * m.Y.Z - m.Y.X * m.X.Z;
+            Number s2 = m.X.X * m.Y.W - m.Y.X * m.X.W;
+            Number s3 = m.X.Y * m.Y.Z - m.Y.Y * m.X.Z;
+            Number s4 = m.X.Y * m.Y.W - m.Y.Y * m.X.W;
+            Number s5 = m.X.Z * m.Y.W - m.Y.Z * m.X.W;
 
-            float c5 = m.Z.Z * m.W.W - m.W.Z * m.Z.W;
-            float c4 = m.Z.Y * m.W.W - m.W.Y * m.Z.W;
-            float c3 = m.Z.Y * m.W.Z - m.W.Y * m.Z.Z;
-            float c2 = m.Z.X * m.W.W - m.W.X * m.Z.W;
-            float c1 = m.Z.X * m.W.Z - m.W.X * m.Z.Z;
-            float c0 = m.Z.X * m.W.Y - m.W.X * m.Z.Y;
+            Number c5 = m.Z.Z * m.W.W - m.W.Z * m.Z.W;
+            Number c4 = m.Z.Y * m.W.W - m.W.Y * m.Z.W;
+            Number c3 = m.Z.Y * m.W.Z - m.W.Y * m.Z.Z;
+            Number c2 = m.Z.X * m.W.W - m.W.X * m.Z.W;
+            Number c1 = m.Z.X * m.W.Z - m.W.X * m.Z.Z;
+            Number c0 = m.Z.X * m.W.Y - m.W.X * m.Z.Y;
 
-            float inverseDeterminant = 1.0f / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0);
+            Number inverseDeterminant = Constants.C1 / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0);
 
-            float m11 = m.X.X;
-            float m12 = m.X.Y;
-            float m13 = m.X.Z;
-            float m14 = m.X.W;
-            float m21 = m.Y.X;
-            float m22 = m.Y.Y;
-            float m23 = m.Y.Z;
-            float m31 = m.Z.X;
-            float m32 = m.Z.Y;
-            float m33 = m.Z.Z;
+            Number m11 = m.X.X;
+            Number m12 = m.X.Y;
+            Number m13 = m.X.Z;
+            Number m14 = m.X.W;
+            Number m21 = m.Y.X;
+            Number m22 = m.Y.Y;
+            Number m23 = m.Y.Z;
+            Number m31 = m.Z.X;
+            Number m32 = m.Z.Y;
+            Number m33 = m.Z.Z;
 
-            float m41 = m.W.X;
-            float m42 = m.W.Y;
+            Number m41 = m.W.X;
+            Number m42 = m.W.Y;
 
             inverted.X = inverseDeterminant * new Vector4(
                 m.Y.Y * c5 - m.Y.Z * c4 + m.Y.W * c3,
@@ -562,7 +589,7 @@ namespace BepuUtilities
         /// <param name="viewMatrix">Look at matrix.</param>
         public static void CreateView(Vector3 position, Vector3 forward, Vector3 upVector, out Matrix viewMatrix)
         {
-            float length = forward.Length();
+            Number length = forward.Length();
             var z = forward / -length;
             var x = Vector3.Cross(upVector, z);
             x = Vector3.Normalize(x);

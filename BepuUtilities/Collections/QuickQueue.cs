@@ -3,7 +3,7 @@ using System.Diagnostics;
 using BepuUtilities.Memory;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using System.Numerics;
+using BepuUtilities.Utils;
 
 namespace BepuUtilities.Collections
 {

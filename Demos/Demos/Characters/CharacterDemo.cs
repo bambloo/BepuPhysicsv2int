@@ -1,14 +1,16 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System.Numerics;
-using System;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
-using DemoUtilities;
+using DemoRenderer;
 using DemoRenderer.UI;
+using DemoUtilities;
 using OpenTK.Input;
+using System;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.Demos.Characters
 {
@@ -45,10 +47,10 @@ namespace Demos.Demos.Characters
                     switch (choice)
                     {
                         case 0:
-                            Simulation.Bodies.Add(BodyDescription.CreateDynamic((position, orientation), shape.ComputeInertia(1), shapeIndex, 0.01f));
+                            Simulation.Bodies.Add(BodyDescription.CreateDynamic((position, orientation), shape.ComputeInertia(1), shapeIndex, (Number)Constants.C0p01));
                             break;
                         case 1:
-                            Simulation.Bodies.Add(BodyDescription.CreateKinematic((position, orientation), shapeIndex, 0.01f));
+                            Simulation.Bodies.Add(BodyDescription.CreateKinematic((position, orientation), shapeIndex, (Number)Constants.C0p01));
                             break;
                         case 2:
                             Simulation.Statics.Add(new StaticDescription(position, orientation, shapeIndex));
@@ -107,7 +109,7 @@ namespace Demos.Demos.Characters
             });
 
             //And a seesaw thing?
-            var seesawBase = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(0, 1f, 34f), Simulation.Shapes.Add(new Box(0.2f, 1, 0.2f)), 0.01f));
+            var seesawBase = Simulation.Bodies.Add(BodyDescription.CreateKinematic(new Vector3(0, 1f, 34f), Simulation.Shapes.Add(new Box(0.2f, 1, 0.2f)), (Number)Constants.C0p01));
             var seesaw = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 1.7f, 34f), 1, Simulation.Shapes, new Box(1, 0.1f, 6f)));
             Simulation.Solver.Add(seesawBase, seesaw, new Hinge
             {
@@ -122,14 +124,14 @@ namespace Demos.Demos.Characters
 
             //Create some moving platforms to jump on.
             movingPlatforms = new MovingPlatform[16];
-            Func<double, RigidPose> poseCreator = time =>
+            Func<Number, RigidPose> poseCreator = time =>
             {
                 RigidPose pose;
-                var horizontalScale = (float)(45 + 10 * Math.Sin(time * 0.015));
+                var horizontalScale = (Number)(45 + 10 * Math.Sin(time * 0.015f));
                 //Float in a noisy ellipse around the newt.
-                pose.Position = new Vector3(0.7f * horizontalScale * (float)Math.Sin(time * 0.1), 10 + 4 * (float)Math.Sin((time + Math.PI * 0.5f) * 0.25), horizontalScale * (float)Math.Cos(time * 0.1));
+                pose.Position = new Vector3(0.7f * horizontalScale * (Number)Math.Sin(time * 0.1f), 10 + 4 * (Number)Math.Sin((time + Math.PI * 0.5f) * 0.25f), horizontalScale * (Number)Math.Cos(time * 0.1f));
                 //As the platform goes behind the newt, dip toward the ground. Use smoothstep for a less jerky ride.
-                var x = MathF.Max(0f, MathF.Min(1f, 1f - (pose.Position.Z + 20f) / -20f));
+                var x = MathF.Max(Constants.C0, MathF.Min(1f, 1f - (pose.Position.Z + 20f) / -20f));
                 var smoothStepped = 3 * x * x - 2 * x * x * x;
                 pose.Position.Y = smoothStepped * (pose.Position.Y - 0.025f) + 0.025f;
                 pose.Orientation = Quaternion.Identity;
@@ -160,19 +162,19 @@ namespace Demos.Demos.Characters
         struct MovingPlatform
         {
             public BodyHandle BodyHandle;
-            public float InverseGoalSatisfactionTime;
-            public double TimeOffset;
-            public Func<double, RigidPose> PoseCreator;
+            public Number InverseGoalSatisfactionTime;
+            public Number TimeOffset;
+            public Func<Number, RigidPose> PoseCreator;
 
-            public MovingPlatform(CollidableDescription collidable, double timeOffset, float goalSatisfactionTime, Simulation simulation, Func<double, RigidPose> poseCreator)
+            public MovingPlatform(CollidableDescription collidable, Number timeOffset, Number goalSatisfactionTime, Simulation simulation, Func<Number, RigidPose> poseCreator)
             {
                 PoseCreator = poseCreator;
-                BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(poseCreator(timeOffset), collidable, -1));
+                BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic(poseCreator(timeOffset), collidable, (Number)(-1)));
                 InverseGoalSatisfactionTime = 1f / goalSatisfactionTime;
                 TimeOffset = timeOffset;
             }
 
-            public void Update(Simulation simulation, double time)
+            public void Update(Simulation simulation, Number time)
             {
                 var body = simulation.Bodies[BodyHandle];
                 ref var pose = ref body.Pose;
@@ -188,14 +190,14 @@ namespace Demos.Demos.Characters
 
         bool characterActive;
         CharacterInput character;
-        double time;
+        Number time;
         void CreateCharacter(Vector3 position)
         {
             characterActive = true;
             character = new CharacterInput(characters, position, new Capsule(0.5f, 1), 0.1f, 1, 20, 100, 6, 4, MathF.PI * 0.4f);
         }
 
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             if (input.WasPushed(Key.C))
             {
@@ -225,7 +227,7 @@ namespace Demos.Demos.Characters
 
         public override void Render(Renderer renderer, Camera camera, Input input, TextBuilder text, Font font)
         {
-            float textHeight = 16;
+            Number textHeight = 16;
             var position = new Vector2(32, renderer.Surface.Resolution.Y - textHeight * 9);
             renderer.TextBatcher.Write(text.Clear().Append("Toggle character: C"), position, textHeight, new Vector3(1), font);
             position.Y += textHeight * 1.2f;

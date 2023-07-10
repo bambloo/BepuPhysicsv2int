@@ -1,12 +1,9 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System.Numerics;
-using DemoContentLoader;
 using BepuPhysics.Constraints;
-using Demos.Demos;
-using System;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
+using DemoRenderer;
 
 namespace Demos.SpecializedTests
 {
@@ -24,7 +21,7 @@ namespace Demos.SpecializedTests
             var shapeB = new Box(.75f, 1, .5f);
             var shapeIndexB = Simulation.Shapes.Add(shapeB);
             var collidableB = new CollidableDescription(shapeIndexB);
-            var activity = new BodyActivityDescription(0.01f);
+            var activity = new BodyActivityDescription(Constants.C0p01);
             var inertiaA = shapeA.ComputeInertia(1);
             var inertiaB = shapeB.ComputeInertia(1);
 

@@ -1,10 +1,11 @@
 ﻿using BepuPhysics.Collidables;
-using System;
-using System.Numerics;
-using BepuUtilities.Memory;
-using DemoContentLoader;
-using BepuUtilities;
 using BepuPhysics.Trees;
+using BepuUtilities;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
+using System;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos
 {
@@ -21,7 +22,7 @@ namespace Demos
             return new Mesh(triangles, scaling, pool);
         }
 
-        public static Mesh CreateFan(int triangleCount, float radius, Vector3 scaling, BufferPool pool)
+        public static Mesh CreateFan(int triangleCount, Number radius, Vector3 scaling, BufferPool pool)
         {
             var anglePerTriangle = 2 * MathF.PI / triangleCount;
             pool.Take<Triangle>(triangleCount, out var triangles);
@@ -113,8 +114,8 @@ namespace Demos
         /// <summary>
         /// Takes a large number of triangles and creates a Mesh from them, but does not attempt to compute any bounds. 
         /// The topology of the mesh's acceleration structure is based entirely on the order of the triangles.
-        /// This is intended to be used with <see cref="Tree.Refit"/>, <see cref="Tree.RefitAndRefine(BufferPool, int, float)"/>,
-        /// or <see cref="Tree.RefitAndRefineMultithreadedContext.RefitAndRefine(ref Tree, BufferPool, IThreadDispatcher, int, float)"/> to provide bounds and higher quality.
+        /// This is intended to be used with <see cref="Tree.Refit"/>, <see cref="Tree.RefitAndRefine(BufferPool, int, Number)"/>,
+        /// or <see cref="Tree.RefitAndRefineMultithreadedContext.RefitAndRefine(ref Tree, BufferPool, IThreadDispatcher, int, Number)"/> to provide bounds and higher quality.
         /// </summary>
         /// <param name="triangles">Large number of triangles to build a mesh from.</param>
         /// <param name="scaling">Scale to use for the mesh shape.</param>

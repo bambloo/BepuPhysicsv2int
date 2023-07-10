@@ -1,15 +1,11 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics.Trees;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using BepuPhysics.CollisionDetection;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
-using BepuPhysics.Trees;
+using Math = BepuUtilities.Utils.Math;
 
 namespace Demos.SpecializedTests
 {
@@ -26,9 +22,9 @@ namespace Demos.SpecializedTests
             var leafCount = leafCountAlongXAxis * leafCountAlongYAxis * leafCountAlongZAxis;
             pool.Take<BoundingBox>(leafCount, out var leafBounds);
 
-            const float boundsSpan = 2;
-            const float spanRange = 2;
-            const float boundsSpacing = 3;
+            Number boundsSpan = 2;
+            Number spanRange = 2;
+            Number boundsSpacing = 3;
             var random = new Random(5);
             for (int i = 0; i < leafCountAlongXAxis; ++i)
             {
@@ -79,7 +75,7 @@ namespace Demos.SpecializedTests
                 var changeCount = random.Next(maximumChangesPerIteration);
                 for (int j = 0; j <= changeCount; ++j)
                 {
-                    var addedFraction = tree.LeafCount / (float)leafCount;
+                    var addedFraction = tree.LeafCount / (Number)leafCount;
                     if (random.NextDouble() < addedFraction)
                     {
                         //Remove a leaf.

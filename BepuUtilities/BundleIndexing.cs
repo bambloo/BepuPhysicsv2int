@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
@@ -14,7 +14,7 @@ namespace BepuUtilities
     public static class BundleIndexing
     {
         /// <summary>
-        /// <![CDATA[Gets the mask value such that x & VectorMask computes x % Vector<float>.Count.]]>
+        /// <![CDATA[Gets the mask value such that x & VectorMask computes x % Vector<Number>.Count.]]>
         /// </summary>
         /// <remarks>The JIT recognizes that this value is constant!</remarks>
         public static int VectorMask
@@ -22,11 +22,11 @@ namespace BepuUtilities
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                return Vector<float>.Count - 1;
+                return Vector<Number>.Count - 1;
             }
         }
         /// <summary>
-        /// <![CDATA[Gets the shift value such that x >> VectorShift divides x by Vector<float>.Count.]]>
+        /// <![CDATA[Gets the shift value such that x >> VectorShift divides x by Vector<Number>.Count.]]>
         /// </summary>
         /// <remarks>The JIT recognizes that this value is constant!</remarks>
         public static int VectorShift
@@ -34,7 +34,7 @@ namespace BepuUtilities
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get
             {
-                switch (Vector<float>.Count)
+                switch (Vector<Number>.Count)
                 {
                     case 4:
                         return 2;
@@ -65,16 +65,16 @@ namespace BepuUtilities
         public static unsafe Vector<int> CreateTrailingMaskForCountInBundle(int countInBundle)
         {
             //TODO: Cross platform intrinsics rewrite
-            if (Avx.IsSupported && Vector<int>.Count == 8)
-            {
-                return Avx.CompareLessThanOrEqual(Vector256.Create((float)countInBundle), Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)).AsInt32().AsVector();
-            }
-            else if (Sse.IsSupported && Vector<int>.Count == 4)
-            {
-                return Sse.CompareLessThanOrEqual(Vector128.Create((float)countInBundle), Vector128.Create(0f, 1f, 2f, 3f)).AsInt32().AsVector();
-            }
-            else
-            {
+            //if (Avx.IsSupported && Vector<int>.Count == 8)
+            //{
+            //    return Avx.CompareLessThanOrEqual(Vector256.Create((Number)countInBundle), Vector256.Create(Constants.C0, Constants.C1, Constants.C2, 3f, 4f, 5f, 6f, 7f)).AsInt32().AsVector();
+            //}
+            //else if (Sse.IsSupported && Vector<int>.Count == 4)
+            //{
+            //    return Sse.CompareLessThanOrEqual(Vector128.Create((Number)countInBundle), Vector128.Create(Constants.C0, Constants.C1, Constants.C2, 3f)).AsInt32().AsVector();
+            //}
+            //else
+            //{
                 Vector<int> mask;
                 var toReturnPointer = (int*)&mask;
                 for (int i = 0; i < Vector<int>.Count; ++i)
@@ -82,7 +82,7 @@ namespace BepuUtilities
                     toReturnPointer[i] = countInBundle <= i ? -1 : 0;
                 }
                 return mask;
-            }
+            //}
         }
 
 
@@ -90,16 +90,16 @@ namespace BepuUtilities
         public static unsafe Vector<int> CreateMaskForCountInBundle(int countInBundle)
         {
             //TODO: Cross platform intrinsics rewrite
-            if (Avx.IsSupported && Vector<int>.Count == 8)
-            {
-                return Avx.CompareGreaterThan(Vector256.Create((float)countInBundle), Vector256.Create(0f, 1f, 2f, 3f, 4f, 5f, 6f, 7f)).AsInt32().AsVector();
-            }
-            else if (Sse.IsSupported && Vector<int>.Count == 4)
-            {
-                return Sse.CompareGreaterThan(Vector128.Create((float)countInBundle), Vector128.Create(0f, 1f, 2f, 3f)).AsInt32().AsVector();
-            }
-            else
-            {
+            //if (Avx.IsSupported && Vector<int>.Count == 8)
+            //{
+            //    return Avx.CompareGreaterThan(Vector256.Create((Number)countInBundle), Vector256.Create(Constants.C0, Constants.C1, Constants.C2, 3f, 4f, 5f, 6f, 7f)).AsInt32().AsVector();
+            //}
+            //else if (Sse.IsSupported && Vector<int>.Count == 4)
+            //{
+            //    return Sse.CompareGreaterThan(Vector128.Create((Number)countInBundle), Vector128.Create(Constants.C0, Constants.C1, Constants.C2, 3f)).AsInt32().AsVector();
+            //}
+            //else
+            //{
                 Vector<int> mask;
                 var toReturnPointer = (int*)&mask;
                 for (int i = 0; i < Vector<int>.Count; ++i)
@@ -107,7 +107,7 @@ namespace BepuUtilities
                     toReturnPointer[i] = countInBundle > i ? -1 : 0;
                 }
                 return mask;
-            }
+            //}
         }
 
 
@@ -115,25 +115,25 @@ namespace BepuUtilities
         public static int GetFirstSetLaneIndex(Vector<int> v)
         {
             //TODO: Probable cross platform intrinsics rewrite
-            if (Avx.IsSupported && Vector<int>.Count == 8)
-            {
-                var scalarMask = Avx.MoveMask(v.AsVector256().As<int, float>());
-                return BitOperations.TrailingZeroCount(scalarMask);
-            }
-            else if (Sse.IsSupported && Vector<int>.Count == 4)
-            {
-                var scalarMask = Sse.MoveMask(v.AsVector128().As<int, float>());
-                return BitOperations.TrailingZeroCount(scalarMask);
-            }
-            else
-            {
+            //if (Avx.IsSupported && Vector<int>.Count == 8)
+            //{
+            //    var scalarMask = Avx.MoveMask(v.AsVector256().As<int, Number>());
+            //    return BitOperations.TrailingZeroCount(scalarMask);
+            //}
+            //else if (Sse.IsSupported && Vector<int>.Count == 4)
+            //{
+            //    var scalarMask = Sse.MoveMask(v.AsVector128().As<int, Number>());
+            //    return BitOperations.TrailingZeroCount(scalarMask);
+            //}
+            //else
+            //{
                 Debug.Assert(Vector<int>.Count <= 8, "We made an assumption that AVX512 and similar widths aren't available, this should be updated if vectors get wider!");
                 for (int i = 0; i < Vector<int>.Count; ++i)
                 {
                     if (v[i] == -1)
                         return i;
                 }
-            }
+            //}
             return -1;
         }
         /// <summary>
@@ -145,25 +145,25 @@ namespace BepuUtilities
         public static int GetLastSetLaneCount(Vector<int> v)
         {
             //TODO: Cross platform intrinsics rewrite
-            if (Avx.IsSupported && Vector<int>.Count == 8)
-            {
-                var scalarMask = Avx.MoveMask(v.AsVector256().As<int, float>());
-                return 32 - BitOperations.LeadingZeroCount((uint)scalarMask);
-            }
-            else if (Sse.IsSupported && Vector<int>.Count == 4)
-            {
-                var scalarMask = Sse.MoveMask(v.AsVector128().As<int, float>());
-                return 32 - BitOperations.LeadingZeroCount((uint)scalarMask);
-            }
-            else
-            {
+            //if (Avx.IsSupported && Vector<int>.Count == 8)
+            //{
+            //    var scalarMask = Avx.MoveMask(v.AsVector256().As<int, Number>());
+            //    return 32 - BitOperations.LeadingZeroCount((uint)scalarMask);
+            //}
+            //else if (Sse.IsSupported && Vector<int>.Count == 4)
+            //{
+            //    var scalarMask = Sse.MoveMask(v.AsVector128().As<int, Number>());
+            //    return 32 - BitOperations.LeadingZeroCount((uint)scalarMask);
+            //}
+            //else
+            //{
                 Debug.Assert(Vector<int>.Count <= 8, "We made an assumption that AVX512 and similar widths aren't available, this should be updated if vectors get wider!");
                 for (int i = Vector<int>.Count - 1; i >= 0; --i)
                 {
                     if (v[i] == -1)
                         return i + 1;
                 }
-            }
+            //}
             return 0;
         }
 

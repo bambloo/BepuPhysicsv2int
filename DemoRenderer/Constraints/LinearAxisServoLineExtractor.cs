@@ -1,8 +1,8 @@
-﻿using BepuUtilities.Collections;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Constraints;
-using System.Numerics;
 using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
 
 namespace DemoRenderer.Constraints
 {
@@ -30,9 +30,9 @@ namespace DemoRenderer.Constraints
             var planeOffset = Vector3.Dot(anchorB - anchorA, worldPlaneNormal);
             var closestPointOnPlane = anchorB - planeOffset * worldPlaneNormal;
 
-            var packedColor = Helpers.PackColor(new Vector3(0.2f, 0.2f, 1f) * tint);
-            var packedBasisColor = Helpers.PackColor(new Vector3(0.2f, 0.6f, 1f) * tint);
-            var backgroundColor = new Vector3(0f, 0f, 1f) * tint;
+            var packedColor = Helpers.PackColor(new Vector3(Constants.C0p2, Constants.C0p2, Constants.C1) * tint);
+            var packedBasisColor = Helpers.PackColor(new Vector3(Constants.C0p2, Constants.C0p6, Constants.C1) * tint);
+            var backgroundColor = new Vector3(Constants.C0, Constants.C0, Constants.C1) * tint;
             lines.AllocateUnsafely() = new LineInstance(poseA.Position, anchorA, packedColor, 0);
             ContactLines.BuildOrthonormalBasis(localPlaneNormal, out var localTX, out var localTY);
             Matrix3x3.Transform(localTX, orientationA, out var tX);

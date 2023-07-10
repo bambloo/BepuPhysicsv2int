@@ -5,10 +5,12 @@ using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoRenderer;
-using System;
+
 using System.Diagnostics;
-using System.Numerics;
+
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -90,8 +92,8 @@ namespace Demos.Demos.Dancers
         //The body handles are cached in each simulation so the source states can be mapped onto each dancer.
         public DancerBodyHandles[] Handles;
 
-        public const float LegOffsetX = 0.135f;
-        public const float ArmOffsetX = 0.25f;
+        public static readonly Number LegOffsetX = 0.135f;
+        public static readonly Number ArmOffsetX = Constants.C0p25;
         public const int HistoryLength = 256;
         public int DancerGridWidth = 16;
         public int DancerGridLength = 16;
@@ -103,7 +105,7 @@ namespace Demos.Demos.Dancers
         DancerControl leftHandControl;
         DancerControl rightHandControl;
 
-        public delegate void DressUpDancer<TCollisionFilter>(Simulation simulation, CollidableProperty<TCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, int dancerGridWidth, float levelOfDetail) where TCollisionFilter : unmanaged;
+        public delegate void DressUpDancer<TCollisionFilter>(Simulation simulation, CollidableProperty<TCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, int dancerGridWidth, Number levelOfDetail) where TCollisionFilter : unmanaged;
         public DemoDancers Initialize<TNarrowPhaseCallbacks, TCollisionFilter>(
             int dancerGridWidth, int dancerGridLength, Simulation mainSimulation, CollidableProperty<SubgroupCollisionFilter> mainCollisionFilters,
             IThreadDispatcher threadDispatcher, BufferPool pool, SolveDescription dancerSolveDescription, DressUpDancer<TCollisionFilter> dressUpDancer, TCollisionFilter filterForDancerBodies)
@@ -115,8 +117,8 @@ namespace Demos.Demos.Dancers
             this.DancerGridLength = dancerGridLength;
 
             var hipsPosition = new Vector3(0, 0, 0);
-            var abdomenPosition = hipsPosition + new Vector3(0, 0.25f, 0);
-            var chestPosition = abdomenPosition + new Vector3(0, 0.25f, 0);
+            var abdomenPosition = hipsPosition + new Vector3(0, Constants.C0p25, 0);
+            var chestPosition = abdomenPosition + new Vector3(0, Constants.C0p25, 0);
             var headPosition = chestPosition + new Vector3(0, 0.4f, 0);
             //It's helpful to have joint locations for the limbs so we can create capsules from the endpoints.
             //There's not going to be a foot or hand body in this demo, since those aren't important for scooting a dress around.
@@ -130,22 +132,22 @@ namespace Demos.Demos.Dancers
 
             //Build the torso and head bodies.
             RagdollDemo.GetCapsuleForLineSegment(hipsPosition - legOffset, hipsPosition + legOffset, 0.14f, out var hipShape, out _, out var hipOrientation);
-            SourceBodyHandles.Hips = mainSimulation.Bodies.Add(BodyDescription.CreateDynamic((hipsPosition, hipOrientation), hipShape.ComputeInertia(1), mainSimulation.Shapes.Add(hipShape), 0.01f));
+            SourceBodyHandles.Hips = mainSimulation.Bodies.Add(BodyDescription.CreateDynamic((hipsPosition, hipOrientation), hipShape.ComputeInertia(1), mainSimulation.Shapes.Add(hipShape), Constants.C0p01));
             ref var hipsFilter = ref mainCollisionFilters.Allocate(SourceBodyHandles.Hips);
             hipsFilter = new SubgroupCollisionFilter(groupIndex, 0);
 
             RagdollDemo.GetCapsuleForLineSegment(abdomenPosition - legOffset * 0.8f, abdomenPosition + legOffset * 0.8f, 0.13f, out var abdomenShape, out _, out var abdomenOrientation);
-            SourceBodyHandles.Abdomen = mainSimulation.Bodies.Add(BodyDescription.CreateDynamic((abdomenPosition, abdomenOrientation), abdomenShape.ComputeInertia(1), mainSimulation.Shapes.Add(abdomenShape), 0.01f));
+            SourceBodyHandles.Abdomen = mainSimulation.Bodies.Add(BodyDescription.CreateDynamic((abdomenPosition, abdomenOrientation), abdomenShape.ComputeInertia(1), mainSimulation.Shapes.Add(abdomenShape), Constants.C0p01));
             ref var abdomenFilter = ref mainCollisionFilters.Allocate(SourceBodyHandles.Abdomen);
             abdomenFilter = new SubgroupCollisionFilter(groupIndex, 1);
 
             RagdollDemo.GetCapsuleForLineSegment(abdomenPosition - legOffset * 0.8f, abdomenPosition + legOffset * 0.8f, 0.165f, out var chestShape, out _, out var chestOrientation);
-            SourceBodyHandles.Chest = mainSimulation.Bodies.Add(BodyDescription.CreateDynamic((chestPosition, chestOrientation), chestShape.ComputeInertia(1), mainSimulation.Shapes.Add(chestShape), 0.01f));
+            SourceBodyHandles.Chest = mainSimulation.Bodies.Add(BodyDescription.CreateDynamic((chestPosition, chestOrientation), chestShape.ComputeInertia(1), mainSimulation.Shapes.Add(chestShape), Constants.C0p01));
             ref var chestFilter = ref mainCollisionFilters.Allocate(SourceBodyHandles.Chest);
             chestFilter = new SubgroupCollisionFilter(groupIndex, 2);
 
             var headShape = new Sphere(0.17f);
-            SourceBodyHandles.Head = mainSimulation.Bodies.Add(BodyDescription.CreateDynamic(headPosition, headShape.ComputeInertia(1), mainSimulation.Shapes.Add(headShape), 1e-2f));
+            SourceBodyHandles.Head = mainSimulation.Bodies.Add(BodyDescription.CreateDynamic(headPosition, headShape.ComputeInertia(1), mainSimulation.Shapes.Add(headShape), Constants.C1em2));
             ref var headFilter = ref mainCollisionFilters.Allocate(SourceBodyHandles.Head);
             headFilter = new SubgroupCollisionFilter(groupIndex, 3);
 
@@ -160,8 +162,8 @@ namespace Demos.Demos.Dancers
             //Create the legs.
             RagdollDemo.GetCapsuleForLineSegment(hipsPosition, kneePosition, 0.11f, out var upperLegShape, out var upperLegPosition, out var upperLegOrientation);
             RagdollDemo.GetCapsuleForLineSegment(kneePosition, anklePosition, 0.1f, out var lowerLegShape, out var lowerLegPosition, out var lowerLegOrientation);
-            var upperLegDescription = BodyDescription.CreateDynamic((upperLegPosition, upperLegOrientation), upperLegShape.ComputeInertia(1), mainSimulation.Shapes.Add(upperLegShape), 0.01f);
-            var lowerLegDescription = BodyDescription.CreateDynamic((lowerLegPosition, lowerLegOrientation), lowerLegShape.ComputeInertia(1), mainSimulation.Shapes.Add(lowerLegShape), 0.01f);
+            var upperLegDescription = BodyDescription.CreateDynamic((upperLegPosition, upperLegOrientation), upperLegShape.ComputeInertia(1), mainSimulation.Shapes.Add(upperLegShape), Constants.C0p01);
+            var lowerLegDescription = BodyDescription.CreateDynamic((lowerLegPosition, lowerLegOrientation), lowerLegShape.ComputeInertia(1), mainSimulation.Shapes.Add(lowerLegShape), Constants.C0p01);
 
             upperLegDescription.Pose.Position -= legOffset;
             lowerLegDescription.Pose.Position -= legOffset;
@@ -178,8 +180,8 @@ namespace Demos.Demos.Dancers
             //Create the arms.
             RagdollDemo.GetCapsuleForLineSegment(chestPosition, elbowPosition, 0.08f, out var upperArmShape, out var upperArmPosition, out var upperArmOrientation);
             RagdollDemo.GetCapsuleForLineSegment(elbowPosition, wristPosition, 0.075f, out var lowerArmShape, out var lowerArmPosition, out var lowerArmOrientation);
-            var upperArmDescription = BodyDescription.CreateDynamic((upperArmPosition, upperArmOrientation), upperArmShape.ComputeInertia(1), mainSimulation.Shapes.Add(upperArmShape), 0.01f);
-            var lowerArmDescription = BodyDescription.CreateDynamic((lowerArmPosition, lowerArmOrientation), lowerArmShape.ComputeInertia(1), mainSimulation.Shapes.Add(lowerArmShape), 0.01f);
+            var upperArmDescription = BodyDescription.CreateDynamic((upperArmPosition, upperArmOrientation), upperArmShape.ComputeInertia(1), mainSimulation.Shapes.Add(upperArmShape), Constants.C0p01);
+            var lowerArmDescription = BodyDescription.CreateDynamic((lowerArmPosition, lowerArmOrientation), lowerArmShape.ComputeInertia(1), mainSimulation.Shapes.Add(lowerArmShape), Constants.C0p01);
 
             upperArmDescription.Pose.Position -= armOffset;
             lowerArmDescription.Pose.Position -= armOffset;
@@ -357,25 +359,25 @@ namespace Demos.Demos.Dancers
         public QuickQueue<MotionState> MotionHistory;
         public static Vector3 GetOffsetForDancer(int i, int dancerGridWidth)
         {
-            const float spacing = 2;
+            Number spacing = 2;
             var (columnIndex, rowIndex) = GetRowAndColumnForDancer(i, dancerGridWidth);
             return new Vector3(dancerGridWidth * spacing / -2 + (columnIndex + 0.5f) * spacing, 0, -2 + rowIndex * -spacing);
         }
 
-        public static float GetDistanceFromMainDancer(int dancerIndex, int dancerGridWidth)
+        public static Number GetDistanceFromMainDancer(int dancerIndex, int dancerGridWidth)
         {
             var (columnIndex, rowIndex) = GetRowAndColumnForDancer(dancerIndex, dancerGridWidth);
             var offsetX = columnIndex - (dancerGridWidth / 2 - 0.5f);
             return MathF.Sqrt(offsetX * offsetX + rowIndex * rowIndex);
         }
 
-        float Smoothstep(float v)
+        Number Smoothstep(Number v)
         {
             var v2 = v * v;
             return 3 * v2 - 2 * v2 * v;
         }
 
-        Vector3 CreateLegTarget(float t)
+        Vector3 CreateLegTarget(Number t)
         {
             var z = MathF.Cos(t * MathF.Tau);
             var zOffset = (Smoothstep(z * 0.5f + 0.5f) * 2 - 1) * 0.7f;
@@ -384,7 +386,7 @@ namespace Demos.Demos.Dancers
             var yOffset = -0.7f + 0.2f * offset;
             return new Vector3(-xOffset - LegOffsetX, yOffset, zOffset);
         }
-        Vector3 CreateArmTarget(float t)
+        Vector3 CreateArmTarget(Number t)
         {
             var z = MathF.Cos(t * MathF.Tau);
             var zOffset = (Smoothstep(z * 0.5f + 0.5f) * 2 - 1);
@@ -414,18 +416,18 @@ namespace Demos.Demos.Dancers
             dancerSimulation.Timestep(Demo.TimestepDuration);
         }
 
-        double time;
-        public double ExecutionTime;
+        Number time;
+        public Number ExecutionTime;
         public unsafe void UpdateTargets(Simulation mainSimulation)
         {
             //Using a fixed interval here, matching the time used in the Demo.
             time += Demo.TimestepDuration;
-            var hipsTarget = new Vector3(0, 0, 3 * (float)Math.Sin(time / 4));
+            var hipsTarget = new Vector3(0, 0, 3 * (Number)Math.Sin(time / 4));
             hipsControl.UpdateTarget(mainSimulation, hipsTarget);
-            const float stepDuration = 3.5f;
+            Number stepDuration = 3.5f;
             var scaledTime = time / stepDuration;
-            var t = (float)(scaledTime - Math.Floor(scaledTime));
-            var tOffset = (t + 0.5f) % 1;
+            var t = (Number)(scaledTime - Math.Floor(scaledTime));
+            var tOffset = (t + Constants.C0p5) % 1;
             var leftFootLocalTarget = CreateLegTarget(t);
             var rightFootLocalTarget = CreateLegTarget(tOffset);
             rightFootLocalTarget.X *= -1;
@@ -452,7 +454,7 @@ namespace Demos.Demos.Dancers
             var startTime = Stopwatch.GetTimestamp();
             looper.For(0, Handles.Length, ExecuteDancer);
             var endTime = Stopwatch.GetTimestamp();
-            ExecutionTime = (endTime - startTime) / (double)Stopwatch.Frequency;
+            ExecutionTime = (endTime - startTime) / (Number)Stopwatch.Frequency;
         }
 
         public void Dispose(BufferPool pool)

@@ -1,17 +1,19 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics.Collidables;
+using BepuPhysics.Trees;
+using BepuUtilities;
 using BepuUtilities.Memory;
-using BepuPhysics.Collidables;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using BepuPhysics.Trees;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.CollisionDetection
 {
     public abstract class CollidableOverlapFinder
     {
-        public abstract void DispatchOverlaps(float dt, IThreadDispatcher threadDispatcher = null);
+        public abstract void DispatchOverlaps(Number dt, IThreadDispatcher threadDispatcher = null);
     }
 
     //The overlap finder requires type knowledge about the narrow phase that the broad phase lacks. Don't really want to infect the broad phase with a bunch of narrow phase dependent 
@@ -101,7 +103,7 @@ namespace BepuPhysics.CollisionDetection
             worker.Batcher.Flush();
         }
 
-        public override void DispatchOverlaps(float dt, IThreadDispatcher threadDispatcher = null)
+        public override void DispatchOverlaps(Number dt, IThreadDispatcher threadDispatcher = null)
         {
             if (threadDispatcher != null && threadDispatcher.ThreadCount > 1)
             {

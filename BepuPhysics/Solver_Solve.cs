@@ -1,19 +1,16 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics.Constraints;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
-using System.Runtime.Intrinsics.X86;
-using System.Numerics;
 using System.Runtime.Intrinsics;
-using static BepuPhysics.Solver;
-using BepuPhysics.CollisionDetection;
+using System.Runtime.Intrinsics.X86;
+using System.Threading;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {
@@ -78,9 +75,9 @@ namespace BepuPhysics
             [FieldOffset(64)]
             public Buffer<int> ConstraintBatchBoundaries;
             [FieldOffset(80)]
-            public float Dt;
+            public Number Dt;
             [FieldOffset(84)]
-            public float InverseDt;
+            public Number InverseDt;
             [FieldOffset(88)]
             public int WorkerCount;
             [FieldOffset(92)]
@@ -107,7 +104,7 @@ namespace BepuPhysics
 
         public abstract IndexSet PrepareConstraintIntegrationResponsibilities(IThreadDispatcher threadDispatcher = null);
         public abstract void DisposeConstraintIntegrationResponsibilities();
-        public abstract void Solve(float dt, IThreadDispatcher threadDispatcher = null);
+        public abstract void Solve(Number dt, IThreadDispatcher threadDispatcher = null);
     }
 
 
@@ -186,7 +183,7 @@ namespace BepuPhysics
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void WarmStartBlock<TBatchShouldIntegratePoses>(int workerIndex, int batchIndex, int typeBatchIndex, int startBundle, int endBundle, ref TypeBatch typeBatch, TypeProcessor typeProcessor, float dt, float inverseDt)
+        private void WarmStartBlock<TBatchShouldIntegratePoses>(int workerIndex, int batchIndex, int typeBatchIndex, int startBundle, int endBundle, ref TypeBatch typeBatch, TypeProcessor typeProcessor, Number dt, Number inverseDt)
             where TBatchShouldIntegratePoses : unmanaged, IBatchPoseIntegrationAllowed
         {
             if (batchIndex == 0)
@@ -222,8 +219,8 @@ namespace BepuPhysics
         //Why? Memory bandwidth. Redoing the calculation is cheaper than storing it out.
         struct WarmStartStageFunction : IStageFunction
         {
-            public float Dt;
-            public float InverseDt;
+            public Number Dt;
+            public Number InverseDt;
             public int SubstepIndex;
             public Solver<TIntegrationCallbacks> solver;
 
@@ -247,8 +244,8 @@ namespace BepuPhysics
 
         struct SolveStageFunction : IStageFunction
         {
-            public float Dt;
-            public float InverseDt;
+            public Number Dt;
+            public Number InverseDt;
             public Solver<TIntegrationCallbacks> solver;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -263,8 +260,8 @@ namespace BepuPhysics
 
         struct IncrementalUpdateStageFunction : IStageFunction
         {
-            public float Dt;
-            public float InverseDt;
+            public Number Dt;
+            public Number InverseDt;
             public Solver<TIntegrationCallbacks> solver;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -278,8 +275,8 @@ namespace BepuPhysics
 
         struct IntegrateConstrainedKinematicsStageFunction : IStageFunction
         {
-            public float Dt;
-            public float InverseDt;
+            public Number Dt;
+            public Number InverseDt;
             public int SubstepIndex;
             public Solver<TIntegrationCallbacks> solver;
 
@@ -700,8 +697,8 @@ namespace BepuPhysics
             }
             workBlocks = new QuickList<WorkBlock>(targetBlocksPerBatch * batchCount, pool);
             pool.Take(batchCount, out batchBoundaries);
-            var inverseMinimumBlockSizeInBundles = 1f / minimumBlockSizeInBundles;
-            var inverseMaximumBlockSizeInBundles = 1f / maximumBlockSizeInBundles;
+            var inverseMinimumBlockSizeInBundles = Constants.C1 / minimumBlockSizeInBundles;
+            var inverseMaximumBlockSizeInBundles = Constants.C1 / maximumBlockSizeInBundles;
             for (int batchIndex = 0; batchIndex < batchCount; ++batchIndex)
             {
                 ref var typeBatches = ref activeSet.Batches[batchIndex].TypeBatches;
@@ -720,7 +717,7 @@ namespace BepuPhysics
                     {
                         continue;
                     }
-                    var typeBatchSizeFraction = typeBatch.BundleCount / (float)bundleCount; //note: pre-inverting this doesn't necessarily work well due to numerical issues.
+                    var typeBatchSizeFraction = typeBatch.BundleCount / (Number)bundleCount; //note: pre-inverting this doesn't necessarily work well due to numerical issues.
                     var typeBatchMaximumBlockCount = typeBatch.BundleCount * inverseMinimumBlockSizeInBundles;
                     var typeBatchMinimumBlockCount = typeBatch.BundleCount * inverseMaximumBlockSizeInBundles;
                     var typeBatchBlockCount = Math.Max(1, (int)Math.Min(typeBatchMaximumBlockCount, Math.Max(typeBatchMinimumBlockCount, targetBlocksPerBatch * typeBatchSizeFraction)));
@@ -754,11 +751,11 @@ namespace BepuPhysics
             return VelocityIterationCount;
         }
         //Buffer<Buffer<int>> debugStageWorkBlocksCompleted;
-        protected void ExecuteMultithreaded(float dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate)
+        protected void ExecuteMultithreaded(Number dt, IThreadDispatcher threadDispatcher, Action<int> workDelegate)
         {
             var workerCount = substepContext.WorkerCount = threadDispatcher.ThreadCount;
             substepContext.Dt = dt;
-            substepContext.InverseDt = 1f / dt;
+            substepContext.InverseDt = Constants.C1 / dt;
             pool.Take(substepCount, out substepContext.VelocityIterationCounts);
             //Each substep can have a different number of velocity iterations.
             if (VelocityIterationScheduler == null)
@@ -959,15 +956,15 @@ namespace BepuPhysics
             var typeBatchBodyReferences = typeBatch.BodyReferences.As<int>();
             var bodiesPerConstraintInTypeBatch = TypeProcessors[typeBatch.TypeId].BodiesPerConstraint;
             var intsPerBundle = Vector<int>.Count * bodiesPerConstraintInTypeBatch;
-            var bundleStartIndex = constraintStart / Vector<float>.Count;
-            var bundleEndIndex = (exclusiveConstraintEnd + Vector<float>.Count - 1) / Vector<float>.Count;
+            var bundleStartIndex = constraintStart / Vector<Number>.Count;
+            var bundleEndIndex = (exclusiveConstraintEnd + Vector<Number>.Count - 1) / Vector<Number>.Count;
             Debug.Assert(bundleStartIndex >= 0 && bundleEndIndex <= typeBatch.BundleCount);
             ref var activeSet = ref bodies.ActiveSet;
 
             for (int bundleIndex = bundleStartIndex; bundleIndex < bundleEndIndex; ++bundleIndex)
             {
                 int bundleStartIndexInConstraints = bundleIndex * Vector<int>.Count;
-                int countInBundle = Math.Min(Vector<float>.Count, typeBatch.ConstraintCount - bundleStartIndexInConstraints);
+                int countInBundle = Math.Min(Vector<Number>.Count, typeBatch.ConstraintCount - bundleStartIndexInConstraints);
                 //Body references are stored in AOSOA layout.
                 var bundleBodyReferencesStart = typeBatchBodyReferences.Memory + bundleIndex * intsPerBundle;
                 for (int bodyIndexInConstraint = 0; bodyIndexInConstraint < bodiesPerConstraintInTypeBatch; ++bodyIndexInConstraint)
@@ -1407,13 +1404,13 @@ namespace BepuPhysics
             }
         }
 
-        public override void Solve(float totalDt, IThreadDispatcher threadDispatcher = null)
+        public override void Solve(Number totalDt, IThreadDispatcher threadDispatcher = null)
         {
             var substepDt = totalDt / substepCount;
             PoseIntegrator.Callbacks.PrepareForIntegration(substepDt);
             if (threadDispatcher == null)
             {
-                var inverseDt = 1f / substepDt;
+                var inverseDt = Constants.C1 / substepDt;
                 ref var activeSet = ref ActiveSet;
                 var batchCount = activeSet.Batches.Count;
                 for (int substepIndex = 0; substepIndex < substepCount; ++substepIndex)

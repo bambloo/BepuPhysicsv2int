@@ -2,15 +2,12 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
-using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Diagnostics;
-using System.Numerics;
-using System.Threading;
 
 namespace Demos.Demos
 {
@@ -19,11 +16,11 @@ namespace Demos.Demos
     /// </summary>
     public class ColosseumDemo : Demo
     {
-        public static void CreateRingWall(Simulation simulation, Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, int height, float radius)
+        public static void CreateRingWall(Simulation simulation, Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, int height, Number radius)
         {
             var circumference = MathF.PI * 2 * radius;
             var boxCountPerRing = (int)(0.9f * circumference / ringBoxShape.Length);
-            float increment = MathHelper.TwoPi / boxCountPerRing;
+            Number increment = MathHelper.TwoPi / boxCountPerRing;
             for (int ringIndex = 0; ringIndex < height; ringIndex++)
             {
                 for (int i = 0; i < boxCountPerRing; i++)
@@ -35,11 +32,11 @@ namespace Demos.Demos
             }
         }
 
-        public static void CreateRingPlatform(Simulation simulation, Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, float radius)
+        public static void CreateRingPlatform(Simulation simulation, Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, Number radius)
         {
             var innerCircumference = MathF.PI * 2 * (radius - ringBoxShape.HalfLength);
             var boxCount = (int)(0.95f * innerCircumference / ringBoxShape.Height);
-            float increment = MathHelper.TwoPi / boxCount;
+            Number increment = MathHelper.TwoPi / boxCount;
             for (int i = 0; i < boxCount; i++)
             {
                 var angle = i * increment;
@@ -49,7 +46,7 @@ namespace Demos.Demos
             }
         }
 
-        public static Vector3 CreateRing(Simulation simulation, Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, float radius, int heightPerPlatformLevel, int platformLevels)
+        public static Vector3 CreateRing(Simulation simulation, Vector3 position, Box ringBoxShape, BodyDescription bodyDescription, Number radius, int heightPerPlatformLevel, int platformLevels)
         {
             for (int platformIndex = 0; platformIndex < platformLevels; ++platformIndex)
             {
@@ -65,13 +62,13 @@ namespace Demos.Demos
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-30, 40, -30);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             camera.Pitch = MathHelper.Pi * 0.2f;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             var ringBoxShape = new Box(0.5f, 1, 3);
-            var boxDescription = BodyDescription.CreateDynamic(new Vector3(), ringBoxShape.ComputeInertia(1), Simulation.Shapes.Add(ringBoxShape), 0.01f);
+            var boxDescription = BodyDescription.CreateDynamic(new Vector3(), ringBoxShape.ComputeInertia(1), Simulation.Shapes.Add(ringBoxShape), Constants.C0p01);
 
             var layerPosition = new Vector3();
             const int layerCount = 6;
@@ -92,28 +89,30 @@ namespace Demos.Demos
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -0.5f, 0), Simulation.Shapes.Add(new Box(500, 1, 500))));
 
             var bulletShape = new Sphere(0.5f);
-            bulletDescription = BodyDescription.CreateDynamic(new Vector3(), bulletShape.ComputeInertia(.1f), Simulation.Shapes.Add(bulletShape), 0.01f);
+            bulletDescription = BodyDescription.CreateDynamic(new Vector3(), bulletShape.ComputeInertia(.1f), Simulation.Shapes.Add(bulletShape), Constants.C0p01);
 
-            var shootiePatootieShape = new Sphere(3f);
-            shootiePatootieDescription = BodyDescription.CreateDynamic(new Vector3(), shootiePatootieShape.ComputeInertia(100), new(Simulation.Shapes.Add(shootiePatootieShape), 0.1f), 0.01f);
+            var shootiePatootieShape = new Sphere(Constants.C3);
+            shootiePatootieDescription = BodyDescription.CreateDynamic(new Vector3(), shootiePatootieShape.ComputeInertia(100), new(Simulation.Shapes.Add(shootiePatootieShape), 0.1f), Constants.C0p01);
         }
 
         BodyDescription bulletDescription;
         BodyDescription shootiePatootieDescription;
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             if (input != null)
             {
                 if (input.WasPushed(OpenTK.Input.Key.Z))
                 {
+                    var pos = window.GetNormalizedMousePosition(input.MousePosition);
                     bulletDescription.Pose.Position = camera.Position;
-                    bulletDescription.Velocity.Linear = camera.GetRayDirection(input.MouseLocked, window.GetNormalizedMousePosition(input.MousePosition)) * 400;
+                    bulletDescription.Velocity.Linear = camera.GetRayDirection(input.MouseLocked, new Vector2(pos.X, pos.Y)) * 400;
                     Simulation.Bodies.Add(bulletDescription);
                 }
                 else if (input.WasPushed(OpenTK.Input.Key.X))
                 {
                     shootiePatootieDescription.Pose.Position = camera.Position;
-                    shootiePatootieDescription.Velocity.Linear = camera.GetRayDirection(input.MouseLocked, window.GetNormalizedMousePosition(input.MousePosition)) * 100;
+                    var pos = window.GetNormalizedMousePosition(input.MousePosition);
+                    shootiePatootieDescription.Velocity.Linear = camera.GetRayDirection(input.MouseLocked, new Vector2(pos.X, pos.Y)) * 100;
                     Simulation.Bodies.Add(shootiePatootieDescription);
                 }
             }

@@ -1,18 +1,16 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {
     public static class BoundingBoxHelpers
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector<float> GetAngularBoundsExpansion(Vector<float> angularSpeed, Vector<float> vectorDt, Vector<float> maximumRadius,
-            Vector<float> maximumAngularExpansion)
+        public static Vector<Number> GetAngularBoundsExpansion(Vector<Number> angularSpeed, Vector<Number> vectorDt, Vector<Number> maximumRadius,
+            Vector<Number> maximumAngularExpansion)
         {
             /*
             Angular requires a bit more care. Since the goal is to create a tight bound, simply using a v = w * r approximation isn't ideal. A slightly tighter can be found:
@@ -35,23 +33,23 @@ namespace BepuPhysics
             An extra few dozen ALU cycles is unlikely to meaningfully change the execution time.
             2) Shrinking the bounding box reduces the number of collision pairs. Collision pairs are expensive- many times more expensive than the cost of shrinking the bounding box.
             */
-            var a = Vector.Min(angularSpeed * vectorDt, new Vector<float>(MathHelper.Pi / 3f));
+            var a = Vector.Min(angularSpeed * vectorDt, new Vector<Number>(MathHelper.Pi / Constants.C3));
             var a2 = a * a;
             var a4 = a2 * a2;
             var a6 = a4 * a2;
-            var cosAngleMinusOne = a2 * new Vector<float>(-1f / 2f) + a4 * new Vector<float>(1f / 24f) - a6 * new Vector<float>(1f / 720f);
+            var cosAngleMinusOne = a2 * new Vector<Number>(Constants.Cm1 / Constants.C2) + a4 * new Vector<Number>(Constants.C1 / Constants.C24) - a6 * new Vector<Number>(Constants.C1 / Constants.C720);
             //Note that it's impossible for angular motion to cause an increase in bounding box size beyond (maximumRadius-minimumRadius) on any given axis.
             //That value, or a conservative approximation, is stored as the maximum angular expansion.
             return Vector.Min(maximumAngularExpansion,
-                Vector.SquareRoot(new Vector<float>(-2f) * maximumRadius * maximumRadius * cosAngleMinusOne));
+                Vector.SquareRoot(new Vector<Number>(Constants.Cm2) * maximumRadius * maximumRadius * cosAngleMinusOne));
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetBoundsExpansion(Vector3Wide linearVelocity, Vector<float> dtWide, Vector<float> angularExpansion, out Vector3Wide minExpansion, out Vector3Wide maxExpansion)
+        public static void GetBoundsExpansion(Vector3Wide linearVelocity, Vector<Number> dtWide, Vector<Number> angularExpansion, out Vector3Wide minExpansion, out Vector3Wide maxExpansion)
         {
             var linearDisplacement = linearVelocity * dtWide;
-            var zero = Vector<float>.Zero;
+            var zero = Vector<Number>.Zero;
             minExpansion = Vector3Wide.Min(zero, linearDisplacement);
             maxExpansion = Vector3Wide.Max(zero, linearDisplacement);
             Vector3Wide.Subtract(minExpansion, angularExpansion, out minExpansion);
@@ -61,7 +59,7 @@ namespace BepuPhysics
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void GetBoundsExpansion(
-            Vector3Wide linearVelocity, Vector3Wide angularVelocity, Vector<float> dtWide, Vector<float> maximumRadius, Vector<float> maximumAngularExpansion,
+            Vector3Wide linearVelocity, Vector3Wide angularVelocity, Vector<Number> dtWide, Vector<Number> maximumRadius, Vector<Number> maximumAngularExpansion,
             out Vector3Wide minBoundsExpansion, out Vector3Wide maxBoundsExpansion)
         {
             /*
@@ -113,7 +111,7 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ExpandBoundingBoxes(BodyVelocityWide velocities, Vector<float> dtWide, Vector<float> maximumRadius, Vector<float> maximumAngularExpansion, Vector<float> maximumExpansion,
+        public static void ExpandBoundingBoxes(BodyVelocityWide velocities, Vector<Number> dtWide, Vector<Number> maximumRadius, Vector<Number> maximumAngularExpansion, Vector<Number> maximumExpansion,
             ref Vector3Wide min, ref Vector3Wide max)
         {
             GetBoundsExpansion(velocities.Linear, velocities.Angular, dtWide, maximumRadius, maximumAngularExpansion, out var minDisplacement, out var maxDisplacement);
@@ -127,21 +125,21 @@ namespace BepuPhysics
 
         //This is simply a internally vectorized version of the above.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float GetAngularBoundsExpansion(float angularVelocityMagnitude, float dt, float maximumRadius, float maximumAngularExpansion)
+        public static Number GetAngularBoundsExpansion(Number angularVelocityMagnitude, Number dt, Number maximumRadius, Number maximumAngularExpansion)
         {
-            var a = MathHelper.Min(angularVelocityMagnitude * dt, MathHelper.Pi / 3f);
+            var a = MathHelper.Min(angularVelocityMagnitude * dt, MathHelper.Pi / Constants.C3);
             var a2 = a * a;
             var a4 = a2 * a2;
             var a6 = a4 * a2;
-            var cosAngleMinusOne = a2 * (-1f / 2f) + a4 * (1f / 24f) - a6 * (1f / 720f);
+            var cosAngleMinusOne = a2 * (Constants.Cm1 / Constants.C2) + a4 * (Constants.C1 / Constants.C24) - a6 * (Constants.C1 / Constants.C720);
             //Note that it's impossible for angular motion to cause an increase in bounding box size beyond (maximumRadius-minimumRadius) on any given axis.
             //That value, or a conservative approximation, is stored as the maximum angular expansion.
-            return MathHelper.Min(maximumAngularExpansion, (float)Math.Sqrt(-2f * maximumRadius * maximumRadius * cosAngleMinusOne));
+            return MathHelper.Min(maximumAngularExpansion, (Number)Math.Sqrt(Constants.Cm2 * maximumRadius * maximumRadius * cosAngleMinusOne));
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetBoundsExpansion(Vector3 linearVelocity, float dt, float angularExpansion, out Vector3 minExpansion, out Vector3 maxExpansion)
+        public static void GetBoundsExpansion(Vector3 linearVelocity, Number dt, Number angularExpansion, out Vector3 minExpansion, out Vector3 maxExpansion)
         {
             var linearDisplacement = linearVelocity * dt;
             var zero = Vector3.Zero;
@@ -151,8 +149,8 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetBoundsExpansion(Vector3 linearVelocity, Vector3 angularVelocity, float dt,
-            float maximumRadius, float maximumAngularExpansion, float maximumAllowedExpansion, out Vector3 minExpansion, out Vector3 maxExpansion)
+        public static void GetBoundsExpansion(Vector3 linearVelocity, Vector3 angularVelocity, Number dt,
+            Number maximumRadius, Number maximumAngularExpansion, Number maximumAllowedExpansion, out Vector3 minExpansion, out Vector3 maxExpansion)
         {
             var linearDisplacement = linearVelocity * dt;
             Vector3 zero = default;
@@ -166,8 +164,8 @@ namespace BepuPhysics
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ExpandBoundingBox(ref Vector3 min, ref Vector3 max, Vector3 linearVelocity, Vector3 angularVelocity, float dt,
-        float maximumRadius, float maximumAngularExpansion, float maximumAllowedExpansion)
+        public static void ExpandBoundingBox(ref Vector3 min, ref Vector3 max, Vector3 linearVelocity, Vector3 angularVelocity, Number dt,
+        Number maximumRadius, Number maximumAngularExpansion, Number maximumAllowedExpansion)
         {
             GetBoundsExpansion(linearVelocity, angularVelocity, dt, maximumRadius, maximumAngularExpansion, maximumAllowedExpansion, out var minExpansion, out var maxExpansion);
             min += minExpansion;
@@ -177,8 +175,8 @@ namespace BepuPhysics
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void ExpandBoundingBox(in Vector3Wide expansion, ref Vector3Wide min, ref Vector3Wide max)
         {
-            Vector3Wide.Min(Vector<float>.Zero, expansion, out var minExpansion);
-            Vector3Wide.Max(Vector<float>.Zero, expansion, out var maxExpansion);
+            Vector3Wide.Min(Vector<Number>.Zero, expansion, out var minExpansion);
+            Vector3Wide.Max(Vector<Number>.Zero, expansion, out var maxExpansion);
             Vector3Wide.Add(min, minExpansion, out min);
             Vector3Wide.Add(max, maxExpansion, out max);
         }
@@ -191,14 +189,14 @@ namespace BepuPhysics
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void ExpandLocalBoundingBoxes(ref Vector3Wide min, ref Vector3Wide max,
-            in Vector<float> radiusA, in Vector3Wide localPositionA, in Vector3Wide localRelativeLinearVelocityA, in Vector3Wide angularVelocityA, in Vector3Wide angularVelocityB, float dt,
-            in Vector<float> maximumRadius, in Vector<float> maximumAngularExpansion, in Vector<float> maximumAllowedExpansion)
+            in Vector<Number> radiusA, in Vector3Wide localPositionA, in Vector3Wide localRelativeLinearVelocityA, in Vector3Wide angularVelocityA, in Vector3Wide angularVelocityB, Number dt,
+            in Vector<Number> maximumRadius, in Vector<Number> maximumAngularExpansion, in Vector<Number> maximumAllowedExpansion)
         {
-            var dtWide = new Vector<float>(dt);
+            var dtWide = new Vector<Number>(dt);
             GetBoundsExpansion(localRelativeLinearVelocityA, angularVelocityA, dtWide,
                 maximumRadius + radiusA, maximumAngularExpansion + radiusA, out var minExpansion, out var maxExpansion);
             Vector3Wide.LengthSquared(angularVelocityB, out var angularSpeedBSquared);
-            if (Vector.GreaterThanAny(angularSpeedBSquared, Vector<float>.Zero))
+            if (Vector.GreaterThanAny(angularSpeedBSquared, Vector<Number>.Zero))
             {
                 //Worst case radius assumes the linear motion is separating the objects as directly as possible.
                 Vector3Wide.Length(localPositionA, out var radiusB);
@@ -232,7 +230,7 @@ namespace BepuPhysics
         /// Computes the bounding box of a child shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
         /// </summary>
         public static unsafe void GetLocalBoundingBoxForSweep(TypedIndex shapeIndex, Shapes shapes, in RigidPose shapePoseLocalToA, Quaternion orientationA, in BodyVelocity velocityA,
-            Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
+            Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, Number dt, out Vector3 sweep, out Vector3 min, out Vector3 max)
         {
             //TODO: For any significant amount of B angular velocity, the resulting bounding boxes can be enormous in local space.
             //You should strongly consider heuristically choosing a world space path. For tree-based compounds, this would require a dedicated slow world space traversal.
@@ -262,7 +260,7 @@ namespace BepuPhysics
         /// Computes the bounding box of shape A in the local space of some other collidable B with a sweep direction representing the net linear motion.
         /// </summary>
         public static unsafe void GetLocalBoundingBoxForSweep<TConvex>(ref TConvex shape, Quaternion orientationA, in BodyVelocity velocityA,
-            Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float dt, out Vector3 sweep, out Vector3 min, out Vector3 max) where TConvex : struct, IConvexShape
+            Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, Number dt, out Vector3 sweep, out Vector3 min, out Vector3 max) where TConvex : struct, IConvexShape
         {
             //TODO: For any significant amount of B angular velocity, the resulting bounding boxes can be enormous in local space.
             //You should strongly consider heuristically choosing a world space path. For tree-based compounds, this would require a dedicated slow world space traversal.

@@ -1,13 +1,15 @@
-﻿using BepuUtilities;
-using BepuUtilities.Collections;
+﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
+
 using System.Text;
+using Math = BepuUtilities.Utils.Math;
 
 namespace Demos.UI
 {
@@ -15,7 +17,7 @@ namespace Demos.UI
     {
         int Start { get; }
         int End { get; }
-        double this[int index] { get; }
+        Number this[int index] { get; }
     }
 
     public struct GraphDescription
@@ -29,19 +31,19 @@ namespace Demos.UI
         /// </summary>
         public Vector2 BodySpan;
         public Vector3 BodyLineColor;
-        public float AxisLabelHeight;
-        public float AxisLineRadius;
+        public Number AxisLabelHeight;
+        public Number AxisLineRadius;
         public string HorizontalAxisLabel;
         public string VerticalAxisLabel;
         public int VerticalIntervalLabelRounding;
-        public float VerticalIntervalValueScale;
-        public float BackgroundLineRadius;
-        public float IntervalTextHeight;
-        public float IntervalTickRadius;
+        public Number VerticalIntervalValueScale;
+        public Number BackgroundLineRadius;
+        public Number IntervalTextHeight;
+        public Number IntervalTickRadius;
         /// <summary>
         /// The length of a tick mark line, measured from the axis.
         /// </summary>
-        public float IntervalTickLength;
+        public Number IntervalTickLength;
         /// <summary>
         /// Number of interval ticks along the horizontal axis, not including the start and end ticks.
         /// </summary>
@@ -50,21 +52,21 @@ namespace Demos.UI
         /// Number of interval ticks along the vertical axis, not including the min and max ticks.
         /// </summary>
         public int TargetVerticalTickCount;
-        public float HorizontalTickTextPadding;
-        public float VerticalTickTextPadding;
+        public Number HorizontalTickTextPadding;
+        public Number VerticalTickTextPadding;
 
 
         /// <summary>
         /// Minimum location of the legend in pixels.
         /// </summary>
         public Vector2 LegendMinimum;
-        public float LegendNameHeight;
-        public float LegendLineLength;
+        public Number LegendNameHeight;
+        public Number LegendLineLength;
 
         public Vector3 TextColor;
         public Font Font;
 
-        public float LineSpacingMultiplier;
+        public Number LineSpacingMultiplier;
         public bool ForceVerticalAxisMinimumToZero;
     }
 
@@ -75,7 +77,7 @@ namespace Demos.UI
             //The use of a string here blocks the use of unmanaged storage. Not a big deal; drawing a Graph isn't exactly performance critical.
             public string Name;
             public Vector3 LineColor;
-            public float LineRadius;
+            public Number LineRadius;
             public IDataSeries Data;
         }
         List<Series> graphSeries;
@@ -131,7 +133,7 @@ namespace Demos.UI
             throw new ArgumentException("No series with the given data exists within the graph.");
         }
 
-        public void AddSeries(string name, Vector3 lineColor, float lineRadius, IDataSeries series)
+        public void AddSeries(string name, Vector3 lineColor, Number lineRadius, IDataSeries series)
         {
             graphSeries.Add(new Series { Name = name, Data = series, LineRadius = lineRadius, LineColor = lineColor });
         }
@@ -163,8 +165,8 @@ namespace Demos.UI
             //Collect information to define data window ranges.
             int minX = int.MaxValue;
             int maxX = int.MinValue;
-            var minY = double.MaxValue;
-            var maxY = double.MinValue;
+            var minY = Number.MaxValue;
+            var maxY = Number.MinValue;
             for (int i = 0; i < graphSeries.Count; ++i)
             {
                 var data = graphSeries[i].Data;
@@ -190,7 +192,7 @@ namespace Demos.UI
                 }
             }
             //If no data series contain values, then just use a default size.
-            if (minY == float.MinValue)
+            if (minY == Number.MinValue)
             {
                 minY = 0;
                 maxY = 1;
@@ -238,7 +240,7 @@ namespace Demos.UI
             {
                 var xDataIntervalSize = (maxX - minX) / (description.TargetHorizontalTickCount + 1f);
                 var previousTickValue = int.MinValue;
-                float valueToPixels = description.BodySpan.X / (maxX - minX);
+                Number valueToPixels = description.BodySpan.X / (maxX - minX);
                 for (int i = 0; i < description.TargetHorizontalTickCount + 2; ++i)
                 {
                     //Round pen offset such that the data tick lands on an integer.
@@ -265,7 +267,7 @@ namespace Demos.UI
             }
             {
                 var yDataIntervalSize = yDataSpan / yIntervalCount;
-                var previousTickValue = double.MinValue;
+                var previousTickValue = Number.MinValue;
                 //Note the inclusion of the scale. Rounding occurs post-scale; moving back to pixels requires undoing the scale.
                 var valueToPixels = description.BodySpan.Y / (yDataSpan * description.VerticalIntervalValueScale);
                 for (int i = 0; i < description.TargetVerticalTickCount + 2; ++i)
@@ -278,7 +280,7 @@ namespace Demos.UI
                     }
                     previousTickValue = tickValue;
 
-                    var penPosition = lowerLeft - new Vector2(0, (float)(tickValue * valueToPixels));
+                    var penPosition = lowerLeft - new Vector2(0, (Number)(tickValue * valueToPixels));
 
                     var tickEnd = penPosition - new Vector2(description.IntervalTickLength, 0);
                     var backgroundEnd = penPosition + new Vector2(description.BodySpan.X, 0);
@@ -293,10 +295,10 @@ namespace Demos.UI
 
             //Draw the line graphs on top of the body.
             {
-                var dataToPixelsScale = new Vector2(description.BodySpan.X / (maxX - minX), (float)(description.BodySpan.Y / yDataSpan));
-                Vector2 DataToScreenspace(int x, double y)
+                var dataToPixelsScale = new Vector2(description.BodySpan.X / (maxX - minX), (Number)(description.BodySpan.Y / yDataSpan));
+                Vector2 DataToScreenspace(int x, Number y)
                 {
-                    var graphCoordinates = new Vector2(x - minX, (float)(y - minY)) * dataToPixelsScale;
+                    var graphCoordinates = new Vector2(x - minX, (Number)(y - minY)) * dataToPixelsScale;
                     var screenCoordinates = graphCoordinates;
                     screenCoordinates.Y = description.BodySpan.Y - screenCoordinates.Y;
                     screenCoordinates += description.BodyMinimum;

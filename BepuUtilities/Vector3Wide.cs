@@ -1,33 +1,33 @@
 ﻿using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
 {
     /// <summary>
-    /// Three dimensional vector with <see cref="Vector{T}.Count"/> (with generic type argument of <see cref="float"/>) SIMD lanes.
+    /// Three dimensional vector with <see cref="Vector{T}.Count"/> (with generic type argument of <see cref="Number"/>) SIMD lanes.
     /// </summary>
     public struct Vector3Wide
     {
         /// <summary>
         /// First component of the vector.
         /// </summary>
-        public Vector<float> X;
+        public Vector<Number> X;
         /// <summary>
         /// Second component of the vector.
         /// </summary>
-        public Vector<float> Y;
+        public Vector<Number> Y;
         /// <summary>
         /// Third component of the vector.
         /// </summary>
-        public Vector<float> Z;
+        public Vector<Number> Z;
 
         /// <summary>
         /// Creates a vector by populating each component with the given scalar.
         /// </summary>
         /// <param name="s">Scalar to copy into all lanes of the vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Vector3Wide(ref Vector<float> s)
+        public Vector3Wide(ref Vector<Number> s)
         {
             X = s;
             Y = s;
@@ -39,7 +39,7 @@ namespace BepuUtilities
         /// </summary>
         /// <param name="s">Scalar to copy into all lanes of the vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Vector3Wide(Vector<float> s)
+        public Vector3Wide(Vector<Number> s)
         {
             X = s;
             Y = s;
@@ -66,7 +66,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to add to every component of the vector.</param>
         /// <param name="result">Vector with components equal to the input vector added to the input scalar.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(in Vector3Wide v, in Vector<float> s, out Vector3Wide result)
+        public static void Add(in Vector3Wide v, in Vector<Number> s, out Vector3Wide result)
         {
             result.X = v.X + s;
             result.Y = v.Y + s;
@@ -94,7 +94,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to add to every component of the vector.</param>
         /// <returns>Vector with components equal to the input vector added to the input scalar.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3Wide operator +(Vector3Wide v, Vector<float> s)
+        public static Vector3Wide operator +(Vector3Wide v, Vector<Number> s)
         {
             Vector3Wide result;
             result.X = v.X + s;
@@ -109,7 +109,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to add to every component of the vector.</param>
         /// <returns>Vector with components equal to the input vector added to the input scalar.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3Wide operator +(Vector<float> s, Vector3Wide v)
+        public static Vector3Wide operator +(Vector<Number> s, Vector3Wide v)
         {
             Vector3Wide result;
             result.X = v.X + s;
@@ -139,7 +139,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to subtract from every component of the vector.</param>
         /// <param name="result">Vector with components equal the input scalar subtracted from the input vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Subtract(in Vector3Wide v, in Vector<float> s, out Vector3Wide result)
+        public static void Subtract(in Vector3Wide v, in Vector<Number> s, out Vector3Wide result)
         {
             result.X = v.X - s;
             result.Y = v.Y - s;
@@ -169,7 +169,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to subtract from.</param>
         /// <param name="result">Vector with components equal the input vector subtracted from the input scalar.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Subtract(in Vector<float> s, in Vector3Wide v, out Vector3Wide result)
+        public static void Subtract(in Vector<Number> s, in Vector3Wide v, out Vector3Wide result)
         {
             result.X = s - v.X;
             result.Y = s - v.Y;
@@ -183,7 +183,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to subtract from.</param>
         /// <returns>Vector with components equal the input vector subtracted from the input scalar.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3Wide operator -(Vector3Wide a, Vector<float> b)
+        public static Vector3Wide operator -(Vector3Wide a, Vector<Number> b)
         {
             Vector3Wide result;
             result.X = a.X - b;
@@ -199,7 +199,7 @@ namespace BepuUtilities
         /// <param name="b">Second vector to dot.</param>
         /// <param name="result">Dot product of a and b.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Dot(in Vector3Wide a, in Vector3Wide b, out Vector<float> result)
+        public static void Dot(in Vector3Wide a, in Vector3Wide b, out Vector<Number> result)
         {
             result = a.X * b.X + a.Y * b.Y + a.Z * b.Z;
         }
@@ -211,7 +211,7 @@ namespace BepuUtilities
         /// <param name="b">Second vector to dot.</param>
         /// <returns>Dot product of a and b.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector<float> Dot(Vector3Wide a, Vector3Wide b)
+        public static Vector<Number> Dot(Vector3Wide a, Vector3Wide b)
         {
             return a.X * b.X + a.Y * b.Y + a.Z * b.Z;
         }
@@ -223,7 +223,7 @@ namespace BepuUtilities
         /// <param name="v">Vector whose components will be compared.</param>
         /// <param name="result">Vector with components matching the smaller of the scalar value and the input vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Min(in Vector<float> s, in Vector3Wide v, out Vector3Wide result)
+        public static void Min(in Vector<Number> s, in Vector3Wide v, out Vector3Wide result)
         {
             result.X = Vector.Min(s, v.X);
             result.Y = Vector.Min(s, v.Y);
@@ -250,7 +250,7 @@ namespace BepuUtilities
         /// <param name="v">Vector whose components will be compared.</param>
         /// <returns>Vector with components matching the smaller of the scalar value and the input vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3Wide Min(Vector<float> s, Vector3Wide v)
+        public static Vector3Wide Min(Vector<Number> s, Vector3Wide v)
         {
             Vector3Wide result;
             result.X = Vector.Min(s, v.X);
@@ -281,7 +281,7 @@ namespace BepuUtilities
         /// <param name="v">Vector whose components will be compared.</param>
         /// <param name="result">Vector with components matching the larger of the scalar value and the input vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Max(in Vector<float> s, in Vector3Wide v, out Vector3Wide result)
+        public static void Max(in Vector<Number> s, in Vector3Wide v, out Vector3Wide result)
         {
             result.X = Vector.Max(s, v.X);
             result.Y = Vector.Max(s, v.Y);
@@ -309,7 +309,7 @@ namespace BepuUtilities
         /// <param name="v">Vector whose components will be compared.</param>
         /// <returns>Vector with components matching the larger of the scalar value and the input vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3Wide Max(Vector<float> s, Vector3Wide v)
+        public static Vector3Wide Max(Vector<Number> s, Vector3Wide v)
         {
             Vector3Wide result;
             result.X = Vector.Max(s, v.X);
@@ -341,7 +341,7 @@ namespace BepuUtilities
         /// <param name="scalar">Scalar to apply to the vector.</param>
         /// <param name="result">Scaled result vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Vector3Wide vector, in Vector<float> scalar, out Vector3Wide result)
+        public static void Scale(in Vector3Wide vector, in Vector<Number> scalar, out Vector3Wide result)
         {
             result.X = vector.X * scalar;
             result.Y = vector.Y * scalar;
@@ -355,10 +355,10 @@ namespace BepuUtilities
         /// <param name="scalar">Scalar to divide the vector by.</param>
         /// <returns>Value of the vector divided by the scalar.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3Wide operator /(Vector3Wide vector, Vector<float> scalar)
+        public static Vector3Wide operator /(Vector3Wide vector, Vector<Number> scalar)
         {
             Vector3Wide result;
-            var inverse = Vector<float>.One / scalar;
+            var inverse = Vector<Number>.One / scalar;
             result.X = vector.X * inverse;
             result.Y = vector.Y * inverse;
             result.Z = vector.Z * inverse;
@@ -372,7 +372,7 @@ namespace BepuUtilities
         /// <param name="scalar">Scalar to apply to the vector.</param>
         /// <returns>Scaled result vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3Wide operator *(Vector3Wide vector, Vector<float> scalar)
+        public static Vector3Wide operator *(Vector3Wide vector, Vector<Number> scalar)
         {
             Vector3Wide result;
             result.X = vector.X * scalar;
@@ -388,7 +388,7 @@ namespace BepuUtilities
         /// <param name="scalar">Scalar to apply to the vector.</param>
         /// <returns>Scaled result vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector3Wide operator *(Vector<float> scalar, Vector3Wide vector)
+        public static Vector3Wide operator *(Vector<Number> scalar, Vector3Wide vector)
         {
             Vector3Wide result;
             result.X = vector.X * scalar;
@@ -560,7 +560,7 @@ namespace BepuUtilities
         /// <param name="v">Vector to compute the squared length of.</param>
         /// <param name="lengthSquared">Squared length of the input vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LengthSquared(in Vector3Wide v, out Vector<float> lengthSquared)
+        public static void LengthSquared(in Vector3Wide v, out Vector<Number> lengthSquared)
         {
             lengthSquared = v.X * v.X + v.Y * v.Y + v.Z * v.Z;
         }
@@ -571,7 +571,7 @@ namespace BepuUtilities
         /// <param name="v">Vector to compute the length of.</param>
         /// <param name="length">Length of the input vector.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Length(in Vector3Wide v, out Vector<float> length)
+        public static void Length(in Vector3Wide v, out Vector<Number> length)
         {
             length = Vector.SquareRoot(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
         }
@@ -582,7 +582,7 @@ namespace BepuUtilities
         /// <param name="v">Vector to compute the squared length of.</param>
         /// <returns>Squared length of the input vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector<float> LengthSquared(Vector3Wide v)
+        public static Vector<Number> LengthSquared(Vector3Wide v)
         {
             return v.X * v.X + v.Y * v.Y + v.Z * v.Z;
         }
@@ -593,7 +593,7 @@ namespace BepuUtilities
         /// <param name="v">Vector to compute the length of.</param>
         /// <returns>Length of the input vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector<float> Length(Vector3Wide v)
+        public static Vector<Number> Length(Vector3Wide v)
         {
             return Vector.SquareRoot(v.X * v.X + v.Y * v.Y + v.Z * v.Z);
         }
@@ -603,7 +603,7 @@ namespace BepuUtilities
         /// </summary>
         /// <returns>Squared length of this vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Vector<float> LengthSquared()
+        public Vector<Number> LengthSquared()
         {
             return X * X + Y * Y + Z * Z;
         }
@@ -613,7 +613,7 @@ namespace BepuUtilities
         /// </summary>
         /// <returns>Length of this vector.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Vector<float> Length()
+        public Vector<Number> Length()
         {
             return Vector.SquareRoot(X * X + Y * Y + Z * Z);
         }
@@ -625,7 +625,7 @@ namespace BepuUtilities
         /// <param name="b">Second vector in the pair.</param>
         /// <param name="distance">Distance between a and b.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Distance(in Vector3Wide a, in Vector3Wide b, out Vector<float> distance)
+        public static void Distance(in Vector3Wide a, in Vector3Wide b, out Vector<Number> distance)
         {
             var x = b.X - a.X;
             var y = b.Y - a.Y;
@@ -640,7 +640,7 @@ namespace BepuUtilities
         /// <param name="b">Second vector in the pair.</param>
         /// <param name="distanceSquared">Squared distance between a and b.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void DistanceSquared(in Vector3Wide a, in Vector3Wide b, out Vector<float> distanceSquared)
+        public static void DistanceSquared(in Vector3Wide a, in Vector3Wide b, out Vector<Number> distanceSquared)
         {
             var x = b.X - a.X;
             var y = b.Y - a.Y;
@@ -655,7 +655,7 @@ namespace BepuUtilities
         /// <param name="b">Second vector in the pair.</param>
         /// <returns>Distance between a and b.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector<float> Distance(Vector3Wide a, Vector3Wide b)
+        public static Vector<Number> Distance(Vector3Wide a, Vector3Wide b)
         {
             var x = b.X - a.X;
             var y = b.Y - a.Y;
@@ -670,7 +670,7 @@ namespace BepuUtilities
         /// <param name="b">Second vector in the pair.</param>
         /// <returns>Squared distance between a and b.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector<float> DistanceSquared(Vector3Wide a, Vector3Wide b)
+        public static Vector<Number> DistanceSquared(Vector3Wide a, Vector3Wide b)
         {
             var x = b.X - a.X;
             var y = b.Y - a.Y;
@@ -689,7 +689,7 @@ namespace BepuUtilities
         public static void Normalize(in Vector3Wide v, out Vector3Wide result)
         {
             Length(v, out var length);
-            var scale = Vector<float>.One / length;
+            var scale = Vector<Number>.One / length;
             Scale(v, scale, out result);
         }
 
@@ -702,7 +702,7 @@ namespace BepuUtilities
         public static Vector3Wide Normalize(Vector3Wide v)
         {
             Length(v, out var length);
-            var scale = Vector<float>.One / length;
+            var scale = Vector<Number>.One / length;
             return v * scale;
         }
 
@@ -828,9 +828,9 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Broadcast(Vector3 source, out Vector3Wide broadcasted)
         {
-            broadcasted.X = new Vector<float>(source.X);
-            broadcasted.Y = new Vector<float>(source.Y);
-            broadcasted.Z = new Vector<float>(source.Z);
+            broadcasted.X = new Vector<Number>(source.X);
+            broadcasted.Y = new Vector<Number>(source.Y);
+            broadcasted.Z = new Vector<Number>(source.Z);
         }
 
         /// <summary>
@@ -842,9 +842,9 @@ namespace BepuUtilities
         public static Vector3Wide Broadcast(Vector3 source)
         {
             Vector3Wide broadcasted;
-            broadcasted.X = new Vector<float>(source.X);
-            broadcasted.Y = new Vector<float>(source.Y);
-            broadcasted.Z = new Vector<float>(source.Z);
+            broadcasted.X = new Vector<Number>(source.X);
+            broadcasted.Y = new Vector<Number>(source.Y);
+            broadcasted.Z = new Vector<Number>(source.Z);
             return broadcasted;
         }
 
@@ -857,9 +857,9 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Rebroadcast(in Vector3Wide source, int slotIndex, out Vector3Wide broadcasted)
         {
-            broadcasted.X = new Vector<float>(source.X[slotIndex]);
-            broadcasted.Y = new Vector<float>(source.Y[slotIndex]);
-            broadcasted.Z = new Vector<float>(source.Z[slotIndex]);
+            broadcasted.X = new Vector<Number>(source.X[slotIndex]);
+            broadcasted.Y = new Vector<Number>(source.Y[slotIndex]);
+            broadcasted.Z = new Vector<Number>(source.Z[slotIndex]);
         }
 
 
@@ -873,9 +873,9 @@ namespace BepuUtilities
         public static Vector3Wide Rebroadcast(Vector3Wide source, int slotIndex)
         {
             Vector3Wide broadcasted;
-            broadcasted.X = new Vector<float>(source.X[slotIndex]);
-            broadcasted.Y = new Vector<float>(source.Y[slotIndex]);
-            broadcasted.Z = new Vector<float>(source.Z[slotIndex]);
+            broadcasted.X = new Vector<Number>(source.X[slotIndex]);
+            broadcasted.Y = new Vector<Number>(source.Y[slotIndex]);
+            broadcasted.Z = new Vector<Number>(source.Z[slotIndex]);
             return broadcasted;
         }
 

@@ -1,9 +1,7 @@
 ﻿using BepuPhysics;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
 
 namespace Demos.SpecializedTests
 {
@@ -12,9 +10,9 @@ namespace Demos.SpecializedTests
         /// <summary>
         /// Gets a value roughly representing the amount of energy in the simulation. This is occasionally handy for debug purposes.
         /// </summary>
-        public static float GetBodyEnergyHeuristic(Bodies bodies)
+        public static Number GetBodyEnergyHeuristic(Bodies bodies)
         {
-            float accumulated = 0;
+            Number accumulated = 0;
             for (int index = 0; index < bodies.ActiveSet.Count; ++index)
             {
                 ref var velocity = ref bodies.ActiveSet.DynamicsState[index].Motion.Velocity;

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
@@ -21,7 +21,7 @@ namespace BepuUtilities
         /// <param name="scale">Scale to apply to the components of m.</param>
         /// <param name="result">Result of scaling each component of m by scale.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Symmetric6x6Wide m, in Vector<float> scale, out Symmetric6x6Wide result)
+        public static void Scale(in Symmetric6x6Wide m, in Vector<Number> scale, out Symmetric6x6Wide result)
         {
             Symmetric3x3Wide.Scale(m.A, scale, out result.A);
             Matrix3x3Wide.Scale(m.B, scale, out result.B);
@@ -90,32 +90,32 @@ namespace BepuUtilities
             in Vector3Wide v0, in Vector3Wide v1, in Symmetric3x3Wide a, in Matrix3x3Wide b, in Symmetric3x3Wide d, out Vector3Wide result0, out Vector3Wide result1)
         {
             var d1 = a.XX;
-            var inverseD1 = Vector<float>.One / d1;
+            var inverseD1 = Vector<Number>.One / d1;
             var l21 = inverseD1 * a.YX;
             var l31 = inverseD1 * a.ZX;
             var l41 = inverseD1 * b.X.X;
             var l51 = inverseD1 * b.X.Y;
             var l61 = inverseD1 * b.X.Z;
             var d2 = a.YY - l21 * l21 * d1;
-            var inverseD2 = Vector<float>.One / d2;
+            var inverseD2 = Vector<Number>.One / d2;
             var l32 = inverseD2 * (a.ZY - l31 * l21 * d1);
             var l42 = inverseD2 * (b.Y.X - l41 * l21 * d1);
             var l52 = inverseD2 * (b.Y.Y - l51 * l21 * d1);
             var l62 = inverseD2 * (b.Y.Z - l61 * l21 * d1);
             var d3 = a.ZZ - l31 * l31 * d1 - l32 * l32 * d2;
-            var inverseD3 = Vector<float>.One / d3;
+            var inverseD3 = Vector<Number>.One / d3;
             var l43 = inverseD3 * (b.Z.X - l41 * l31 * d1 - l42 * l32 * d2);
             var l53 = inverseD3 * (b.Z.Y - l51 * l31 * d1 - l52 * l32 * d2);
             var l63 = inverseD3 * (b.Z.Z - l61 * l31 * d1 - l62 * l32 * d2);
             var d4 = d.XX - l41 * l41 * d1 - l42 * l42 * d2 - l43 * l43 * d3;
-            var inverseD4 = Vector<float>.One / d4;
+            var inverseD4 = Vector<Number>.One / d4;
             var l54 = inverseD4 * (d.YX - l51 * l41 * d1 - l52 * l42 * d2 - l53 * l43 * d3);
             var l64 = inverseD4 * (d.ZX - l61 * l41 * d1 - l62 * l42 * d2 - l63 * l43 * d3);
             var d5 = d.YY - l51 * l51 * d1 - l52 * l52 * d2 - l53 * l53 * d3 - l54 * l54 * d4;
-            var inverseD5 = Vector<float>.One / d5;
+            var inverseD5 = Vector<Number>.One / d5;
             var l65 = inverseD5 * (d.ZY - l61 * l51 * d1 - l62 * l52 * d2 - l63 * l53 * d3 - l64 * l54 * d4);
             var d6 = d.ZZ - l61 * l61 * d1 - l62 * l62 * d2 - l63 * l63 * d3 - l64 * l64 * d4 - l65 * l65 * d5;
-            var inverseD6 = Vector<float>.One / d6;
+            var inverseD6 = Vector<Number>.One / d6;
 
             //We now have the components of L and D, so substitute.
             result0.X = v0.X;

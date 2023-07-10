@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -16,16 +16,16 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// Maximum amount of force the motor can apply in one unit of time.
         /// </summary>
-        public float MaximumForce;
+        public Number MaximumForce;
         /// <summary>
         /// Mass-scaled damping constant. If you want to simulate a viscous damping coefficient of D with an object of mass M, set this damping value to D / M.
         /// </summary>
-        public float Damping;
+        public Number Damping;
 
         /// <summary>
-        /// Gets or sets how soft the constraint is. Values range from 0 to infinity. Softness is inverse damping; 0 is perfectly rigid, 1 is very soft, float.MaxValue is effectively nonexistent.
+        /// Gets or sets how soft the constraint is. Values range from 0 to infinity. Softness is inverse damping; 0 is perfectly rigid, 1 is very soft, Number.MaxValue is effectively nonexistent.
         /// </summary>
-        public float Softness { get { return 1f / Damping; } set { Damping = value <= 0 ? float.MaxValue : 1f / value; } }
+        public Number Softness { get { return Constants.C1 / Damping; } set { Damping = value <= 0 ? Number.MaxValue : Constants.C1 / value; } }
 
         /// <summary>
         /// Checks if a settings instance has valid nonnegative values.
@@ -41,9 +41,9 @@ namespace BepuPhysics.Constraints
         /// Defines settings for a motor constraint.
         /// </summary>
         /// <param name="maximumForce">Maximum amount of force the motor can apply in one unit of time.</param>
-        /// <param name="softness">Gets or sets how soft the constraint is. Values range from 0 to infinity. Softness is inverse damping; 0 is perfectly rigid, 1 is very soft, float.MaxValue is effectively nonexistent.</param>
+        /// <param name="softness">Gets or sets how soft the constraint is. Values range from 0 to infinity. Softness is inverse damping; 0 is perfectly rigid, 1 is very soft, Number.MaxValue is effectively nonexistent.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public MotorSettings(float maximumForce, float softness) : this()
+        public MotorSettings(Number maximumForce, Number softness) : this()
         {
             MaximumForce = maximumForce;
             Softness = softness;
@@ -52,8 +52,8 @@ namespace BepuPhysics.Constraints
     }
     public struct MotorSettingsWide
     {
-        public Vector<float> MaximumForce;
-        public Vector<float> Damping;
+        public Vector<Number> MaximumForce;
+        public Vector<Number> Damping;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WriteFirst(in MotorSettings source, ref MotorSettingsWide target)
@@ -70,7 +70,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeSoftness(in MotorSettingsWide settings, float dt, out Vector<float> effectiveMassCFMScale, out Vector<float> softnessImpulseScale, out Vector<float> maximumImpulse)
+        public static void ComputeSoftness(in MotorSettingsWide settings, Number dt, out Vector<Number> effectiveMassCFMScale, out Vector<Number> softnessImpulseScale, out Vector<Number> maximumImpulse)
         {
             //We can't use damping ratio for a velocity motor; there is no position goal, so there is no such thing as critical damping.
             //Instead, we start with the damping constant.
@@ -93,10 +93,10 @@ namespace BepuPhysics.Constraints
             //CFM/dt * softenedEffectiveMass = 1 / (d * dt + 1)
             //(For more, see the Inequality1DOF example constraint.)
 
-            var dtWide = new Vector<float>(dt);
+            var dtWide = new Vector<Number>(dt);
             var dtd = dtWide * settings.Damping;
             maximumImpulse = settings.MaximumForce * dtWide;
-            softnessImpulseScale = Vector<float>.One / (dtd + Vector<float>.One);
+            softnessImpulseScale = Vector<Number>.One / (dtd + Vector<Number>.One);
             effectiveMassCFMScale = dtd * softnessImpulseScale;
         }
     }

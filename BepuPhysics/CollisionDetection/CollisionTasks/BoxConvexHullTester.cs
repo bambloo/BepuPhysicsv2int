@@ -1,10 +1,10 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
-using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
@@ -12,7 +12,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         public int BatchSize => 16;
 
-        public unsafe void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public unsafe void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             Unsafe.SkipInit(out manifold);
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var boxOrientation);
@@ -22,11 +22,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, hullOrientation, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
             Vector3Wide.Length(localOffsetA, out var centerDistance);
-            Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
-            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
-            initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
-            initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
-            initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
+            Vector3Wide.Scale(localOffsetA, Vector<Number>.One / centerDistance, out var initialNormal);
+            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<Number>(Constants.C1em8));
+            initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<Number>.Zero, initialNormal.X);
+            initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<Number>.One, initialNormal.Y);
+            initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<Number>.Zero, initialNormal.Z);
             var hullSupportFinder = default(ConvexHullSupportFinder);
             var boxSupportFinder = default(BoxSupportFinder);
             var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
@@ -34,7 +34,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var epsilonScale = Vector.Min(Vector.Max(a.HalfWidth, Vector.Max(a.HalfHeight, a.HalfLength)), hullEpsilonScale);
             var depthThreshold = -speculativeMargin;
             DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
-                b, a, localOffsetA, hullLocalBoxOrientation, ref hullSupportFinder, ref boxSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
+                b, a, localOffsetA, hullLocalBoxOrientation, ref hullSupportFinder, ref boxSupportFinder, initialNormal, inactiveLanes, Constants.C1em5 * epsilonScale, depthThreshold,
                 out var depth, out var localNormal, out var closestOnHull);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
@@ -62,8 +62,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(useX, hullLocalBoxOrientation.Z, hullLocalBoxOrientation.Y, out var boxFaceY);
             Vector3Wide.ConditionalSelect(useY, hullLocalBoxOrientation.X, boxFaceY, out boxFaceY);
             var negateFace =
-                Vector.ConditionalSelect(useX, Vector.GreaterThan(localNormalInA.X, Vector<float>.Zero),
-                Vector.ConditionalSelect(useY, Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), Vector.GreaterThan(localNormalInA.Z, Vector<float>.Zero)));
+                Vector.ConditionalSelect(useX, Vector.GreaterThan(localNormalInA.X, Vector<Number>.Zero),
+                Vector.ConditionalSelect(useY, Vector.GreaterThan(localNormalInA.Y, Vector<Number>.Zero), Vector.GreaterThan(localNormalInA.Z, Vector<Number>.Zero)));
             Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceNormal);
             //Winding is important; flip the face bases if necessary.
             Vector3Wide.ConditionallyNegate(Vector.OnesComplement(negateFace), ref boxFaceX);
@@ -82,10 +82,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(v1, boxFaceYOffset, out var v11);
 
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
-            var boundingPlaneEpsilon = 1e-3f * epsilonScale;
-            Vector3* slotHullFaceNormals = stackalloc Vector3[Vector<float>.Count];
-            Vector3* slotLocalNormals = stackalloc Vector3[Vector<float>.Count];
-            Buffer<HullVertexIndex>* hullVertexIndices = stackalloc Buffer<HullVertexIndex>[Vector<float>.Count];
+            var boundingPlaneEpsilon = Constants.C1em3 * epsilonScale;
+            Vector3* slotHullFaceNormals = stackalloc Vector3[Vector<Number>.Count];
+            Vector3* slotLocalNormals = stackalloc Vector3[Vector<Number>.Count];
+            Buffer<HullVertexIndex>* hullVertexIndices = stackalloc Buffer<HullVertexIndex>[Vector<Number>.Count];
             Unsafe.SkipInit(out Vector3Wide hullFaceNormal);
             int maximumFaceVertexCount = 0;
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
@@ -182,28 +182,28 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     //A plane is being 'entered' if the ray direction opposes the face normal.
                     //Entry denominators are always negative, exit denominators are always positive. Don't have to worry about comparison sign flips.
                     //TODO: Now that we're off NS2.0, this branchmess could be improved.
-                    float latestEntry, earliestExit;
+                    Number latestEntry, earliestExit;
                     if (denominator.X < 0)
                     {
                         latestEntry = edgeIntersections.X;
-                        earliestExit = float.MaxValue;
+                        earliestExit = Number.MaxValue;
                     }
                     else if (denominator.X > 0)
                     {
-                        latestEntry = float.MinValue;
+                        latestEntry = Number.MinValue;
                         earliestExit = edgeIntersections.X;
                     }
                     else if (numerator.X < 0)
                     {
                         //The B edge is parallel and outside the edge A, so there can be no intersection.
-                        earliestExit = float.MinValue;
-                        latestEntry = float.MaxValue;
+                        earliestExit = Number.MinValue;
+                        latestEntry = Number.MaxValue;
                     }
                     else
                     {
                         //Parallel, but inside.
-                        latestEntry = float.MinValue;
-                        earliestExit = float.MaxValue;
+                        latestEntry = Number.MinValue;
+                        earliestExit = Number.MaxValue;
                     }
                     if (denominator.Y < 0)
                     {
@@ -217,8 +217,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     }
                     else if (numerator.Y < 0)
                     {
-                        earliestExit = float.MinValue;
-                        latestEntry = float.MaxValue;
+                        earliestExit = Number.MinValue;
+                        latestEntry = Number.MaxValue;
                     }
                     if (denominator.Z < 0)
                     {
@@ -232,8 +232,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     }
                     else if (numerator.Z < 0)
                     {
-                        earliestExit = float.MinValue;
-                        latestEntry = float.MaxValue;
+                        earliestExit = Number.MinValue;
+                        latestEntry = Number.MaxValue;
                     }
                     if (denominator.W < 0)
                     {
@@ -247,8 +247,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     }
                     else if (numerator.W < 0)
                     {
-                        earliestExit = float.MinValue;
-                        latestEntry = float.MaxValue;
+                        earliestExit = Number.MinValue;
+                        latestEntry = Number.MaxValue;
                     }
 
                     //We now have a convex hull edge interval. Add contacts for it.
@@ -353,19 +353,19 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.ReadSlot(ref boxFaceNormal, slotIndex, out var slotBoxFaceNormal);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
                 Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
-                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotBoxFaceNormal, 1f / Vector3.Dot(slotBoxFaceNormal, slotLocalNormal), slotBoxFaceCenter, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotBoxFaceNormal, Constants.C1 / Vector3.Dot(slotBoxFaceNormal, slotLocalNormal), slotBoxFaceCenter, hullFaceOrigin, hullFaceX, hullFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                    slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
             }
             //The reduction does not assign the normal. Fill it in.
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, hullOrientation, out manifold.Normal);
         }
 
-        public void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref BoxWide a, ref ConvexHullWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

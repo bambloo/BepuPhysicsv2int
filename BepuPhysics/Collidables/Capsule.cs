@@ -1,9 +1,9 @@
-﻿using System;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using BepuUtilities.Memory;
+﻿using BepuPhysics.CollisionDetection;
 using BepuUtilities;
-using BepuPhysics.CollisionDetection;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System.Runtime.CompilerServices;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace BepuPhysics.Collidables
 {
@@ -16,30 +16,30 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Spherical expansion applied to the internal line segment.
         /// </summary>
-        public float Radius;
+        public Number Radius;
         /// <summary>
         /// Half of the length of the internal line segment. Oriented along the local Y axis.
         /// </summary>
-        public float HalfLength;
+        public Number HalfLength;
 
         /// <summary>
         /// Gets or sets the length of the capsule's internal line segment along the local Y axis.
         /// </summary>
-        public float Length { get { return HalfLength * 2; } set { HalfLength = value * 0.5f; } }
+        public Number Length { get { return HalfLength * 2; } set { HalfLength = value * Constants.C0p5; } }
 
         /// <summary>
         /// Creates a capsule shape.
         /// </summary>
         /// <param name="radius">Radius of the capsule.</param>
         /// <param name="length">Length of the capsule's internal line segment along the local Y axis.</param>
-        public Capsule(float radius, float length)
+        public Capsule(Number radius, Number length)
         {
             Radius = radius;
-            HalfLength = length * 0.5f;
+            HalfLength = length * Constants.C0p5;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        public readonly void ComputeAngularExpansionData(out Number maximumRadius, out Number maximumAngularExpansion)
         {
             maximumRadius = HalfLength + Radius;
             //The minimum radius is capsules.Radius, so the maximum offset is simply the half length.
@@ -55,7 +55,7 @@ namespace BepuPhysics.Collidables
         }
 
 
-        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out Number t, out Vector3 normal)
         {
             //It's convenient to work in local space, so pull the ray into the capsule's local space.
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
@@ -64,12 +64,12 @@ namespace BepuPhysics.Collidables
             Matrix3x3.TransformTranspose(direction, orientation, out var d);
 
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
-            var inverseDLength = 1f / d.Length();
+            var inverseDLength = Constants.C1 / d.Length();
             d *= inverseDLength;
 
             //Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
             var tOffset = -Vector3.Dot(o, d) - (HalfLength + Radius);
-            tOffset = float.Max(0, tOffset);
+            tOffset = Number.Max(0, tOffset);
             o += d * tOffset;
             var oh = new Vector3(o.X, 0, o.Z);
             var dh = new Vector3(d.X, 0, d.Z);
@@ -85,8 +85,8 @@ namespace BepuPhysics.Collidables
                 return false;
             }
 
-            float sphereY;
-            if (a > 1e-8f)
+            Number sphereY;
+            if (a > Constants.C1em8)
             {
                 var discriminant = b * b - a * c;
                 if (discriminant < 0)
@@ -123,8 +123,8 @@ namespace BepuPhysics.Collidables
                 //Note that the sphere cap is nudged forward to match the origin of the ray.
                 //This is just a simple way to capture the case where the ray starts inside the capsule, but too far to up/down to hit the cap chosen by d.Y.
                 sphereY = d.Y > 0 ?
-                    float.Max(float.Min(HalfLength, o.Y), -HalfLength) :
-                    float.Min(float.Max(-HalfLength, o.Y), HalfLength);
+                    Number.Max(Number.Min(HalfLength, o.Y), -HalfLength) :
+                    Number.Min(Number.Max(-HalfLength, o.Y), HalfLength);
             }
 
             var os = o - new Vector3(0, sphereY, 0);
@@ -148,7 +148,7 @@ namespace BepuPhysics.Collidables
                 return false;
             }
             t = -capB - MathF.Sqrt(capDiscriminant);
-            t = float.Max(t, -tOffset);
+            t = Number.Max(t, -tOffset);
             normal = (os + d * t) / Radius;
             t = (t + tOffset) * inverseDLength;
             Matrix3x3.Transform(normal, orientation, out normal);
@@ -156,23 +156,23 @@ namespace BepuPhysics.Collidables
 
         }
 
-        public readonly BodyInertia ComputeInertia(float mass)
+        public readonly BodyInertia ComputeInertia(Number mass)
         {
             BodyInertia inertia;
-            inertia.InverseMass = 1f / mass;
+            inertia.InverseMass = Constants.C1 / mass;
             var r2 = Radius * Radius;
             var h2 = HalfLength * HalfLength;
             var cylinderVolume = 2 * HalfLength * r2 * MathHelper.Pi;
-            var sphereVolume = (4f / 3f) * r2 * Radius * MathHelper.Pi;
-            var inverseTotal = 1f / (cylinderVolume + sphereVolume);
+            var sphereVolume = (Constants.C4 / Constants.C3) * r2 * Radius * MathHelper.Pi;
+            var inverseTotal = Constants.C1 / (cylinderVolume + sphereVolume);
             //Volume is in units of the capsule's whole volume.
             cylinderVolume *= inverseTotal;
             sphereVolume *= inverseTotal;
             inertia.InverseInertiaTensor.XX = inertia.InverseMass / (
-                cylinderVolume * ((3f / 12f) * r2 + (4f / 12f) * h2) +
-                sphereVolume * ((2f / 5f) * r2 + (6f / 8f) * Radius * HalfLength + h2));
+                cylinderVolume * ((Constants.C3 / Constants.C12) * r2 + (Constants.C4 / Constants.C12) * h2) +
+                sphereVolume * ((Constants.C2 / Constants.C5) * r2 + (Constants.C6 / Constants.C8) * Radius * HalfLength + h2));
             inertia.InverseInertiaTensor.YX = 0;
-            inertia.InverseInertiaTensor.YY = inertia.InverseMass / (cylinderVolume * (1f / 2f) * r2 + sphereVolume * (2f / 5f) * r2);
+            inertia.InverseInertiaTensor.YY = inertia.InverseMass / (cylinderVolume * (Constants.C1 / Constants.C2) * r2 + sphereVolume * (Constants.C2 / Constants.C5) * r2);
             inertia.InverseInertiaTensor.ZX = 0;
             inertia.InverseInertiaTensor.ZY = 0;
             inertia.InverseInertiaTensor.ZZ = inertia.InverseInertiaTensor.XX;
@@ -195,21 +195,21 @@ namespace BepuPhysics.Collidables
 
     public struct CapsuleWide : IShapeWide<Capsule>
     {
-        public Vector<float> Radius;
-        public Vector<float> HalfLength;
+        public Vector<Number> Radius;
+        public Vector<Number> HalfLength;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Broadcast(in Capsule shape)
         {
-            Radius = new Vector<float>(shape.Radius);
-            HalfLength = new Vector<float>(shape.HalfLength);
+            Radius = new Vector<Number>(shape.Radius);
+            HalfLength = new Vector<Number>(shape.HalfLength);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteFirst(in Capsule source)
         {
-            Unsafe.As<Vector<float>, float>(ref Radius) = source.Radius;
-            Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;
+            Unsafe.As<Vector<Number>, Number>(ref Radius) = source.Radius;
+            Unsafe.As<Vector<Number>, Number>(ref HalfLength) = source.HalfLength;
         }
 
         public bool AllowOffsetMemoryAccess => true;
@@ -223,7 +223,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
+        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<Number> maximumRadius, out Vector<Number> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             var segmentOffset = QuaternionWide.TransformUnitY(orientations);
             Vector3Wide.Scale(segmentOffset, HalfLength, out segmentOffset);
@@ -247,7 +247,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector<int> intersected, out Vector<Number> t, out Vector3Wide normal)
         {
             //It's convenient to work in local space, so pull the ray into the capsule's local space.
             Matrix3x3Wide.CreateFromQuaternion(pose.Orientation, out var orientation);
@@ -257,12 +257,12 @@ namespace BepuPhysics.Collidables
 
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
             Vector3Wide.Length(d, out var dLength);
-            var inverseDLength = Vector<float>.One / dLength;
+            var inverseDLength = Vector<Number>.One / dLength;
             Vector3Wide.Scale(d, inverseDLength, out d);
 
             //Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
             Vector3Wide.Dot(o, d, out var od);
-            var tOffset = Vector.Max(-od - (HalfLength + Radius), Vector<float>.Zero);
+            var tOffset = Vector.Max(-od - (HalfLength + Radius), Vector<Number>.Zero);
             Vector3Wide.Scale(d, tOffset, out var oOffset);
             Vector3Wide.Add(o, oOffset, out o);
             var a = d.X * d.X + d.Z * d.Z;
@@ -270,17 +270,17 @@ namespace BepuPhysics.Collidables
             var radiusSquared = Radius * Radius;
             var c = (o.X * o.X + o.Z * o.Z) - radiusSquared;
 
-            var rayIsntParallel = Vector.GreaterThan(a, new Vector<float>(1e-8f));
+            var rayIsntParallel = Vector.GreaterThan(a, new Vector<Number>(Constants.C1em8));
             var discriminant = b * b - a * c;
             var cylinderIntersected = Vector.BitwiseAnd(
                 Vector.BitwiseOr(
-                    Vector.LessThanOrEqual(b, Vector<float>.Zero),
-                    Vector.LessThanOrEqual(c, Vector<float>.Zero)),
-                Vector.GreaterThanOrEqual(discriminant, Vector<float>.Zero));
+                    Vector.LessThanOrEqual(b, Vector<Number>.Zero),
+                    Vector.LessThanOrEqual(c, Vector<Number>.Zero)),
+                Vector.GreaterThanOrEqual(discriminant, Vector<Number>.Zero));
             var cylinderT = Vector.Max(-tOffset, (-b - Vector.SquareRoot(discriminant)) / a);
             Vector3Wide.Scale(d, cylinderT, out oOffset);
             Vector3Wide.Add(o, oOffset, out var cylinderHitLocation);
-            var inverseRadius = Vector<float>.One / Radius;
+            var inverseRadius = Vector<Number>.One / Radius;
             var cylinderNormalX = cylinderHitLocation.X * inverseRadius;
             var cylinderNormalZ = cylinderHitLocation.Z * inverseRadius;
             var useCylinder = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(cylinderHitLocation.Y, -HalfLength), Vector.LessThanOrEqual(cylinderHitLocation.Y, HalfLength));
@@ -289,11 +289,11 @@ namespace BepuPhysics.Collidables
             //Note that the sphere cap is nudged forward in the parallel case to match the origin of the ray.
             //This is just a simple way to capture the case where the ray starts inside the capsule, but too far to up/down to hit the cap chosen by d.Y.
             var negatedHalfLength = -HalfLength;
-            var parallelSphereY = Vector.ConditionalSelect(Vector.LessThan(d.Y, Vector<float>.Zero), 
+            var parallelSphereY = Vector.ConditionalSelect(Vector.LessThan(d.Y, Vector<Number>.Zero), 
                 Vector.Max(negatedHalfLength, Vector.Min(o.Y, HalfLength)), 
                 Vector.Min(HalfLength, Vector.Max(o.Y, negatedHalfLength)));
             var nonParallelSphereY = Vector.ConditionalSelect(Vector.GreaterThan(cylinderHitLocation.Y, HalfLength), HalfLength, negatedHalfLength);
-            Vector<float> sphereY = Vector.ConditionalSelect(rayIsntParallel, nonParallelSphereY, parallelSphereY);
+            Vector<Number> sphereY = Vector.ConditionalSelect(rayIsntParallel, nonParallelSphereY, parallelSphereY);
 
             o.Y -= sphereY;
             Vector3Wide.Dot(o, d, out var capB);
@@ -303,9 +303,9 @@ namespace BepuPhysics.Collidables
             var capDiscriminant = capB * capB - capC;
             var capIntersected = Vector.BitwiseAnd(
                 Vector.BitwiseOr(
-                    Vector.LessThanOrEqual(capB, Vector<float>.Zero),
-                    Vector.LessThanOrEqual(capC, Vector<float>.Zero)),
-                Vector.GreaterThanOrEqual(capDiscriminant, Vector<float>.Zero));
+                    Vector.LessThanOrEqual(capB, Vector<Number>.Zero),
+                    Vector.LessThanOrEqual(capC, Vector<Number>.Zero)),
+                Vector.GreaterThanOrEqual(capDiscriminant, Vector<Number>.Zero));
 
             var capT = Vector.Max(-tOffset, -capB - Vector.SquareRoot(capDiscriminant));
             Vector3Wide.Scale(d, capT, out oOffset);
@@ -313,7 +313,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Scale(capHitLocation, inverseRadius, out var capNormal);
 
             normal.X = Vector.ConditionalSelect(useCylinder, cylinderNormalX, capNormal.X);
-            normal.Y = Vector.ConditionalSelect(useCylinder, Vector<float>.Zero, capNormal.Y);
+            normal.Y = Vector.ConditionalSelect(useCylinder, Vector<Number>.Zero, capNormal.Y);
             normal.Z = Vector.ConditionalSelect(useCylinder, cylinderNormalZ, capNormal.Z);
             t = (Vector.ConditionalSelect(useCylinder, cylinderT, capT) + tOffset) * inverseDLength;
             intersected = Vector.ConditionalSelect(useCylinder, cylinderIntersected, capIntersected);
@@ -329,7 +329,7 @@ namespace BepuPhysics.Collidables
             get { return true; }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetMargin(in CapsuleWide shape, out Vector<float> margin)
+        public void GetMargin(in CapsuleWide shape, out Vector<Number> margin)
         {
             margin = shape.Radius;
         }
@@ -339,15 +339,15 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Scale(orientation.Y, shape.HalfLength, out support);
             Vector3Wide.Negate(support, out var negated);
             Vector3Wide.Dot(orientation.Y, direction, out var dot);
-            var shouldNegate = Vector.LessThan(dot, Vector<float>.Zero);
+            var shouldNegate = Vector.LessThan(dot, Vector<Number>.Zero);
             Vector3Wide.ConditionalSelect(shouldNegate, negated, support, out support);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeLocalSupport(in CapsuleWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
-            support.X = Vector<float>.Zero;
-            support.Y = Vector.ConditionalSelect(Vector.LessThan(direction.Y, Vector<float>.Zero), -shape.HalfLength, shape.HalfLength);
-            support.Z = Vector<float>.Zero;
+            support.X = Vector<Number>.Zero;
+            support.Y = Vector.ConditionalSelect(Vector.LessThan(direction.Y, Vector<Number>.Zero), -shape.HalfLength, shape.HalfLength);
+            support.Z = Vector<Number>.Zero;
         }
     }
 }

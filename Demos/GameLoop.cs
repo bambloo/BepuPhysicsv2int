@@ -1,11 +1,10 @@
-﻿using DemoRenderer;
+﻿using BepuUtilities;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using DemoRenderer;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Text;
-using BepuUtilities;
-using OpenTK;
-using BepuUtilities.Memory;
+using Math = BepuUtilities.Utils.Math;
 
 namespace Demos
 {
@@ -32,7 +31,7 @@ namespace Demos
                 window.Resolution, enableDeviceDebugLayer: false
             );
             Renderer = new Renderer(Surface);
-            Camera = new Camera(window.Resolution.X / (float)window.Resolution.Y, (float)Math.PI / 3, 0.01f, 100000);            
+            Camera = new Camera(window.Resolution.X / (Number)window.Resolution.Y, (Number)Math.PI / 3, Constants.C0p01, 100000);            
         }
 
         void Update(float dt)
@@ -60,7 +59,7 @@ namespace Demos
         {
             //We just don't support true fullscreen in the demos. Would be pretty pointless.
             Renderer.Surface.Resize(resolution, false);
-            Camera.AspectRatio = resolution.X / (float)resolution.Y;
+            Camera.AspectRatio = resolution.X / (Number)resolution.Y;
             DemoHarness?.OnResize(resolution);
         }
 

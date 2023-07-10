@@ -1,12 +1,12 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using Demos.Demos;
 using DemoUtilities;
 using System;
-using System.Numerics;
 
 namespace Demos.SpecializedTests.Media
 {
@@ -43,7 +43,7 @@ namespace Demos.SpecializedTests.Media
             return new BodyVelocity { Linear = linearVelocity, Angular = new Vector3(-20) + 40 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) };
         }
 
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             var pose = TestHelpers.CreateRandomPose(random, new BoundingBox
             {

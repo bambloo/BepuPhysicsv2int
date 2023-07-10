@@ -1,10 +1,5 @@
-﻿using BepuPhysics.Constraints;
-using BepuUtilities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using BepuUtilities;
+using BepuUtilities.Numerics;
 
 namespace BepuPhysics
 {
@@ -100,18 +95,18 @@ namespace BepuPhysics
     }
 
 
-    public unsafe struct FloatCollector : IForEach<float>
+    public unsafe struct FloatCollector : IForEach<Number>
     {
-        public float* Values;
+        public Number* Values;
         public int Index;
 
-        public FloatCollector(float* values)
+        public FloatCollector(Number* values)
         {
             Values = values;
             Index = 0;
         }
 
-        public void LoopBody(float value)
+        public void LoopBody(Number value)
         {
             Values[Index++] = value;
         }

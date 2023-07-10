@@ -1,8 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
@@ -10,7 +9,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
     {
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void PickRepresentativeFace(ref ConvexHull hull, int slotIndex, ref Vector3Wide localNormal, in Vector3Wide closestOnHull, in Vector<int> slotOffsetIndices,
-            ref Vector<float> boundingPlaneEpsilon, out Vector3 slotFaceNormal, out Vector3 slotLocalNormal, out int bestFaceIndex)
+            ref Vector<Number> boundingPlaneEpsilon, out Vector3 slotFaceNormal, out Vector3 slotLocalNormal, out int bestFaceIndex)
         {
             //Pick the representative face from the set of faces touching the best sampled support point.
             //The representative face is chosen based on:
@@ -20,7 +19,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Broadcast(slotLocalNormal, out var slotLocalNormalBundle);
             ref var boundingPlaneBundle = ref hull.BoundingPlanes[0];
             var slotBoundingPlaneEpsilon = boundingPlaneEpsilon[slotIndex];
-            var slotBoundingPlaneEpsilonBundle = new Vector<float>(slotBoundingPlaneEpsilon);
+            var slotBoundingPlaneEpsilonBundle = new Vector<Number>(slotBoundingPlaneEpsilon);
             var negatedSlotBoundingPlaneEpsilonBundle = -slotBoundingPlaneEpsilonBundle;
             Vector3Wide.Rebroadcast(closestOnHull, slotIndex, out var slotClosestOnHull);
             Vector3Wide.Dot(boundingPlaneBundle.Normal, slotLocalNormalBundle, out var bestFaceDotBundle);
@@ -54,7 +53,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var bestPlaneError = bestPlaneErrorBundle[0];
             bestFaceIndex = bestIndices[0];
             var negatedSlotBoundingPlaneEpsilon = -slotBoundingPlaneEpsilon;
-            for (int i = 1; i < Vector<float>.Count; ++i)
+            for (int i = 1; i < Vector<Number>.Count; ++i)
             {
                 var dot = bestFaceDotBundle[i];
                 var error = bestPlaneErrorBundle[i];

@@ -1,17 +1,18 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Trees
 {
     partial struct Tree
     {
 
-        unsafe float RefitAndMeasure(ref NodeChild child)
+        unsafe Number RefitAndMeasure(ref NodeChild child)
         {
             ref var node = ref Nodes[child.Index];
 
@@ -19,7 +20,7 @@ namespace BepuPhysics.Trees
             Debug.Assert(LeafCount >= 2);
 
             var premetric = ComputeBoundsMetric(ref child.Min, ref child.Max);
-            float childChange = 0;
+            Number childChange = 0;
             ref var a = ref node.A;
             if (a.Index >= 0)
             {
@@ -33,17 +34,19 @@ namespace BepuPhysics.Trees
             BoundingBox.CreateMerged(a.Min, a.Max, b.Min, b.Max, out child.Min, out child.Max);
 
             var postmetric = ComputeBoundsMetric(ref child.Min, ref child.Max);
+            Debug.Assert(!Number.IsNaN(childChange) && !Number.IsInfinity(childChange));
+            Debug.Assert(!Number.IsNaN(postmetric - premetric + childChange) && !Number.IsInfinity(postmetric - premetric + childChange));
             return postmetric - premetric + childChange; //TODO: would clamping produce a superior result?
 
         }
 
-        unsafe float RefitAndMark(ref NodeChild child, int leafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool)
+        unsafe Number RefitAndMark(ref NodeChild child, int leafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool)
         {
             Debug.Assert(leafCountThreshold > 1);
 
             ref var node = ref Nodes[child.Index];
             Debug.Assert(Metanodes[child.Index].RefineFlag == 0);
-            float childChange = 0;
+            Number childChange = 0;
 
             var premetric = ComputeBoundsMetric(ref child.Min, ref child.Max);
             //The wavefront of internal nodes is defined by the transition from more than threshold to less than threshold.
@@ -87,13 +90,13 @@ namespace BepuPhysics.Trees
 
         }
 
-        unsafe float RefitAndMark(int leafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool)
+        unsafe Number RefitAndMark(int leafCountThreshold, ref QuickList<int> refinementCandidates, BufferPool pool)
         {
             Debug.Assert(LeafCount > 2, "There's no reason to refit a tree with 2 or less elements. Nothing would happen.");
 
             ref var children = ref Nodes[0].A;
-            float childChange = 0;
-            var merged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
+            Number childChange = 0;
+            var merged = new BoundingBox { Min = new Vector3(Number.MaxValue), Max = new Vector3(Number.MinValue) };
             for (int i = 0; i < 2; ++i)
             {
                 //Note: these conditions mean the root will never be considered a wavefront node. That's acceptable;
@@ -123,7 +126,7 @@ namespace BepuPhysics.Trees
             //Since refines are unable to change the volume of the root, there's
             //no point in including it in the volume change.
             //It does, however, normalize the child volume changes into a cost metric.
-            if (postmetric >= 1e-10)
+            if (postmetric >= Constants.C1em10)
             {
                 return childChange / postmetric;
             }
@@ -158,19 +161,19 @@ namespace BepuPhysics.Trees
             refinementLeafCountThreshold = Math.Min(LeafCount, maximumSubtrees);
         }
 
-        readonly void GetRefineTuning(int frameIndex, int refinementCandidatesCount, float refineAggressivenessScale, float costChange,
+        readonly void GetRefineTuning(int frameIndex, int refinementCandidatesCount, Number refineAggressivenessScale, Number costChange,
             out int targetRefinementCount, out int refinementPeriod, out int refinementOffset)
         {
-            if (float.IsNaN(costChange) || float.IsInfinity(costChange))
+            if (Number.IsNaN(costChange) || Number.IsInfinity(costChange))
                 throw new InvalidOperationException(
                     "The change in tree cost is an invalid value, strongly implying the tree bounds have been corrupted by infinites or NaNs. " +
                     "If this happened in the broad phase's use of the tree, it's likely that there are invalid poses or velocities in the simulation, " +
                     "possibly as a result of bugged input state or constraint configuration. " + 
                     "Try running the library with debug asserts enabled to narrow down where the NaNsplosion started.");
             var refineAggressiveness = Math.Max(0, costChange * refineAggressivenessScale);
-            float refinePortion = Math.Min(1, refineAggressiveness * 0.25f);
+            Number refinePortion = Math.Min(1, refineAggressiveness * Constants.C0p25);
 
-            var targetRefinementScale = Math.Min(NodeCount, Math.Max(2, (float)Math.Ceiling(refinementCandidatesCount * refineAggressivenessScale * 0.03f)) + refinementCandidatesCount * refinePortion);
+            var targetRefinementScale = Math.Min(NodeCount, Math.Max(2, (Number)Math.Ceiling(refinementCandidatesCount * refineAggressivenessScale * Constants.C0p03)) + refinementCandidatesCount * refinePortion);
             //Note that the refinementCandidatesCount is used as a maximum instead of refinementCandidates + 1 for simplicity, since there's a chance
             //that the root would already be a refinementCandidate. Doesn't really have a significant effect either way.
             refinementPeriod = Math.Max(1, (int)(refinementCandidatesCount / targetRefinementScale));
@@ -178,7 +181,12 @@ namespace BepuPhysics.Trees
             targetRefinementCount = Math.Min(refinementCandidatesCount, (int)targetRefinementScale);
         }
 
-        public unsafe void RefitAndRefine(BufferPool pool, int frameIndex, float refineAggressivenessScale = 1)
+        public unsafe void RefitAndRefine(BufferPool pool, int frameIndex)
+        {
+            RefitAndRefine(pool, frameIndex, 1);
+        }
+
+        public unsafe void RefitAndRefine(BufferPool pool, int frameIndex, Number refineAggressivenessScale)
         {
             //Don't proceed if the tree has no refitting or refinement required. This also guarantees that any nodes that do exist have two children.
             if (LeafCount <= 2)

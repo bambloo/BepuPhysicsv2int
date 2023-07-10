@@ -1,7 +1,5 @@
 ﻿using BepuUtilities;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using BepuUtilities.Numerics;
 
 namespace BepuPhysics
 {
@@ -10,7 +8,7 @@ namespace BepuPhysics
     /// </summary>
     /// <param name="dt">Time step duration.</param>
     /// <param name="threadDispatcher">Thread dispatcher used for this timestep.</param>
-    public delegate void TimestepperStageHandler(float dt, IThreadDispatcher threadDispatcher);
+    public delegate void TimestepperStageHandler(Number dt, IThreadDispatcher threadDispatcher);
 
     /// <summary>
     /// Defines a type capable of updating the simulation state for a given elapsed time.
@@ -33,6 +31,6 @@ namespace BepuPhysics
         /// <param name="simulation">Simulation to be stepped forward in time.</param>
         /// <param name="dt">Duration of the time step.</param>
         /// <param name="threadDispatcher">Thread dispatcher to use for execution, if any.</param>
-        void Timestep(Simulation simulation, float dt, IThreadDispatcher threadDispatcher = null);
+        void Timestep(Simulation simulation, Number dt, IThreadDispatcher threadDispatcher = null);
     }
 }

@@ -1,15 +1,10 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using DemoUtilities;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System;
-using System.Numerics;
-using System.Diagnostics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
+using DemoRenderer;
 
 namespace Demos.SpecializedTests
 {
@@ -18,7 +13,7 @@ namespace Demos.SpecializedTests
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-120, 30, -120);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             camera.Pitch = 0.1f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
@@ -28,7 +23,7 @@ namespace Demos.SpecializedTests
             var clothNodeShapeIndex = Simulation.Shapes.Add(clothNodeShape);
             const int width = 128;
             const int length = 128;
-            const float spacing = 1.75f;
+            Number spacing = 1.75f;
             BodyHandle[][] nodeHandles = new BodyHandle[width][];
             for (int i = 0; i < width; ++i)
             {
@@ -36,7 +31,7 @@ namespace Demos.SpecializedTests
                 for (int j = 0; j < length; ++j)
                 {
                     var location = new Vector3(0, 30, 0) + new Vector3(spacing, 0, spacing) * (new Vector3(i, 0, j) + new Vector3(-width * 0.5f, 0, -length * 0.5f));
-                    var bodyDescription = BodyDescription.CreateDynamic(location, clothNodeInertia, new(clothNodeShapeIndex, 0.1f), 0.01f);
+                    var bodyDescription = BodyDescription.CreateDynamic(location, clothNodeInertia, new(clothNodeShapeIndex, 0.1f), Constants.C0p01);
                     nodeHandles[i][j] = Simulation.Bodies.Add(bodyDescription);
 
                 }

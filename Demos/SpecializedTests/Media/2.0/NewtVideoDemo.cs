@@ -3,12 +3,14 @@ using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using Demos.Demos;
 using DemoUtilities;
-using System;
-using System.Numerics;
+
+
 
 namespace Demos.SpecializedTests.Media
 {
@@ -24,7 +26,7 @@ namespace Demos.SpecializedTests.Media
             Simulation = Simulation.Create(BufferPool, new DeformableCallbacks(filters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
-            float cellSize = 0.1f;
+            Number cellSize = 0.1f;
             DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool,
                 out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
             var weldSpringiness = new SpringSettings(30f, 0);
@@ -45,13 +47,13 @@ namespace Demos.SpecializedTests.Media
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -1.5f, 0), Simulation.Shapes.Add(new Sphere(3))));
 
             var bulletShape = new Sphere(0.5f);
-            bulletDescription = BodyDescription.CreateDynamic(RigidPose.Identity, bulletShape.ComputeInertia(.25f), Simulation.Shapes.Add(bulletShape), 0.01f);
+            bulletDescription = BodyDescription.CreateDynamic(RigidPose.Identity, bulletShape.ComputeInertia(.25f), Simulation.Shapes.Add(bulletShape), Constants.C0p01);
 
             var mesh = DemoMeshHelper.LoadModel(content, BufferPool, "Content\\newt.obj", new Vector3(20));
             Simulation.Statics.Add(new StaticDescription(new Vector3(200, 0.5f, 120), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, -3 * MathHelper.PiOver4), Simulation.Shapes.Add(mesh)));
         }
         BodyDescription bulletDescription;
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             if (input.WasPushed(OpenTK.Input.Key.Z))
             {

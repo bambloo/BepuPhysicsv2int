@@ -1,15 +1,16 @@
-﻿using System.Runtime.CompilerServices;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace Demos.Demos.Cars
 {
     struct CarBodyProperties
     {
         public SubgroupCollisionFilter Filter;
-        public float Friction;
+        public Number Friction;
     }
 
     /// <summary>
@@ -24,7 +25,7 @@ namespace Demos.Demos.Cars
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
         {
             //It's impossible for two statics to collide, and pairs are sorted such that bodies always come before statics.
             if (b.Mobility != CollidableMobility.Static)
@@ -47,9 +48,9 @@ namespace Demos.Demos.Cars
             if (pair.B.Mobility != CollidableMobility.Static)
             {
                 //If two bodies collide, just average the friction.
-                pairMaterial.FrictionCoefficient = (pairMaterial.FrictionCoefficient + Properties[pair.B.BodyHandle].Friction) * 0.5f;
+                pairMaterial.FrictionCoefficient = (pairMaterial.FrictionCoefficient + Properties[pair.B.BodyHandle].Friction) * Constants.C0p5;
             }
-            pairMaterial.MaximumRecoveryVelocity = 2f;
+            pairMaterial.MaximumRecoveryVelocity = Constants.C0p3;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);
             return true;
         }

@@ -1,18 +1,19 @@
-﻿using DemoContentLoader;
+﻿using BepuPhysics;
+using BepuPhysics.Collidables;
+using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
 using DemoRenderer;
+using DemoRenderer.UI;
+using Demos.Demos.Characters;
+using DemoUtilities;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
-using BepuPhysics;
-using DemoRenderer.UI;
-using System.IO;
-using DemoUtilities;
 using System.Diagnostics;
-using BepuUtilities.Collections;
-using BepuPhysics.Collidables;
-using Demos.Demos.Characters;
+using System.IO;
 using Helpers = DemoRenderer.Helpers;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.Demos.Sponsors
 {
@@ -109,7 +110,7 @@ namespace Demos.Demos.Sponsors
         public override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(130, 50, 130);
-            camera.Yaw = -MathF.PI * 0.25f;
+            camera.Yaw = -MathF.PI * Constants.C0p25;
             camera.Pitch = 0.4f;
 
             characterControllers = new CharacterControllers(BufferPool);
@@ -127,8 +128,8 @@ namespace Demos.Demos.Sponsors
                 newt = new SponsorNewt(Simulation, newtShape, 0, newtArenaMin, newtArenaMax, random, i);
             }
 
-            const float floorSize = 240;
-            const float wallThickness = 200;
+            Number floorSize = 240;
+            Number wallThickness = 200;
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10f, 0), Simulation.Shapes.Add(new Box(floorSize, 20, floorSize))));
             Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * -0.5f - wallThickness * 0.5f, -5, 0), Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2))));
             Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * 0.5f + wallThickness * 0.5f, -5, 0), Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2))));
@@ -147,7 +148,7 @@ namespace Demos.Demos.Sponsors
 
             const int hutCount = 30;
             var hutBoxShape = new Box(0.4f, 2, 3);
-            var obstacleDescription = BodyDescription.CreateDynamic(new Vector3(), hutBoxShape.ComputeInertia(20), Simulation.Shapes.Add(hutBoxShape), 1e-2f);
+            var obstacleDescription = BodyDescription.CreateDynamic(new Vector3(), hutBoxShape.ComputeInertia(20), Simulation.Shapes.Add(hutBoxShape), Constants.C1em2);
 
             for (int i = 0; i < hutCount; ++i)
             {
@@ -162,16 +163,16 @@ namespace Demos.Demos.Sponsors
         }
 
 
-        static void Get(int sponsorCount, int maximumBatchSize, double time, float timePerBatch, float fadeTime, out float alpha, out int start, out int end)
+        static void Get(int sponsorCount, int maximumBatchSize, Number time, Number timePerBatch, Number fadeTime, out Number alpha, out int start, out int end)
         {
-            var batchCount = (int)MathF.Ceiling((float)sponsorCount / maximumBatchSize);
+            var batchCount = (int)MathF.Ceiling((Number)sponsorCount / maximumBatchSize);
             if (batchCount > 1)
             {
                 var batchIndex = (time / timePerBatch) % batchCount;
                 //Fade time covers the time from full alpha to 0 and back to full alpha again. In other words, the full time for a given batch is:
                 //[0, 0.5 * fadeTime) [0.5 * fadeTime, timePerBatch - 0.5 * fadeT6ime ) [timePerBatch - 0.5 * fadeTime, timePerBatch)
                 Debug.Assert(fadeTime <= timePerBatch);
-                var batchProgress = (float)(timePerBatch * (batchIndex - MathF.Truncate((float)batchIndex)));
+                var batchProgress = (Number)(timePerBatch * (batchIndex - MathF.Truncate((Number)batchIndex)));
                 var inverseFadeTime = 1f / fadeTime;
                 alpha = MathF.Min(MathF.Min(1f, batchProgress * inverseFadeTime), inverseFadeTime * timePerBatch - batchProgress * inverseFadeTime);
                 start = (int)batchIndex * maximumBatchSize;
@@ -185,8 +186,8 @@ namespace Demos.Demos.Sponsors
             }
         }
 
-        static float DrawSponsors(string groupTitle, List<Sponsor> sponsors, Vector2 position, Vector2 mousePosition, Renderer renderer, TextBuilder text, Font font,
-            double time, int maximumBatchSize, float timePerBatch, float fadeTime, float fontSize, float padding, float lineSpacing)
+        static Number DrawSponsors(string groupTitle, List<Sponsor> sponsors, Vector2 position, Vector2 mousePosition, Renderer renderer, TextBuilder text, Font font,
+            Number time, int maximumBatchSize, Number timePerBatch, Number fadeTime, Number fontSize, Number padding, Number lineSpacing)
         {
             var initialY = position.Y;
             renderer.TextBatcher.Write(text.Clear().Append(groupTitle), position, fontSize * 1.5f, new Vector4(1), font);
@@ -212,8 +213,8 @@ namespace Demos.Demos.Sponsors
             return position.Y - initialY;
         }
 
-        float DrawSponsors(string groupTitle, List<string> sponsors, Vector2 position, Renderer renderer, TextBuilder text, Font font,
-            double time, int maximumBatchSize, float timePerBatch, float fadeTime, float fontSize, float lineSpacing)
+        Number DrawSponsors(string groupTitle, List<string> sponsors, Vector2 position, Renderer renderer, TextBuilder text, Font font,
+            Number time, int maximumBatchSize, Number timePerBatch, Number fadeTime, Number fontSize, Number lineSpacing)
         {
             var initialY = position.Y;
             renderer.TextBatcher.Write(text.Clear().Append(groupTitle), position, fontSize * 1.5f, new Vector4(1), font);
@@ -228,9 +229,9 @@ namespace Demos.Demos.Sponsors
             return position.Y - initialY;
         }
 
-        double realTime;
-        double simulationTime;
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        Number realTime;
+        Number simulationTime;
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             Simulation.Timestep(TimestepDuration, ThreadDispatcher);
             for (int i = 0; i < newts.Count; ++i)
@@ -258,21 +259,21 @@ namespace Demos.Demos.Sponsors
             {
                 var worldTextPosition = Simulation.Statics[overlordNewtHandle].Pose.Position + new Vector3(0, 48, 0);
                 Helpers.GetScreenLocation(worldTextPosition, viewProjection, resolution, out var screenspacePosition);
-                const float nameHeight = 14;
+                Number nameHeight = 14;
                 var name = sponsors3[0].Name;
                 var nameLength = GlyphBatch.MeasureLength(name, font, nameHeight);
                 screenspacePosition.X -= nameLength * 0.5f;
-                renderer.TextBatcher.Write(text.Clear().Append(name), screenspacePosition, nameHeight, new Vector3(0.3f, 0f, 0f), font);
+                renderer.TextBatcher.Write(text.Clear().Append(name), screenspacePosition, nameHeight, new Vector3(0.3f, Constants.C0, Constants.C0), font);
             }
 
             var integralMousePosition = input.MousePosition;
             var mousePosition = new Vector2(integralMousePosition.X, integralMousePosition.Y);
             renderer.TextBatcher.Write(text.Clear().Append("Mouseover entries to view additional very important tier rewards."), new Vector2(32, resolution.Y - 50), 14, new Vector3(1), font);
             renderer.TextBatcher.Write(text.Clear().Append("Are you a sponsor, but missing from this list? Want a different name/nickname for your entry? Send me a message!"), new Vector2(32, resolution.Y - 32), 14, new Vector3(1), font);
-            DrawSponsors("Super duper sponsors", sponsors3, new Vector2(32, resolution.Y - 480), mousePosition, renderer, text, font, realTime, 1, 4, 0.25f, 32, 6, 48);
-            DrawSponsors("Very neat sponsors", sponsors2, new Vector2(32, resolution.Y - 288), mousePosition, renderer, text, font, realTime, 4, 4, 0.25f, 24, 4, 36);
-            DrawSponsors("Sponsors", sponsors1, new Vector2(renderer.Surface.Resolution.X - 512, resolution.Y - 480), mousePosition, renderer, text, font, realTime, 4, 4, 0.25f, 24, 4, 36);
-            DrawSponsors("Smaller sponsors who are still cool", sponsors0, new Vector2(renderer.Surface.Resolution.X - 512, resolution.Y - 288), renderer, text, font, realTime, 4, 4, 0.25f, 16, 24);
+            DrawSponsors("Super duper sponsors", sponsors3, new Vector2(32, resolution.Y - 480), mousePosition, renderer, text, font, realTime, 1, 4, Constants.C0p25, 32, 6, 48);
+            DrawSponsors("Very neat sponsors", sponsors2, new Vector2(32, resolution.Y - 288), mousePosition, renderer, text, font, realTime, 4, 4, Constants.C0p25, 24, 4, 36);
+            DrawSponsors("Sponsors", sponsors1, new Vector2(renderer.Surface.Resolution.X - 512, resolution.Y - 480), mousePosition, renderer, text, font, realTime, 4, 4, Constants.C0p25, 24, 4, 36);
+            DrawSponsors("Smaller sponsors who are still cool", sponsors0, new Vector2(renderer.Surface.Resolution.X - 512, resolution.Y - 288), renderer, text, font, realTime, 4, 4, Constants.C0p25, 16, 24);
 
         }
 

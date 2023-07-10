@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
+﻿using BepuPhysics;
+using BepuPhysics.Collidables;
+using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
-using BepuPhysics;
-using BepuPhysics.Collidables;
-using System.Runtime.CompilerServices;
-using BepuPhysics.Constraints;
 
 namespace Demos.Demos
 {
@@ -29,17 +25,17 @@ namespace Demos.Demos
             innerCallbacks.Initialize(simulation);
         }
 
-        public GyroscopicIntegratorCallbacks(Vector3 gravity, float linearDamping, float angularDamping)
+        public GyroscopicIntegratorCallbacks(Vector3 gravity, Number linearDamping, Number angularDamping)
         {
             innerCallbacks = new DemoPoseIntegratorCallbacks(gravity, linearDamping, angularDamping);
         }
 
-        public void PrepareForIntegration(float dt)
+        public void PrepareForIntegration(Number dt)
         {
             innerCallbacks.PrepareForIntegration(dt);
         }
 
-        public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<float> dt, ref BodyVelocityWide velocity)
+        public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<Number> dt, ref BodyVelocityWide velocity)
         {
             innerCallbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, integrationMask, workerIndex, dt, ref velocity);
         }
@@ -55,7 +51,7 @@ namespace Demos.Demos
             camera.Pitch = 0;
 
             //Note the lack of damping- we want the gyroscope to keep spinning.
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new GyroscopicIntegratorCallbacks(new Vector3(0, -10, 0), 0f, 0f), new SolveDescription(1, 8));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new GyroscopicIntegratorCallbacks(new Vector3(0, -10, 0), Constants.C0, Constants.C0), new SolveDescription(1, 8));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(100, 1, 100))));
 
@@ -71,7 +67,7 @@ namespace Demos.Demos
             builder.Dispose();
             var dzhanibekovShape = Simulation.Shapes.Add(new Compound(children));
             var dzhanibekovSpinnerBody = Simulation.Bodies.Add(
-                BodyDescription.CreateDynamic(new Vector3(6, 4, 0), (new Vector3(0, 0, 1), new Vector3(3, 1e-5f, 0)), inertia, dzhanibekovShape, 0.01f));
+                BodyDescription.CreateDynamic(new Vector3(6, 4, 0), (new Vector3(0, 0, 1), new Vector3(3, 1e-5f, 0)), inertia, dzhanibekovShape, (Number)Constants.C0p01));
             var dzhanibekovBaseBody = Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic(new Vector3(6, 1, 0), Simulation.Shapes, new Box(.1f, 2, .1f)));
             Simulation.Solver.Add(dzhanibekovBaseBody, dzhanibekovSpinnerBody, new BallSocket { LocalOffsetA = new Vector3(0, 3, 0), LocalOffsetB = new Vector3(0, 0, 0), SpringSettings = new SpringSettings(30, 1) });
         }

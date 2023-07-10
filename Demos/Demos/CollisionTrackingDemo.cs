@@ -1,19 +1,20 @@
-﻿using System;
-using System.Numerics;
-using BepuUtilities;
+﻿
+
 using BepuPhysics;
-using DemoContentLoader;
-using DemoRenderer;
 using BepuPhysics.Collidables;
-using DemoUtilities;
-using DemoRenderer.UI;
 using BepuPhysics.CollisionDetection;
+using BepuPhysics.Constraints;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System.Runtime.CompilerServices;
-using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
+using DemoRenderer;
+using DemoRenderer.UI;
+using DemoUtilities;
+using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 
 namespace Demos.Demos;
 
@@ -202,7 +203,7 @@ public class CollisionTrackingDemo : Demo
         /// <summary>
         /// Prepares the collision tracker for the next timestep by swapping/clearing pairs that expect updates in the coming narrow phase step and preparing the per-worker contact caches.
         /// </summary>
-        void PrepareForNextTimestep(float dt, IThreadDispatcher dispatcher)
+        void PrepareForNextTimestep(Number dt, IThreadDispatcher dispatcher)
         {
             //Flip the caches for each listener and clear out the now-current set for accumulation.
             //Note that we have to do some special stuff in the case of sleeping.
@@ -281,7 +282,7 @@ public class CollisionTrackingDemo : Demo
         /// <summary>
         /// Flushes all collisions found in the previous timestep into efficient storage for queries.
         /// </summary>
-        void Flush(float dt, IThreadDispatcher threadDispatcher)
+        void Flush(Number dt, IThreadDispatcher threadDispatcher)
         {
             if (dispatcher != null)
             {
@@ -381,7 +382,7 @@ public class CollisionTrackingDemo : Demo
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
         {
             return true;
         }
@@ -396,7 +397,7 @@ public class CollisionTrackingDemo : Demo
         public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
             pairMaterial.FrictionCoefficient = 1f;
-            pairMaterial.MaximumRecoveryVelocity = 2f;
+            pairMaterial.MaximumRecoveryVelocity = Constants.C0p3;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);
             collisionTracker.ReportContacts(pair.A, pair.B, workerIndex, ref manifold);
             return true;
@@ -426,7 +427,7 @@ public class CollisionTrackingDemo : Demo
     struct ContactResponseParticle
     {
         public Vector3 Position;
-        public float Age;
+        public Number Age;
         public Vector3 Normal;
     }
     QuickList<ContactResponseParticle> particles;
@@ -448,7 +449,7 @@ public class CollisionTrackingDemo : Demo
         var listenedBody1 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 5, 0), 1, Simulation.Shapes, new Box(1, 2, 3)));
         collisionTracker.Track(Simulation.Bodies[listenedBody1].CollidableReference);
 
-        var listenedBody2 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0.5f, 10, 0), 1, Simulation.Shapes, new Capsule(0.25f, 0.7f)));
+        var listenedBody2 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0.5f, 10, 0), 1, Simulation.Shapes, new Capsule(Constants.C0p25, 0.7f)));
         collisionTracker.Track(Simulation.Bodies[listenedBody2].CollidableReference);
 
 
@@ -477,7 +478,7 @@ public class CollisionTrackingDemo : Demo
         return false;
     }
 
-    public override void Update(Window window, Camera camera, Input input, float dt)
+    public override void Update(Window window, Camera camera, Input input, Number dt)
     {
         //base.Update includes a call to the Simulation.Timestep.
         base.Update(window, camera, input, dt);

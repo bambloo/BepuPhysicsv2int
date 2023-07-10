@@ -6,7 +6,7 @@
 <#@ output extension=".cs" #>
 using BepuPhysics.CollisionDetection;
 using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using BepuUtilities;
 namespace BepuPhysics.Constraints.Contact

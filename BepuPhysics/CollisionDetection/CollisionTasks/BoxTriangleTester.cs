@@ -1,8 +1,8 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
@@ -12,7 +12,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public int BatchSize => 32;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void GetDepthForInterval(in Vector<float> boxExtreme, in Vector<float> a, in Vector<float> b, in Vector<float> c, out Vector<float> depth)
+        static void GetDepthForInterval(in Vector<Number> boxExtreme, in Vector<Number> a, in Vector<Number> b, in Vector<Number> c, out Vector<Number> depth)
         {
             var minB = Vector.Min(a, Vector.Min(b, c));
             var maxB = Vector.Max(a, Vector.Max(b, c));
@@ -20,22 +20,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TestBoxEdgeAgainstTriangleEdge(
-            in Vector<float> triangleEdgeOffsetY, in Vector<float> triangleEdgeOffsetZ,
-            in Vector<float> triangleCenterY, in Vector<float> triangleCenterZ,
-            in Vector<float> edgeOffsetYSquared, in Vector<float> edgeOffsetZSquared,
-            in Vector<float> halfHeight, in Vector<float> halfLength,
-            in Vector<float> vAY, in Vector<float> vAZ, in Vector<float> vBY, in Vector<float> vBZ, in Vector<float> vCY, in Vector<float> vCZ,
-            out Vector<float> depth, out Vector<float> localNormalX, out Vector<float> localNormalY, out Vector<float> localNormalZ)
+            in Vector<Number> triangleEdgeOffsetY, in Vector<Number> triangleEdgeOffsetZ,
+            in Vector<Number> triangleCenterY, in Vector<Number> triangleCenterZ,
+            in Vector<Number> edgeOffsetYSquared, in Vector<Number> edgeOffsetZSquared,
+            in Vector<Number> halfHeight, in Vector<Number> halfLength,
+            in Vector<Number> vAY, in Vector<Number> vAZ, in Vector<Number> vBY, in Vector<Number> vBZ, in Vector<Number> vCY, in Vector<Number> vCZ,
+            out Vector<Number> depth, out Vector<Number> localNormalX, out Vector<Number> localNormalY, out Vector<Number> localNormalZ)
         {
             //We assume we're working with the box's X edge direction. Caller will swizzle.
-            localNormalX = Vector<float>.Zero;
+            localNormalX = Vector<Number>.Zero;
             localNormalY = triangleEdgeOffsetZ;
             localNormalZ = -triangleEdgeOffsetY;
 
             //Calibrate the normal to point from the triangle to the box while normalizing.
             var calibrationDot = triangleCenterY * localNormalY + triangleCenterZ * localNormalZ;
             var length = Vector.SquareRoot(edgeOffsetYSquared + edgeOffsetZSquared);
-            var inverseLength = Vector.ConditionalSelect(Vector.LessThan(calibrationDot, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f)) / length;
+            var inverseLength = Vector.ConditionalSelect(Vector.LessThan(calibrationDot, Vector<Number>.Zero), Vector<Number>.One, new Vector<Number>(Constants.Cm1)) / length;
             localNormalY *= inverseLength;
             localNormalZ *= inverseLength;
 
@@ -44,7 +44,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var nVB = vBY * localNormalY + vBZ * localNormalZ;
             var nVC = vCY * localNormalY + vCZ * localNormalZ;
             GetDepthForInterval(extremeA, nVA, nVB, nVC, out depth);
-            depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-7f)), new Vector<float>(float.MaxValue), depth);
+            depth = Vector.ConditionalSelect(Vector.LessThan(length, new Vector<Number>(Constants.C1em7)), new Vector<Number>(Number.MaxValue), depth);
 
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -52,7 +52,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             in BoxWide a,
             in Vector3Wide triangleEdgeOffset, in Vector3Wide triangleCenter,
             in Vector3Wide vA, in Vector3Wide vB, in Vector3Wide vC,
-            out Vector<float> depth, out Vector3Wide localNormal)
+            out Vector<Number> depth, out Vector3Wide localNormal)
         {
 
             var x2 = triangleEdgeOffset.X * triangleEdgeOffset.X;
@@ -87,8 +87,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Select(
-            ref Vector<float> depth, ref Vector3Wide normal,
-            in Vector<float> depthCandidate, in Vector3Wide normalCandidate)
+            ref Vector<Number> depth, ref Vector3Wide normal,
+            in Vector<Number> depthCandidate, in Vector3Wide normalCandidate)
         {
             var useCandidate = Vector.LessThan(depthCandidate, depth);
             Vector3Wide.ConditionalSelect(useCandidate, normalCandidate, normal, out normal);
@@ -96,8 +96,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void Select(
-            ref Vector<float> depth, ref Vector3Wide normal,
-            in Vector<float> depthCandidate, in Vector<float> nxCandidate, in Vector<float> nyCandidate, in Vector<float> nzCandidate)
+            ref Vector<Number> depth, ref Vector3Wide normal,
+            in Vector<Number> depthCandidate, in Vector<Number> nxCandidate, in Vector<Number> nyCandidate, in Vector<Number> nzCandidate)
         {
             var useCandidate = Vector.LessThan(depthCandidate, depth);
             normal.X = Vector.ConditionalSelect(useCandidate, nxCandidate, normal.X);
@@ -122,22 +122,22 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ClipTriangleEdgeAgainstPlanes(in Vector3Wide edgeDirection, in Vector3Wide triangleEdgeStartToBoxEdgeAnchor0, in Vector3Wide triangleEdgeStartToBoxEdgeAnchor1,
-            in Vector3Wide boxEdgePlaneNormal, out Vector<float> min, out Vector<float> max)
+            in Vector3Wide boxEdgePlaneNormal, out Vector<Number> min, out Vector<Number> max)
         {
             Vector3Wide.Dot(triangleEdgeStartToBoxEdgeAnchor0, boxEdgePlaneNormal, out var distance0);
             Vector3Wide.Dot(triangleEdgeStartToBoxEdgeAnchor1, boxEdgePlaneNormal, out var distance1);
             Vector3Wide.Dot(boxEdgePlaneNormal, edgeDirection, out var velocity);
-            var inverseVelocity = Vector<float>.One / velocity;
+            var inverseVelocity = Vector<Number>.One / velocity;
 
             //If the distances to the planes have opposing signs, then the start must be between the two.
-            var edgeStartIsInside = Vector.LessThanOrEqual(distance0 * distance1, Vector<float>.Zero);
-            var dontUseFallback = Vector.GreaterThan(Vector.Abs(velocity), new Vector<float>(1e-15f));
+            var edgeStartIsInside = Vector.LessThanOrEqual(distance0 * distance1, Vector<Number>.Zero);
+            var dontUseFallback = Vector.GreaterThan(Vector.Abs(velocity), new Vector<Number>(Constants.C1em15));
             var t0 = distance0 * inverseVelocity;
             var t1 = distance1 * inverseVelocity;
             //If the edge direction and plane surface is parallel, then the interval is defined entirely by whether the edge starts inside or outside.
             //If it's inside, then it's -inf to inf. If it's outside, then there is no overlap and we'll use inf to -inf.
-            var largeNegative = new Vector<float>(-float.MaxValue);
-            var largePositive = new Vector<float>(float.MaxValue);
+            var largeNegative = new Vector<Number>(-Number.MaxValue);
+            var largePositive = new Vector<Number>(Number.MaxValue);
             min = Vector.ConditionalSelect(dontUseFallback, Vector.Min(t0, t1), Vector.ConditionalSelect(edgeStartIsInside, largeNegative, largePositive));
             max = Vector.ConditionalSelect(dontUseFallback, Vector.Max(t0, t1), Vector.ConditionalSelect(edgeStartIsInside, largePositive, largeNegative));
         }
@@ -153,7 +153,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             ClipTriangleEdgeAgainstPlanes(edgeDirection, triangleEdgeStartToV00, triangleEdgeStartToV11, edgePlaneNormalX, out var minX, out var maxX);
             ClipTriangleEdgeAgainstPlanes(edgeDirection, triangleEdgeStartToV00, triangleEdgeStartToV11, edgePlaneNormalY, out var minY, out var maxY);
             var min = Vector.Max(minX, minY);
-            var max = Vector.Min(Vector<float>.One, Vector.Min(maxX, maxY));
+            var max = Vector.Min(Vector<Number>.One, Vector.Min(maxX, maxY));
             Vector3Wide.Scale(edgeDirection, min, out var minLocation);
             Vector3Wide.Scale(edgeDirection, max, out var maxLocation);
             Vector3Wide.Add(edgeStart, minLocation, out minLocation);
@@ -170,10 +170,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector.BitwiseAnd(
                         allowContacts,
                         Vector.LessThan(candidateCount, six)),
-                    Vector.GreaterThanOrEqual(max - min, new Vector<float>(1e-5f))),
+                    Vector.GreaterThanOrEqual(max - min, new Vector<Number>(Constants.C1em5))),
                 Vector.BitwiseAnd(
-                    Vector.LessThan(min, Vector<float>.One),
-                    Vector.GreaterThan(min, Vector<float>.Zero)));
+                    Vector.LessThan(min, Vector<Number>.One),
+                    Vector.GreaterThan(min, Vector<Number>.Zero)));
             Add(minLocation, triangleCenter, triangleTangentX, triangleTangentY, edgeId, minExists, ref candidates, ref candidateCount, pairCount);
 
             var maxExists = Vector.BitwiseAnd(
@@ -183,8 +183,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         Vector.LessThan(candidateCount, six)),
                     Vector.GreaterThanOrEqual(max, min)),
                 Vector.BitwiseAnd(
-                    Vector.LessThanOrEqual(max, Vector<float>.One),
-                    Vector.GreaterThanOrEqual(max, Vector<float>.Zero)));
+                    Vector.LessThanOrEqual(max, Vector<Number>.One),
+                    Vector.GreaterThanOrEqual(max, Vector<Number>.Zero)));
             Add(maxLocation, triangleCenter, triangleTangentX, triangleTangentY, edgeId + new Vector<int>(8), maxExists, ref candidates, ref candidateCount, pairCount);
         }
 
@@ -218,7 +218,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void AddBoxVertex(in Vector3Wide a, in Vector3Wide b, in Vector3Wide v, in Vector3Wide triangleNormal, in Vector3Wide contactNormal, in Vector<float> inverseNormalDot,
+        static void AddBoxVertex(in Vector3Wide a, in Vector3Wide b, in Vector3Wide v, in Vector3Wide triangleNormal, in Vector3Wide contactNormal, in Vector<Number> inverseNormalDot,
             in Vector3Wide abEdgePlaneNormal, in Vector3Wide bcEdgePlaneNormal, in Vector3Wide caEdgePlaneNormal,
             in Vector3Wide triangleCenter, in Vector3Wide triangleX, in Vector3Wide triangleY, in Vector<int> featureId,
             in Vector<int> allowContacts, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
@@ -244,10 +244,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var contained = Vector.BitwiseAnd(
                 Vector.BitwiseAnd(
                     allowContacts,
-                    Vector.GreaterThanOrEqual(abDot, Vector<float>.Zero)),
+                    Vector.GreaterThanOrEqual(abDot, Vector<Number>.Zero)),
                 Vector.BitwiseAnd(
-                    Vector.GreaterThanOrEqual(bcDot, Vector<float>.Zero),
-                    Vector.GreaterThanOrEqual(caDot, Vector<float>.Zero)));
+                    Vector.GreaterThanOrEqual(bcDot, Vector<Number>.Zero),
+                    Vector.GreaterThanOrEqual(caDot, Vector<Number>.Zero)));
 
             Add(vOnPlane, triangleCenter, triangleX, triangleY, featureId, contained, ref candidates, ref candidateCount, pairCount);
         }
@@ -260,7 +260,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             Vector3Wide.Dot(triangleNormal, contactNormal, out var normalDot);
             //Note that we don't worry about cases where the triangle normal faces away from the contact normal- those cases don't generate contacts anyway.
-            var inverseNormalDot = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(normalDot), new Vector<float>(1e-10f)), Vector<float>.One / normalDot, new Vector<float>(float.MaxValue));
+            var inverseNormalDot = Vector.ConditionalSelect(Vector.GreaterThan(Vector.Abs(normalDot), new Vector<Number>(Constants.C1em10)), Vector<Number>.One / normalDot, new Vector<Number>(Number.MaxValue));
 
             //Edge plane normals point inward for these tests.
             Vector3Wide.CrossWithoutOverlap(ab, triangleNormal, out var abEdgePlaneNormal);
@@ -279,7 +279,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(
-            ref BoxWide a, ref TriangleWide b, ref Vector<float> speculativeMargin,
+            ref BoxWide a, ref TriangleWide b, ref Vector<Number> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex4ContactManifoldWide manifold)
         {
@@ -296,7 +296,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector3Wide.Add(vA, vB, out var localTriangleCenter);
             Vector3Wide.Add(localTriangleCenter, vC, out localTriangleCenter);
-            Vector3Wide.Scale(localTriangleCenter, new Vector<float>(1f / 3f), out localTriangleCenter);
+            Vector3Wide.Scale(localTriangleCenter, new Vector<Number>(Constants.C1 / Constants.C3), out localTriangleCenter);
 
             Vector3Wide.Subtract(vB, vA, out var ab);
             Vector3Wide.Subtract(vC, vB, out var bc);
@@ -309,26 +309,26 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
 
             //Test face normals of A. Working in local space of A means potential axes are just (1,0,0) etc.
-            var xNormalSign = Vector.ConditionalSelect(Vector.LessThan(localTriangleCenter.X, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f));
-            var yNormalSign = Vector.ConditionalSelect(Vector.LessThan(localTriangleCenter.Y, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f));
-            var zNormalSign = Vector.ConditionalSelect(Vector.LessThan(localTriangleCenter.Z, Vector<float>.Zero), Vector<float>.One, new Vector<float>(-1f));
+            var xNormalSign = Vector.ConditionalSelect(Vector.LessThan(localTriangleCenter.X, Vector<Number>.Zero), Vector<Number>.One, new Vector<Number>(Constants.Cm1));
+            var yNormalSign = Vector.ConditionalSelect(Vector.LessThan(localTriangleCenter.Y, Vector<Number>.Zero), Vector<Number>.One, new Vector<Number>(Constants.Cm1));
+            var zNormalSign = Vector.ConditionalSelect(Vector.LessThan(localTriangleCenter.Z, Vector<Number>.Zero), Vector<Number>.One, new Vector<Number>(Constants.Cm1));
 
             //Note that we ignore sign on interval tests here- the depth is the same regardless of what the sign is, so we don't have to take it into account.
             GetDepthForInterval(a.HalfWidth, vA.X, vB.X, vC.X, out var faceAXDepth);
             GetDepthForInterval(a.HalfHeight, vA.Y, vB.Y, vC.Y, out var faceAYDepth);
             GetDepthForInterval(a.HalfLength, vA.Z, vB.Z, vC.Z, out var faceAZDepth);
-            Select(ref depth, ref localNormal, faceAXDepth, xNormalSign, Vector<float>.Zero, Vector<float>.Zero);
-            Select(ref depth, ref localNormal, faceAYDepth, Vector<float>.Zero, yNormalSign, Vector<float>.Zero);
-            Select(ref depth, ref localNormal, faceAZDepth, Vector<float>.Zero, Vector<float>.Zero, zNormalSign);
+            Select(ref depth, ref localNormal, faceAXDepth, xNormalSign, Vector<Number>.Zero, Vector<Number>.Zero);
+            Select(ref depth, ref localNormal, faceAYDepth, Vector<Number>.Zero, yNormalSign, Vector<Number>.Zero);
+            Select(ref depth, ref localNormal, faceAZDepth, Vector<Number>.Zero, Vector<Number>.Zero, zNormalSign);
 
             //Test face normal of B.
             Vector3Wide.CrossWithoutOverlap(ab, ca, out var triangleNormal);
             Vector3Wide.Length(triangleNormal, out var triangleNormalLength);
-            Vector3Wide.Scale(triangleNormal, Vector<float>.One / triangleNormalLength, out triangleNormal);
+            Vector3Wide.Scale(triangleNormal, Vector<Number>.One / triangleNormalLength, out triangleNormal);
             //Calibrate the normal to point from B to A. This is needed because the choice to eliminate backface contacts depends on dot(localNormal, triangleNormal).
             Vector3Wide.Dot(triangleNormal, localTriangleCenter, out var trianglePlaneOffset);
             Vector3Wide.Negate(triangleNormal, out var negatedTriangleNormal);
-            Vector3Wide.ConditionalSelect(Vector.GreaterThan(trianglePlaneOffset, Vector<float>.Zero), negatedTriangleNormal, triangleNormal, out var calibratedTriangleNormal);
+            Vector3Wide.ConditionalSelect(Vector.GreaterThan(trianglePlaneOffset, Vector<Number>.Zero), negatedTriangleNormal, triangleNormal, out var calibratedTriangleNormal);
             var triangleFaceDepth =
                 Vector.Abs(triangleNormal.X) * a.HalfWidth + Vector.Abs(triangleNormal.Y) * a.HalfHeight + Vector.Abs(triangleNormal.Z) * a.HalfLength - Vector.Abs(trianglePlaneOffset);
             Select(ref depth, ref localNormal, triangleFaceDepth, calibratedTriangleNormal);
@@ -337,7 +337,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //The following was created for MeshReduction when it demanded all contact normals be correct during separation.
             //Other pairs don't have that requirement, and we ended modifying MeshReduction to be a little less picky.
             //This remains for posterity because, hey, it works, and if you need it, there it is.
-            //var testVertexNormals = Vector.BitwiseAnd(activeLanes, Vector.LessThan(depth, Vector<float>.Zero));
+            //var testVertexNormals = Vector.BitwiseAnd(activeLanes, Vector.LessThan(depth, Vector<Number>.Zero));
             //if (Vector.LessThanAny(testVertexNormals, Vector<int>.Zero))
             //{
             //    //At least one lane contains a separating pair. Mesh reduction relies on separating normals being minimal (or very very close to it), so test 7 candidate normals.
@@ -383,7 +383,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //    var faceOffsetMagnitude = Vector.ConditionalSelect(useFaceX, a.HalfWidth, Vector.ConditionalSelect(useFaceY, a.HalfHeight, a.HalfLength));
             //    var xOffset = Vector.ConditionalSelect(useFaceX, a.HalfHeight, Vector.ConditionalSelect(useFaceY, a.HalfLength, a.HalfWidth));
             //    var yOffset = Vector.ConditionalSelect(useFaceX, a.HalfLength, Vector.ConditionalSelect(useFaceY, a.HalfWidth, a.HalfHeight));
-            //    var faceOffset = Vector.ConditionalSelect(Vector.LessThan(faceLocalNormalComponent, Vector<float>.Zero), faceOffsetMagnitude, -faceOffsetMagnitude);
+            //    var faceOffset = Vector.ConditionalSelect(Vector.LessThan(faceLocalNormalComponent, Vector<Number>.Zero), faceOffsetMagnitude, -faceOffsetMagnitude);
 
             //    //Thanks to axis alignment, all the box component dot products squish down to component selections.
             //    var edgeABDotFaceOffset = faceOffset * Vector.ConditionalSelect(useFaceX, ab.X, Vector.ConditionalSelect(useFaceY, ab.Y, ab.Z));
@@ -399,24 +399,24 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //    Vector3Wide.Dot(bc, vB, out var bcDotB);
             //    Vector3Wide.Dot(ca, vC, out var caDotC);
 
-            //    var inverseLengthSquaredAB = Vector<float>.One / (ab.X * ab.X + ab.Y * ab.Y + ab.Z * ab.Z);
-            //    var inverseLengthSquaredBC = Vector<float>.One / (bc.X * bc.X + bc.Y * bc.Y + bc.Z * bc.Z);
-            //    var inverseLengthSquaredCA = Vector<float>.One / (ca.X * ca.X + ca.Y * ca.Y + ca.Z * ca.Z);
+            //    var inverseLengthSquaredAB = Vector<Number>.One / (ab.X * ab.X + ab.Y * ab.Y + ab.Z * ab.Z);
+            //    var inverseLengthSquaredBC = Vector<Number>.One / (bc.X * bc.X + bc.Y * bc.Y + bc.Z * bc.Z);
+            //    var inverseLengthSquaredCA = Vector<Number>.One / (ca.X * ca.X + ca.Y * ca.Y + ca.Z * ca.Z);
             //    var abToFaceDot = edgeABDotFaceOffset - abDotA;
             //    var bcToFaceDot = edgeBCDotFaceOffset - bcDotB;
             //    var caToFaceDot = edgeCADotFaceOffset - caDotC;
-            //    var tClosestOnAB00 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (abToFaceDot - edgeABDotBoxEdgeX - edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
-            //    var tClosestOnAB01 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (abToFaceDot - edgeABDotBoxEdgeX + edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
-            //    var tClosestOnAB10 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (abToFaceDot + edgeABDotBoxEdgeX - edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
-            //    var tClosestOnAB11 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (abToFaceDot + edgeABDotBoxEdgeX + edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
-            //    var tClosestOnBC00 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (bcToFaceDot - edgeBCDotBoxEdgeX - edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
-            //    var tClosestOnBC01 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (bcToFaceDot - edgeBCDotBoxEdgeX + edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
-            //    var tClosestOnBC10 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (bcToFaceDot + edgeBCDotBoxEdgeX - edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
-            //    var tClosestOnBC11 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (bcToFaceDot + edgeBCDotBoxEdgeX + edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
-            //    var tClosestOnCA00 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (caToFaceDot - edgeCADotBoxEdgeX - edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
-            //    var tClosestOnCA01 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (caToFaceDot - edgeCADotBoxEdgeX + edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
-            //    var tClosestOnCA10 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (caToFaceDot + edgeCADotBoxEdgeX - edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
-            //    var tClosestOnCA11 = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (caToFaceDot + edgeCADotBoxEdgeX + edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
+            //    var tClosestOnAB00 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (abToFaceDot - edgeABDotBoxEdgeX - edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
+            //    var tClosestOnAB01 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (abToFaceDot - edgeABDotBoxEdgeX + edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
+            //    var tClosestOnAB10 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (abToFaceDot + edgeABDotBoxEdgeX - edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
+            //    var tClosestOnAB11 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (abToFaceDot + edgeABDotBoxEdgeX + edgeABDotBoxEdgeY) * inverseLengthSquaredAB));
+            //    var tClosestOnBC00 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (bcToFaceDot - edgeBCDotBoxEdgeX - edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
+            //    var tClosestOnBC01 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (bcToFaceDot - edgeBCDotBoxEdgeX + edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
+            //    var tClosestOnBC10 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (bcToFaceDot + edgeBCDotBoxEdgeX - edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
+            //    var tClosestOnBC11 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (bcToFaceDot + edgeBCDotBoxEdgeX + edgeBCDotBoxEdgeY) * inverseLengthSquaredBC));
+            //    var tClosestOnCA00 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (caToFaceDot - edgeCADotBoxEdgeX - edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
+            //    var tClosestOnCA01 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (caToFaceDot - edgeCADotBoxEdgeX + edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
+            //    var tClosestOnCA10 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (caToFaceDot + edgeCADotBoxEdgeX - edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
+            //    var tClosestOnCA11 = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (caToFaceDot + edgeCADotBoxEdgeX + edgeCADotBoxEdgeY) * inverseLengthSquaredCA));
 
             //    //We now have the t value of every box vertex on each triangle edge.
             //    //Find the closest pair.
@@ -533,7 +533,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //    offsetZ = Vector.ConditionalSelect(useCA00, ca00Z, Vector.ConditionalSelect(useCA01, ca01Z, Vector.ConditionalSelect(useCA10, ca10Z, Vector.ConditionalSelect(useCA11, ca11Z, offsetZ))));
 
             //    var distance = Vector.SquareRoot(distanceSquared);
-            //    var inverseDistance = new Vector<float>(-1f) / distance;
+            //    var inverseDistance = new Vector<Number>(Constants.Cm1) / distance;
             //    localNormalCandidate.X = offsetX * inverseDistance;
             //    localNormalCandidate.Y = offsetY * inverseDistance;
             //    localNormalCandidate.Z = offsetZ * inverseDistance;
@@ -544,7 +544,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //    var extremeA = Vector.Abs(localNormalCandidate.X) * a.HalfWidth + Vector.Abs(localNormalCandidate.Y) * a.HalfHeight + Vector.Abs(localNormalCandidate.Z) * a.HalfLength;
             //    GetDepthForInterval(extremeA, nVA, nVB, nVC, out depthCandidate);
             //    //Guard against division by zero.
-            //    depthCandidate = Vector.ConditionalSelect(Vector.GreaterThan(distanceSquared, new Vector<float>(1e-6f)), depthCandidate, new Vector<float>(float.MaxValue));
+            //    depthCandidate = Vector.ConditionalSelect(Vector.GreaterThan(distanceSquared, new Vector<Number>(Constants.C1em6)), depthCandidate, new Vector<Number>(Number.MaxValue));
             //    Select(ref depth, ref localNormal, depthCandidate, localNormalCandidate);
             //}
 
@@ -556,7 +556,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.LengthSquared(ca, out var caLengthSquared);
             TriangleWide.ComputeNondegenerateTriangleMask(abLengthSquared, caLengthSquared, triangleNormalLength, out var triangleEpsilonScale, out var nondegenerateMask);
             var allowContacts = Vector.BitwiseAnd(
-                Vector.BitwiseAnd(nondegenerateMask, Vector.GreaterThanOrEqual(normalDot, new Vector<float>(TriangleWide.BackfaceNormalDotRejectionThreshold))),
+                Vector.BitwiseAnd(nondegenerateMask, Vector.GreaterThanOrEqual(normalDot, new Vector<Number>(TriangleWide.BackfaceNormalDotRejectionThreshold))),
                 Vector.BitwiseAnd(Vector.GreaterThanOrEqual(depth, minimumDepth), activeLanes));
             if (Vector.EqualsAll(allowContacts, Vector<int>.Zero))
             {
@@ -584,24 +584,24 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useAY = Vector.AndNot(yBiggerThanZ, useAX);
             var useAZ = Vector.OnesComplement(Vector.BitwiseOr(useAX, useAY));
 
-            var normalIsNegativeX = Vector.LessThan(localNormal.X, Vector<float>.Zero);
-            var normalIsNegativeY = Vector.LessThan(localNormal.Y, Vector<float>.Zero);
-            var normalIsNegativeZ = Vector.LessThan(localNormal.Z, Vector<float>.Zero);
+            var normalIsNegativeX = Vector.LessThan(localNormal.X, Vector<Number>.Zero);
+            var normalIsNegativeY = Vector.LessThan(localNormal.Y, Vector<Number>.Zero);
+            var normalIsNegativeZ = Vector.LessThan(localNormal.Z, Vector<Number>.Zero);
 
             //If we're using face with normal X, the tangent axes are Z and Y
             //If we're using face with normal Y, the tangent axes are X and Z
             //If we're using face with normal Z, the tangent axes are X and Y
             Vector3Wide boxTangentX, boxTangentY, boxFaceNormal;
-            boxTangentX.X = Vector.ConditionalSelect(Vector.BitwiseOr(useAY, useAZ), Vector<float>.One, Vector<float>.Zero);
-            boxTangentX.Y = Vector<float>.Zero;
-            boxTangentX.Z = Vector.ConditionalSelect(useAX, Vector<float>.One, Vector<float>.Zero);
-            boxTangentY.X = Vector<float>.Zero;
-            boxTangentY.Y = Vector.ConditionalSelect(Vector.BitwiseOr(useAX, useAZ), Vector<float>.One, Vector<float>.Zero);
-            boxTangentY.Z = Vector.ConditionalSelect(useAY, Vector<float>.One, Vector<float>.Zero);
-            var negativeOne = new Vector<float>(-1f);
-            boxFaceNormal.X = Vector.ConditionalSelect(useAX, Vector.ConditionalSelect(normalIsNegativeX, Vector<float>.One, negativeOne), Vector<float>.Zero);
-            boxFaceNormal.Y = Vector.ConditionalSelect(useAY, Vector.ConditionalSelect(normalIsNegativeY, Vector<float>.One, negativeOne), Vector<float>.Zero);
-            boxFaceNormal.Z = Vector.ConditionalSelect(useAZ, Vector.ConditionalSelect(normalIsNegativeZ, Vector<float>.One, negativeOne), Vector<float>.Zero);
+            boxTangentX.X = Vector.ConditionalSelect(Vector.BitwiseOr(useAY, useAZ), Vector<Number>.One, Vector<Number>.Zero);
+            boxTangentX.Y = Vector<Number>.Zero;
+            boxTangentX.Z = Vector.ConditionalSelect(useAX, Vector<Number>.One, Vector<Number>.Zero);
+            boxTangentY.X = Vector<Number>.Zero;
+            boxTangentY.Y = Vector.ConditionalSelect(Vector.BitwiseOr(useAX, useAZ), Vector<Number>.One, Vector<Number>.Zero);
+            boxTangentY.Z = Vector.ConditionalSelect(useAY, Vector<Number>.One, Vector<Number>.Zero);
+            var negativeOne = new Vector<Number>(Constants.Cm1);
+            boxFaceNormal.X = Vector.ConditionalSelect(useAX, Vector.ConditionalSelect(normalIsNegativeX, Vector<Number>.One, negativeOne), Vector<Number>.Zero);
+            boxFaceNormal.Y = Vector.ConditionalSelect(useAY, Vector.ConditionalSelect(normalIsNegativeY, Vector<Number>.One, negativeOne), Vector<Number>.Zero);
+            boxFaceNormal.Z = Vector.ConditionalSelect(useAZ, Vector.ConditionalSelect(normalIsNegativeZ, Vector<Number>.One, negativeOne), Vector<Number>.Zero);
 
             var halfExtentX = Vector.ConditionalSelect(useAX, a.HalfLength, a.HalfWidth);
             var halfExtentY = Vector.ConditionalSelect(useAY, a.HalfLength, a.HalfHeight);
@@ -634,7 +634,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //We will be working on the surface of the triangle, but we'd still like a 2d parameterization of the surface for contact reduction.
             //So, we'll create tangent axes from the edge and edge x normal.
-            Vector3Wide.Scale(ab, Vector<float>.One / Vector.SquareRoot(abLengthSquared), out var triangleTangentX);
+            Vector3Wide.Scale(ab, Vector<Number>.One / Vector.SquareRoot(abLengthSquared), out var triangleTangentX);
             Vector3Wide.CrossWithoutOverlap(triangleTangentX, triangleNormal, out var triangleTangentY);
 
             //Note that we only allocate up to 6 candidates. Each triangle edge can contribute at most two contacts (any more would require a nonconvex clip region).
@@ -665,7 +665,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector3Wide.Subtract(boxFaceCenter, localTriangleCenter, out var faceCenterBToFaceCenterA);
             Vector3Wide.Dot(boxFaceNormal, localNormal, out var faceNormalDotNormal);
-            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, boxFaceNormal, Vector<float>.One / faceNormalDotNormal, faceCenterBToFaceCenterA, triangleTangentX, triangleTangentY, epsilonScale, minimumDepth, pairCount,
+            ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 6, boxFaceNormal, Vector<Number>.One / faceNormalDotNormal, faceCenterBToFaceCenterA, triangleTangentX, triangleTangentY, epsilonScale, minimumDepth, pairCount,
                 out var contact0, out var contact1, out var contact2, out var contact3,
                 out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
 
@@ -683,7 +683,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //if all depths are similar, the triangle depth could be similar to an edge depth with a normal that is 90 degrees away from the triangle normal.
             //Given that this is used as input to mesh boundary smoothing, that's counterproductive.
             var faceFlag = Vector.ConditionalSelect(
-                Vector.GreaterThanOrEqual(normalDot, new Vector<float>(MeshReduction.MinimumDotForFaceCollision)), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
+                Vector.GreaterThanOrEqual(normalDot, new Vector<Number>(MeshReduction.MinimumDotForFaceCollision)), new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
             manifold.FeatureId0 += faceFlag;
         }
 
@@ -691,7 +691,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void TransformContactToManifold(
             in ManifoldCandidate rawContact, in Vector3Wide faceCenterB, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
-            out Vector3Wide manifoldOffsetA, out Vector<float> manifoldDepth, out Vector<int> manifoldFeatureId)
+            out Vector3Wide manifoldOffsetA, out Vector<Number> manifoldDepth, out Vector<int> manifoldFeatureId)
         {
             Vector3Wide.Scale(tangentBX, rawContact.X, out manifoldOffsetA);
             Vector3Wide.Scale(tangentBY, rawContact.Y, out var y);
@@ -701,12 +701,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifoldFeatureId = rawContact.FeatureId;
         }
 
-        public void Test(ref BoxWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref BoxWide a, ref TriangleWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref BoxWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref BoxWide a, ref TriangleWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

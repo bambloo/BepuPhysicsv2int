@@ -1,11 +1,9 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
 using BepuUtilities.Memory;
-using System;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using static BepuUtilities.GatherScatter;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
@@ -19,9 +17,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         //Note that, while the interface requires all three of these implementations, concrete implementers will only ever have one defined or called.
         //Including the other unused functions is just here to simplify its use in the batch execution loop.
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out TManifoldWideType manifold);
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out TManifoldWideType manifold);
-        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out TManifoldWideType manifold);
+        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out TManifoldWideType manifold);
+        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out TManifoldWideType manifold);
+        void Test(ref TShapeWideA a, ref TShapeWideB b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out TManifoldWideType manifold);
     }
 
     public interface IContactManifoldWide
@@ -69,12 +67,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var defaultPairTester = default(TPairTester);
             var manifold = default(ConvexContactManifold);
 
-            for (int i = 0; i < batch.Count; i += Vector<float>.Count)
+            for (int i = 0; i < batch.Count; i += Vector<Number>.Count)
             {
                 ref var bundleStart = ref Unsafe.Add(ref start, i);
                 int countInBundle = batch.Count - i;
-                if (countInBundle > Vector<float>.Count)
-                    countInBundle = Vector<float>.Count;
+                if (countInBundle > Vector<Number>.Count)
+                    countInBundle = Vector<Number>.Count;
 
                 //TODO: If we have gather intrinsics, they might be a win.
                 for (int j = 0; j < countInBundle; ++j)

@@ -1,9 +1,6 @@
 ﻿using BepuUtilities;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace BepuPhysics.Collidables
 {
@@ -27,7 +24,7 @@ namespace BepuPhysics.Collidables
     /// </summary>
     public static class MeshInertiaHelper
     {
-        public static void ComputeTetrahedronContribution(Vector3 a, Vector3 b, Vector3 c, float mass, out Symmetric3x3 inertiaTensor)
+        public static void ComputeTetrahedronContribution(Vector3 a, Vector3 b, Vector3 c, Number mass, out Symmetric3x3 inertiaTensor)
         {
             //Computing the inertia of a tetrahedron requires integrating across its volume.
             //While it's possible to do so directly given arbitrary plane equations, it's more convenient to integrate over a normalized tetrahedron with coordinates 
@@ -68,7 +65,7 @@ namespace BepuPhysics.Collidables
             //Revisiting the determinant, note that:
             //density * abs(determinant) = density * volume * 6 = mass * 6
             //So there's no need to actually compute the determinant/volume since we were given the mass directly.
-            var diagonalScaling = mass * (6f / 60f);
+            var diagonalScaling = mass * (Constants.C6 / Constants.C60);
             inertiaTensor.XX = diagonalScaling * (
                 a.Y * a.Y + a.Z * a.Z + b.Y * b.Y + b.Z * b.Z + c.Y * c.Y + c.Z * c.Z +
                 b.Y * c.Y + b.Z * c.Z +
@@ -81,7 +78,7 @@ namespace BepuPhysics.Collidables
                 a.X * a.X + a.Y * a.Y + b.X * b.X + b.Y * b.Y + c.X * c.X + c.Y * c.Y +
                 b.X * c.X + b.Y * c.Y +
                 a.X * (b.X + c.X) + a.Y * (b.Y + c.Y));
-            var offScaling = mass * (6f / 120f);
+            var offScaling = mass * (Constants.C6 / Constants.C120);
             inertiaTensor.YX = offScaling * (
                 -2 * b.X * b.Y - 2 * c.X * c.Y -
                 b.Y * c.X - b.X * c.Y -
@@ -109,9 +106,9 @@ namespace BepuPhysics.Collidables
         /// <param name="c">Third vertex of the tetrahedron.</param>
         /// <returns>Volume of the tetrahedron.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float ComputeTetrahedronVolume(Vector3 a, Vector3 b, Vector3 c)
+        public static Number ComputeTetrahedronVolume(Vector3 a, Vector3 b, Vector3 c)
         {
-            return (1f / 6f) * Vector3.Dot(Vector3.Cross(b, a), c);
+            return (Constants.C1 / Constants.C6) * Vector3.Dot(Vector3.Cross(b, a), c);
         }
 
         /// <summary>
@@ -122,7 +119,7 @@ namespace BepuPhysics.Collidables
         /// <param name="c">Third vertex of the tetrahedron.</param>
         /// <param name="volume">Volume of the tetrahedron.</param>
         /// <param name="inertiaTensor">Inertia tensor of this tetrahedron assuming a density of 1.</param>
-        public static void ComputeTetrahedronContribution(Vector3 a, Vector3 b, Vector3 c, out float volume, out Symmetric3x3 inertiaTensor)
+        public static void ComputeTetrahedronContribution(Vector3 a, Vector3 b, Vector3 c, out Number volume, out Symmetric3x3 inertiaTensor)
         {
             volume = ComputeTetrahedronVolume(a, b, c);
             ComputeTetrahedronContribution(a, b, c, volume, out inertiaTensor);
@@ -137,7 +134,7 @@ namespace BepuPhysics.Collidables
         /// <param name="mass">Mass of the mesh to scale the inertia tensor with.</param>
         /// <param name="volume">Volume of the mesh.</param>
         /// <param name="inertia">Inertia tensor of the mesh.</param>
-        public static void ComputeClosedInertia<TTriangleSource>(ref TTriangleSource triangleSource, float mass, out float volume, out Symmetric3x3 inertia) where TTriangleSource : ITriangleSource
+        public static void ComputeClosedInertia<TTriangleSource>(ref TTriangleSource triangleSource, Number mass, out Number volume, out Symmetric3x3 inertia) where TTriangleSource : ITriangleSource
         {
             volume = 0;
             Symmetric3x3 summedContributions = default;
@@ -160,7 +157,7 @@ namespace BepuPhysics.Collidables
         /// <param name="volume">Volume of the mesh.</param>
         /// <param name="inertia">Inertia tensor of the mesh.</param>
         /// <param name="center">Center of mass of the mesh.</param>
-        public static void ComputeClosedInertia<TTriangleSource>(ref TTriangleSource triangleSource, float mass, out float volume, out Symmetric3x3 inertia, out Vector3 center) where TTriangleSource : ITriangleSource
+        public static void ComputeClosedInertia<TTriangleSource>(ref TTriangleSource triangleSource, Number mass, out Number volume, out Symmetric3x3 inertia, out Vector3 center) where TTriangleSource : ITriangleSource
         {
             volume = 0;
             Symmetric3x3 summedContributions = default;
@@ -172,8 +169,8 @@ namespace BepuPhysics.Collidables
                 volume += tVolume;
                 center += (a + b + c) * tVolume;
             }
-            var inverseVolume = 1f / volume;
-            center *= inverseVolume * 0.25f;
+            var inverseVolume = Constants.C1 / volume;
+            center *= inverseVolume * Constants.C0p25;
             Symmetric3x3.Scale(summedContributions, mass * inverseVolume, out inertia);
         }
 
@@ -184,10 +181,10 @@ namespace BepuPhysics.Collidables
         /// <param name="triangleSource">Source from which to retrieve a sequence of triangles.</param>
         /// <param name="volume">Volume of the mesh.</param>
         /// <param name="center">Center of mass of the mesh.</param>
-        public static void ComputeClosedCenterOfMass<TTriangleSource>(ref TTriangleSource triangleSource, out float volume, out Vector3 center) where TTriangleSource : ITriangleSource
+        public static void ComputeClosedCenterOfMass<TTriangleSource>(ref TTriangleSource triangleSource, out Number volume, out Vector3 center) where TTriangleSource : ITriangleSource
         {
             center = default;
-            volume = 0f;
+            volume = Constants.C0;
             while (triangleSource.GetNextTriangle(out var a, out var b, out var c))
             {
                 var tVolume = ComputeTetrahedronVolume(a, b, c);
@@ -205,7 +202,7 @@ namespace BepuPhysics.Collidables
         /// <param name="c">Third vertex in the triangle.</param>
         /// <param name="mass">Mass of the triangle.</param>
         /// <param name="inertiaTensor">Inertia tensor of the triangle.</param>
-        public static void ComputeTriangleContribution(Vector3 a, Vector3 b, Vector3 c, float mass, out Symmetric3x3 inertiaTensor)
+        public static void ComputeTriangleContribution(Vector3 a, Vector3 b, Vector3 c, Number mass, out Symmetric3x3 inertiaTensor)
         {
             //This follows the same logic as the tetrahedral inertia tensor calculation, but the transform is different.
             //There are only two dimensions of interest, but if we wanted to express it as a 3x3 linear transform:
@@ -228,7 +225,7 @@ namespace BepuPhysics.Collidables
             //Revisiting the determinant, note that:
             //density * abs(determinant) = density * volume * 2 = mass * 2
             //So there's no need to actually compute the determinant/area since we were given the mass directly.
-            var diagonalScaling = mass * (2f / 12f);
+            var diagonalScaling = mass * (Constants.C2 / Constants.C12);
             inertiaTensor.XX = diagonalScaling * (
                 a.Y * a.Y + a.Z * a.Z + b.Y * b.Y + b.Z * b.Z + c.Y * c.Y + c.Z * c.Z +
                 a.Y * b.Y + a.Z * b.Z + a.Y * c.Y + b.Y * c.Y + a.Z * c.Z + b.Z * c.Z);
@@ -238,7 +235,7 @@ namespace BepuPhysics.Collidables
             inertiaTensor.ZZ = diagonalScaling * (
                 a.X * a.X + a.Y * a.Y + b.X * b.X + b.Y * b.Y + c.X * c.X + c.Y * c.Y +
                 a.X * b.X + a.Y * b.Y + a.X * c.X + b.X * c.X + a.Y * c.Y + b.Y * c.Y);
-            var offScaling = mass * (2f / 24f);
+            var offScaling = mass * (Constants.C2 / Constants.C24);
             inertiaTensor.YX = offScaling * (-a.Y * (b.X + c.X) - b.Y * (2 * b.X + c.X) - (b.X + 2 * c.X) * c.Y - a.X * (2 * a.Y + b.Y + c.Y));
             inertiaTensor.ZX = offScaling * (-a.Z * (b.X + c.X) - b.Z * (2 * b.X + c.X) - (b.X + 2 * c.X) * c.Z - a.X * (2 * a.Z + b.Z + c.Z));
             inertiaTensor.ZY = offScaling * (-a.Z * (b.Y + c.Y) - b.Z * (2 * b.Y + c.Y) - (b.Y + 2 * c.Y) * c.Z - a.Y * (2 * a.Z + b.Z + c.Z));
@@ -254,9 +251,9 @@ namespace BepuPhysics.Collidables
         /// <param name="b">Second vertex in the triangle.</param>
         /// <param name="c">Third vertex in the triangle.</param>
         /// <returns>Area of the triangle.</returns>
-        public static float ComputeTriangleArea(Vector3 a, Vector3 b, Vector3 c)
+        public static Number ComputeTriangleArea(Vector3 a, Vector3 b, Vector3 c)
         {
-            return 0.5f * Vector3.Cross(b - a, c - a).Length(); //Not exactly fast, but again, we're assuming performance is irrelevant for the mesh inertia helper.
+            return Constants.C0p5 * Vector3.Cross(b - a, c - a).Length(); //Not exactly fast, but again, we're assuming performance is irrelevant for the mesh inertia helper.
         }
 
         /// <summary>
@@ -267,7 +264,7 @@ namespace BepuPhysics.Collidables
         /// <param name="c">Third vertex in the triangle.</param>
         /// <param name="area">Area of the triangle.</param>
         /// <param name="inertiaTensor">Inertia tensor of the triangle assuming that the density is 1.</param>
-        public static void ComputeTriangleContribution(Vector3 a, Vector3 b, Vector3 c, out float area, out Symmetric3x3 inertiaTensor)
+        public static void ComputeTriangleContribution(Vector3 a, Vector3 b, Vector3 c, out Number area, out Symmetric3x3 inertiaTensor)
         {
             area = ComputeTriangleArea(a, b, c);
             ComputeTriangleContribution(a, b, c, area, out inertiaTensor);
@@ -280,9 +277,9 @@ namespace BepuPhysics.Collidables
         /// <param name="triangleSource">Source from which to retrieve a sequence of triangles.</param>
         /// <param name="mass">Mass of the mesh to scale the inertia tensor with.</param>
         /// <param name="inertia">Inertia tensor of the mesh.</param>
-        public static void ComputeOpenInertia<TTriangleSource>(ref TTriangleSource triangleSource, float mass, out Symmetric3x3 inertia) where TTriangleSource : ITriangleSource
+        public static void ComputeOpenInertia<TTriangleSource>(ref TTriangleSource triangleSource, Number mass, out Symmetric3x3 inertia) where TTriangleSource : ITriangleSource
         {
-            float area = 0f;
+            Number area = Constants.C0;
             inertia = default;
             while (triangleSource.GetNextTriangle(out var a, out var b, out var c))
             {
@@ -301,10 +298,10 @@ namespace BepuPhysics.Collidables
         /// <param name="mass">Mass of the mesh to scale the inertia tensor with.</param>
         /// <param name="inertia">Inertia tensor of the mesh.</param>
         /// <param name="center">Center of mass of the mesh.</param>
-        public static void ComputeOpenInertia<TTriangleSource>(ref TTriangleSource triangleSource, float mass, out Symmetric3x3 inertia, out Vector3 center) where TTriangleSource : ITriangleSource
+        public static void ComputeOpenInertia<TTriangleSource>(ref TTriangleSource triangleSource, Number mass, out Symmetric3x3 inertia, out Vector3 center) where TTriangleSource : ITriangleSource
         {
             center = default;
-            float area = 0f;
+            Number area = Constants.C0;
             inertia = default;
             while (triangleSource.GetNextTriangle(out var a, out var b, out var c))
             {
@@ -313,8 +310,8 @@ namespace BepuPhysics.Collidables
                 center += tArea * (a + b + c);
                 Symmetric3x3.Add(tContribution, inertia, out inertia);
             }
-            var inverseArea = 1f / area;
-            center *= inverseArea * (1f / 3f);
+            var inverseArea = Constants.C1 / area;
+            center *= inverseArea * (Constants.C1 / Constants.C3);
             Symmetric3x3.Scale(inertia, mass * inverseArea, out inertia);
         }
 
@@ -327,7 +324,7 @@ namespace BepuPhysics.Collidables
         public static Vector3 ComputeOpenCenterOfMass<TTriangleSource>(ref TTriangleSource triangleSource) where TTriangleSource : ITriangleSource
         {
             Vector3 center = default;
-            float area = 0f;
+            Number area = Constants.C0;
             while (triangleSource.GetNextTriangle(out var a, out var b, out var c))
             {
                 var tArea = ComputeTriangleArea(a, b, c);
@@ -344,7 +341,7 @@ namespace BepuPhysics.Collidables
         /// <param name="mass">Mass associated with the inertia tensor being moved.</param>
         /// <param name="offset">Offset from the current inertia frame of reference to the new frame of reference.</param>
         /// <param name="inertiaOffset">Modification to add to the inertia tensor to move it into the new reference frame.</param>
-        public static void GetInertiaOffset(float mass, Vector3 offset, out Symmetric3x3 inertiaOffset)
+        public static void GetInertiaOffset(Number mass, Vector3 offset, out Symmetric3x3 inertiaOffset)
         {
             //Just the parallel axis theorem.
             var squared = offset * offset;

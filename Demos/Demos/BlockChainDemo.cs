@@ -2,12 +2,12 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Numerics;
 
 namespace Demos.Demos
 {
@@ -22,7 +22,7 @@ namespace Demos.Demos
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-30, 8, -60);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             camera.Pitch = 0;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 3)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), angularDamping: 0.2f), new SolveDescription(8, 1));
@@ -41,7 +41,7 @@ namespace Demos.Demos
                     var bodyDescription = BodyDescription.CreateDynamic(
                         new Vector3(0, 5 + blockIndex * (boxShape.Height + 1), (forkIndex - forkCount * 0.5f) * (boxShape.Length + 4)),
                         //Make the uppermost block kinematic to hold up the rest of the chain.
-                        blockIndex == blocksPerChain - 1 ? new BodyInertia() : boxInertia, boxIndex, .01f);
+                        blockIndex == blocksPerChain - 1 ? new BodyInertia() : boxInertia, boxIndex, (Number).01f);
                     blockHandles[blockIndex] = Simulation.Bodies.Add(bodyDescription);
                 }
                 //Build the chains.
@@ -61,12 +61,12 @@ namespace Demos.Demos
 
             //Build the coin description for the ponz-I mean ICO.
             var coinShape = new Cylinder(1.5f, 0.2f);
-            coinDescription = BodyDescription.CreateDynamic(RigidPose.Identity, coinShape.ComputeInertia(1), Simulation.Shapes.Add(coinShape), 0.03f);
+            coinDescription = BodyDescription.CreateDynamic(RigidPose.Identity, coinShape.ComputeInertia(1), Simulation.Shapes.Add(coinShape), (Number)0.03f);
         }
 
         BodyDescription coinDescription;
         Random random = new Random(5);
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             if (input.WasPushed(OpenTK.Input.Key.Z))
             {
@@ -82,7 +82,7 @@ namespace Demos.Demos
                         direction = new Vector3(0, 1, 0);
 
                     coinDescription.Pose = (origin + direction * 10 * random.NextSingle(),
-                        QuaternionEx.Normalize(new(0.01f + random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle())));
+                        QuaternionEx.Normalize(new(Constants.C0p01 + random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle())));
                     coinDescription.Velocity = direction * (5 + 30 * random.NextSingle());
                     Simulation.Bodies.Add(coinDescription);
                 }

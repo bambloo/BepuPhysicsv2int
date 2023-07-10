@@ -1,9 +1,8 @@
-﻿using BepuUtilities;
-using BepuUtilities.Collections;
+﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees
@@ -11,7 +10,7 @@ namespace BepuPhysics.Trees
     public struct SubtreeHeapEntry
     {
         public int Index;
-        public float Cost;
+        public Number Cost;
     }
     unsafe internal struct SubtreeBinaryHeap
     {
@@ -129,7 +128,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool TryPop(ref Buffer<Metanode> metanodes, ref int remainingSubtreeSpace, ref QuickList<int> subtrees, out int index, out float cost)
+        public bool TryPop(ref Buffer<Metanode> metanodes, ref int remainingSubtreeSpace, ref QuickList<int> subtrees, out int index, out Number cost)
         {
             while (Count > 0)
             {
@@ -170,7 +169,7 @@ namespace BepuPhysics.Trees
     {
 
         public unsafe void CollectSubtrees(int nodeIndex, int maximumSubtrees, SubtreeHeapEntry* entries,
-            ref QuickList<int> subtrees, ref QuickList<int> internalNodes, out float treeletCost)
+            ref QuickList<int> subtrees, ref QuickList<int> internalNodes, out Number treeletCost)
         {
 
             //Collect subtrees iteratively by choosing the highest cost subtree repeatedly.
@@ -195,7 +194,7 @@ namespace BepuPhysics.Trees
             //That's because the treelet root cannot change.
             treeletCost = 0;
             int remainingSubtreeSpace = maximumSubtrees - priorityQueue.Count - subtrees.Count;
-            while (priorityQueue.TryPop(ref Metanodes, ref remainingSubtreeSpace, ref subtrees, out int highestIndex, out float highestCost))
+            while (priorityQueue.TryPop(ref Metanodes, ref remainingSubtreeSpace, ref subtrees, out int highestIndex, out Number highestCost))
             {
                 treeletCost += highestCost;
                 internalNodes.AddUnsafely(highestIndex);

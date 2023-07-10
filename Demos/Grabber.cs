@@ -3,10 +3,12 @@ using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuPhysics.Trees;
 using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoRenderer;
 using DemoRenderer.Constraints;
-using System;
-using System.Numerics;
+
+
 using System.Runtime.CompilerServices;
 
 namespace Demos
@@ -15,7 +17,7 @@ namespace Demos
     {
         bool active;
         BodyReference body;
-        float t;
+        Number t;
         Vector3 localGrabPoint;
         Quaternion targetOrientation;
         ConstraintHandle linearMotorHandle;
@@ -23,7 +25,7 @@ namespace Demos
 
         struct RayHitHandler : IRayHitHandler
         {
-            public float T;
+            public Number T;
             public CollidableReference HitCollidable;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool AllowTest(CollidableReference collidable)
@@ -38,7 +40,7 @@ namespace Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, CollidableReference collidable, int childIndex)
+            public void OnRayHit(in RayData ray, ref Number maximumT, Number t, Vector3 normal, CollidableReference collidable, int childIndex)
             {
                 //We are only interested in the earliest hit. This callback is executing within the traversal, so modifying maximumT informs the traversal
                 //that it can skip any AABBs which are more distant than the new maximumT.
@@ -49,19 +51,19 @@ namespace Demos
             }
         }
 
-        readonly void CreateMotorDescription(Vector3 target, float inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularServo angularDescription)
+        readonly void CreateMotorDescription(Vector3 target, Number inverseMass, out OneBodyLinearServo linearDescription, out OneBodyAngularServo angularDescription)
         {
             linearDescription = new OneBodyLinearServo
             {
                 LocalOffset = localGrabPoint,
                 Target = target,
-                ServoSettings = new ServoSettings(float.MaxValue, 0, 360 / inverseMass),
+                ServoSettings = new ServoSettings(Number.MaxValue, 0, 360 / inverseMass),
                 SpringSettings = new SpringSettings(5, 2),
             };
             angularDescription = new OneBodyAngularServo
             {
                 TargetOrientation = targetOrientation,
-                ServoSettings = new ServoSettings(float.MaxValue, 0, localGrabPoint.Length() * 180 / inverseMass),
+                ServoSettings = new ServoSettings(Number.MaxValue, 0, localGrabPoint.Length() * 180 / inverseMass),
                 SpringSettings = new SpringSettings(5, 2),
             };
         }
@@ -87,9 +89,9 @@ namespace Demos
             {
                 var rayDirection = camera.GetRayDirection(mouseLocked, normalizedMousePosition);
                 var hitHandler = default(RayHitHandler);
-                hitHandler.T = float.MaxValue;
-                simulation.RayCast(camera.Position, rayDirection, float.MaxValue, ref hitHandler);
-                if (hitHandler.T < float.MaxValue && hitHandler.HitCollidable.Mobility == CollidableMobility.Dynamic)
+                hitHandler.T = Number.MaxValue;
+                simulation.RayCast(camera.Position, rayDirection, Number.MaxValue, ref hitHandler);
+                if (hitHandler.T < Number.MaxValue && hitHandler.HitCollidable.Mobility == CollidableMobility.Dynamic)
                 {
                     //Found something to grab!
                     t = hitHandler.T;

@@ -1,6 +1,6 @@
 ﻿using BepuUtilities.Collections;
 using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities

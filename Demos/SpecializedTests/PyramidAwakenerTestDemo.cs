@@ -2,14 +2,10 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
-using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
 
 namespace Demos.Demos
 {
@@ -21,7 +17,7 @@ namespace Demos.Demos
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-30, 8, -110);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
@@ -41,7 +37,7 @@ namespace Demos.Demos
                             (-columnCount * 0.5f + columnIndex) * boxShape.Width,
                             (rowIndex + 0.5f) * boxShape.Height,
                             (pyramidIndex - pyramidCount * 0.5f) * (boxShape.Length + 4)),
-                            boxInertia, boxIndex, 0.01f));
+                            boxInertia, boxIndex, Constants.C0p01));
                     }
                 }
             }
@@ -54,14 +50,14 @@ namespace Demos.Demos
         }
 
         int frameIndex;
-        Random random = new Random(5);
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        System.Random random = new System.Random(5);
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             frameIndex++;
             if (frameIndex % 64 == 0)
             {
                 var bulletShape = new Sphere(0.5f + 5 * random.NextSingle());
-                var bodyDescription = BodyDescription.CreateDynamic(new Vector3(0, 8, -130), new Vector3(0, 0, 350), bulletShape.ComputeInertia(bulletShape.Radius * bulletShape.Radius * bulletShape.Radius), Simulation.Shapes.Add(bulletShape), 0.01f);
+                var bodyDescription = BodyDescription.CreateDynamic(new Vector3(0, 8, -130), new Vector3(0, 0, 350), bulletShape.ComputeInertia(bulletShape.Radius * bulletShape.Radius * bulletShape.Radius), Simulation.Shapes.Add(bulletShape), Constants.C0p01);
                 Simulation.Bodies.Add(bodyDescription);
             }
             if (frameIndex % 192 == 0)

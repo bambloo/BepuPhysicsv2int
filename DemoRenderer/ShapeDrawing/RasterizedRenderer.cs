@@ -1,9 +1,11 @@
 ﻿using BepuUtilities;
+
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
-using System.Numerics;
+
 using System.Runtime.InteropServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace DemoRenderer.ShapeDrawing
 {
@@ -11,15 +13,15 @@ namespace DemoRenderer.ShapeDrawing
     struct RasterizedVertexConstants
     {
         [FieldOffset(0)]
-        public Matrix Projection;
+        public MatrixFloat Projection;
         [FieldOffset(64)]
-        public Vector3 CameraPosition;
+        public System.Numerics.Vector3 CameraPosition;
         [FieldOffset(80)]
-        public Vector3 CameraRight;
+        public System.Numerics.Vector3 CameraRight;
         [FieldOffset(96)]
-        public Vector3 CameraUp;
+        public System.Numerics.Vector3 CameraUp;
         [FieldOffset(112)]
-        public Vector3 CameraBackward;
+        public System.Numerics.Vector3 CameraBackward;
     }
     public class RasterizedRenderer<TInstance> : IDisposable where TInstance : struct
     {       

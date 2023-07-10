@@ -1,5 +1,6 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuUtilities.Numerics;
 
 namespace Demos.Demos.Tanks
 {
@@ -23,9 +24,9 @@ namespace Demos.Demos.Tanks
         /// <summary>
         /// Friction of the body to be used in pair material calculations.
         /// </summary>
-        public float Friction;
+        public Number Friction;
 
-        public static TankPartDescription Create<TShape>(float mass, in TShape shape, in RigidPose pose, float friction, Shapes shapes) where TShape : unmanaged, IConvexShape
+        public static TankPartDescription Create<TShape>(Number mass, in TShape shape, in RigidPose pose, Number friction, Shapes shapes) where TShape : unmanaged, IConvexShape
         {
             TankPartDescription description;
             description.Shape = shapes.Add(shape);

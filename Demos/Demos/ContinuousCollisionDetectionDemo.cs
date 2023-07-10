@@ -1,5 +1,5 @@
-﻿using System;
-using System.Numerics;
+﻿
+
 using DemoContentLoader;
 using DemoRenderer;
 using BepuPhysics;
@@ -7,6 +7,8 @@ using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using DemoUtilities;
 using DemoRenderer.UI;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 
 namespace Demos.Demos
 {
@@ -19,10 +21,10 @@ namespace Demos.Demos
         ConstraintHandle spinnerMotorDefaultA, spinnerMotorDefaultB, spinnerMotorSweepA, spinnerMotorSweepB;
         RolloverInfo rolloverInfo;
 
-        ConstraintHandle BuildSpinner(Vector3 initialPosition, float rotationSpeed, float maximumSpeculativeMargin, ContinuousDetection continuousDetection)
+        ConstraintHandle BuildSpinner(Vector3 initialPosition, Number rotationSpeed, Number maximumSpeculativeMargin, ContinuousDetection continuousDetection)
         {
-            var spinnerBase = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1e-2f }, Simulation.Shapes.Add(new Box(2, 2, 2)), 0.01f));
-            var bladeShape = new Box(5, 0.01f, 1);
+            var spinnerBase = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = Constants.C1em2 }, Simulation.Shapes.Add(new Box(2, 2, 2)), Constants.C0p01));
+            var bladeShape = new Box(5, Constants.C0p01, 1);
             var bladeInertia = bladeShape.ComputeInertia(1);
             var shapeIndex = Simulation.Shapes.Add(bladeShape);
             //Note that both the minimum progression duration and the sweep convergence duration are both very small at 1e-4. 
@@ -41,7 +43,7 @@ namespace Demos.Demos
 
             //Using a restricted speculative margin by setting the maximumSpeculativeMargin to 0.2 means that collision detection won't accept distant contacts.
             //This pretty much eliminates ghost collisions, while the continuous sweep helps avoid missed collisions.
-            var spinnerBlade = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, bladeInertia, new(shapeIndex, maximumSpeculativeMargin, continuousDetection), 0.01f));
+            var spinnerBlade = Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, bladeInertia, new(shapeIndex, maximumSpeculativeMargin, continuousDetection), Constants.C0p01));
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new Hinge { LocalHingeAxisA = new Vector3(0, 0, 1), LocalHingeAxisB = new Vector3(0, 0, 1), LocalOffsetB = new Vector3(0, 0, -3), SpringSettings = new SpringSettings(30, 1) });
             Simulation.Solver.Add(spinnerBase, spinnerBlade, new AngularAxisMotor { LocalAxisA = new Vector3(0, 0, 1), Settings = new MotorSettings(10, 1e-4f), TargetVelocity = rotationSpeed });
             return Simulation.Solver.Add(spinnerBase, new OneBodyLinearServo { ServoSettings = ServoSettings.Default, SpringSettings = new SpringSettings(30, 1) });
@@ -70,20 +72,20 @@ namespace Demos.Demos
                 {
                     //The first set of boxes are forced to use very small speculative margins. They're going to tunnel into the ground, since no contacts will be created to stop it.
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-37 + 2 * j, 100 + (i + j) * 2, -30 + i * 2), new Vector3(0, -150, 0), inertia,
-                        new(shapeIndex, 0.01f, ContinuousDetection.Discrete), 0.01f));
+                        new(shapeIndex, Constants.C0p01, ContinuousDetection.Discrete), Constants.C0p01));
 
                     //The second set of boxes are not using explicit continuous collision sweeps, but have unlimited speculative margins.
                     //This configuration is the most common one you're likely to see in the demos (and use in your own applications).
-                    //"ContinuousDetection.Passive" here just sets the maximum speculative margin to float.MaxValue in passive mode.
+                    //"ContinuousDetection.Passive" here just sets the maximum speculative margin to Number.MaxValue in passive mode.
                     //Discrete vs Passive mode just controls how the bounding box is expanded:
                     //in Discrete mode, the bounding box can only be expanded by velocity up to the speculative margin.
                     //In Passive mode, the bounding box will expand to encompass the whole velocity. 
-                    //If Discrete is given a maximum speculative margin of float.MaxValue, they're functionally equivalent.
+                    //If Discrete is given a maximum speculative margin of Number.MaxValue, they're functionally equivalent.
                     //(The difference exists because bounding box expansion is sometimes required to catch collisions from *other* continuous bodies.
                     //Without expanding the bounding box on a discrete body with low margin, another continuous body might not know the unexpanded body even exists and fly right by.
                     //If you don't care about that corner case for a given body, then using discrete is fine.)
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(-9 + 2 * j, 100 + (i + j) * 2, -30 + i * 2), new Vector3(0, -150, 0), inertia,
-                        new(shapeIndex, ContinuousDetection.Passive), 0.01f));
+                        new(shapeIndex, ContinuousDetection.Passive), Constants.C0p01));
 
                     //The third set of boxes uses explicit continuous sweeps. Because of the sweeps, the speculative margin can be kept very small.
                     //The minimum progression duration parameter at 1e-3 means the CCD sweep won't miss any collisions that last at least 1e-3 units of time- so, if time is measured in seconds,
@@ -93,7 +95,7 @@ namespace Demos.Demos
                     //runs to create the actual contact manifold. That provides high quality contact positions and speculative depths.
                     //If the ground that these boxes were smashing into was something like a mesh- which is infinitely thin- you may want to increase the sweep accuracy.
                     Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(17 + 2 * j, 100 + (i + j) * 2, -30 + i * 2), new Vector3(0, -150, 0), inertia,
-                        new(shapeIndex, 0.01f, ContinuousDetection.Continuous(1e-3f, 1e-2f)), 0.01f));
+                        new(shapeIndex, Constants.C0p01, ContinuousDetection.Continuous(1e-3f, Constants.C1em2)), Constants.C0p01));
                 }
             }
             rolloverInfo = new RolloverInfo();
@@ -116,13 +118,13 @@ namespace Demos.Demos
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -5f, 0), Simulation.Shapes.Add(new Box(300, 10, 300))));
         }
 
-        double time;
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        Number time;
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             //Scoot the spinners around.
             var servo = new OneBodyLinearServo { ServoSettings = ServoSettings.Default, SpringSettings = new SpringSettings(30, 1) };
-            var leftServoTarget = new Vector3(-3.5f * (float)Math.Sin(time), 10, -5);
-            var rightServoTarget = new Vector3(3.5f * (float)Math.Sin(time), 10, -5);
+            var leftServoTarget = new Vector3(-3.5f * (Number)Math.Sin(time), 10, -5);
+            var rightServoTarget = new Vector3(3.5f * (Number)Math.Sin(time), 10, -5);
             servo.Target = new Vector3(-20, 0, 0) + leftServoTarget;
             Simulation.Solver.ApplyDescription(spinnerMotorDefaultA, servo);
             servo.Target = new Vector3(-10, 0, 0) + rightServoTarget;

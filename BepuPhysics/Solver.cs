@@ -1,14 +1,15 @@
-﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
+﻿using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using BepuPhysics.CollisionDetection;
-using BepuUtilities;
 using System.Runtime.InteropServices;
-using System.Numerics;
 using System.Threading;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {
@@ -598,11 +599,11 @@ namespace BepuPhysics
             }
         }
 
-        unsafe struct ValidateAccumulatedImpulsesEnumerator : IForEach<float>
+        unsafe struct ValidateAccumulatedImpulsesEnumerator : IForEach<Number>
         {
             public int Index;
-            public float* AccumulatedImpulses;
-            public void LoopBody(float impulse)
+            public Number* AccumulatedImpulses;
+            public void LoopBody(Number impulse)
             {
                 AccumulatedImpulses[Index] = impulse;
             }
@@ -653,7 +654,7 @@ namespace BepuPhysics
         [Conditional("DEBUG")]
         internal unsafe void ValidateAccumulatedImpulses()
         {
-            var impulseMemory = stackalloc float[16];
+            var impulseMemory = stackalloc Number[16];
             var impulsesEnumerator = new ValidateAccumulatedImpulsesEnumerator { Index = 0, AccumulatedImpulses = impulseMemory };
             for (int i = 0; i < Sets.Length; ++i)
             {
@@ -1492,7 +1493,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="set">Set to scale.</param>
         /// <param name="scale">Scale to apply to accumulated impulses.</param>
-        public void ScaleAccumulatedImpulses(ref ConstraintSet set, float scale)
+        public void ScaleAccumulatedImpulses(ref ConstraintSet set, Number scale)
         {
             for (int batchIndex = 0; batchIndex < ActiveSet.Batches.Count; ++batchIndex)
             {
@@ -1509,7 +1510,7 @@ namespace BepuPhysics
         /// Scales all accumulated impulses in the active set.
         /// </summary>
         /// <param name="scale">Scale to apply to accumulated impulses.</param>
-        public void ScaleActiveAccumulatedImpulses(float scale)
+        public void ScaleActiveAccumulatedImpulses(Number scale)
         {
             ScaleAccumulatedImpulses(ref ActiveSet, scale);
         }
@@ -1518,7 +1519,7 @@ namespace BepuPhysics
         /// Scales all accumulated impulses in all constraint sets.
         /// </summary>
         /// <param name="scale">Scale to apply to accumulated impulses.</param>
-        public void ScaleAccumulatedImpulses(float scale)
+        public void ScaleAccumulatedImpulses(Number scale)
         {
             for (int i = 0; i < Sets.Length; ++i)
             {
@@ -1533,7 +1534,7 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="constraintHandle">Constraint to enumerate.</param>
         /// <param name="enumerator">Enumerator to use.</param>
-        public void EnumerateAccumulatedImpulses<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<float>
+        public void EnumerateAccumulatedImpulses<TEnumerator>(ConstraintHandle constraintHandle, ref TEnumerator enumerator) where TEnumerator : IForEach<Number>
         {
             ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
             ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
@@ -1546,16 +1547,16 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="constraintHandle">Constraint to look up the accumulated impulses of.</param>
         /// <returns>Squared magnitude of the accumulated impulses associated with the given constraint.</returns>
-        public unsafe float GetAccumulatedImpulseMagnitudeSquared(ConstraintHandle constraintHandle)
+        public unsafe Number GetAccumulatedImpulseMagnitudeSquared(ConstraintHandle constraintHandle)
         {
             ref var constraintLocation = ref HandleToConstraint[constraintHandle.Value];
             ref var typeBatch = ref Sets[constraintLocation.SetIndex].Batches[constraintLocation.BatchIndex].GetTypeBatch(constraintLocation.TypeId);
             Debug.Assert(constraintLocation.IndexInTypeBatch >= 0 && constraintLocation.IndexInTypeBatch < typeBatch.ConstraintCount, "Bad constraint location; likely some add/remove bug.");
             var typeProcessor = TypeProcessors[constraintLocation.TypeId];
-            var impulses = stackalloc float[typeProcessor.ConstrainedDegreesOfFreedom];
+            var impulses = stackalloc Number[typeProcessor.ConstrainedDegreesOfFreedom];
             var floatCollector = new FloatCollector(impulses);
             TypeProcessors[constraintLocation.TypeId].EnumerateAccumulatedImpulses(ref typeBatch, constraintLocation.IndexInTypeBatch, ref floatCollector);
-            var sumOfSquares = 0f;
+            var sumOfSquares = Constants.C0;
             for (int i = 0; i < typeProcessor.ConstrainedDegreesOfFreedom; ++i)
             {
                 var impulse = impulses[i];
@@ -1569,9 +1570,9 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="constraintHandle">Constraint to look up the accumulated impulses of.</param>
         /// <returns>Magnitude of the accumulated impulses associated with the given constraint.</returns>
-        public unsafe float GetAccumulatedImpulseMagnitude(ConstraintHandle constraintHandle)
+        public unsafe Number GetAccumulatedImpulseMagnitude(ConstraintHandle constraintHandle)
         {
-            return (float)Math.Sqrt(GetAccumulatedImpulseMagnitudeSquared(constraintHandle));
+            return (Number)Math.Sqrt(GetAccumulatedImpulseMagnitudeSquared(constraintHandle));
         }
 
 

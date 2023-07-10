@@ -1,11 +1,10 @@
-﻿using System;
-using System.Diagnostics;
+﻿using BepuUtilities;
 using OpenTK;
-using BepuUtilities;
 using OpenTK.Graphics;
 using OpenTK.Platform;
+using System;
+using System.Diagnostics;
 using System.Threading;
-using Vector2 = System.Numerics.Vector2;
 
 namespace DemoUtilities
 {
@@ -95,8 +94,8 @@ namespace DemoUtilities
         public Window(string title, Int2 resolution, Int2 location, WindowMode windowMode)
         {
             window = new NativeWindow(location.X, location.Y, resolution.X, resolution.Y, title, GameWindowFlags.FixedWindow, GraphicsMode.Default, DisplayDevice.Default);
-            Debug.Assert(window.ClientSize.Width == resolution.X);
-            Debug.Assert(window.ClientSize.Height == resolution.Y);
+            //Debug.Assert(window.ClientSize.Width == resolution.X);
+            //Debug.Assert(window.ClientSize.Height == resolution.Y);
             window.Visible = true;
             Resolution = resolution;
             window.Resize += (form, args) => resized = true;

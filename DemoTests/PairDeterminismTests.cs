@@ -4,6 +4,8 @@ using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using Demos;
 using Demos.Demos;
 using Demos.SpecializedTests;

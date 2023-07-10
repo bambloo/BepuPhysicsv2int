@@ -3,13 +3,15 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
+
 using System.Diagnostics;
-using System.Numerics;
+
 using System.Runtime.CompilerServices;
 
 namespace Demos.Demos
@@ -67,7 +69,7 @@ namespace Demos.Demos
             return new ClothCallbacks(filters, pairMaterialProperties, minimumDistanceForSelfCollisions);
         }
         public ClothCallbacks(CollidableProperty<ClothCollisionFilter> filters, int minimumDistanceForSelfCollisions = 3)
-            : this(filters, new PairMaterialProperties { SpringSettings = new SpringSettings(30, 1), FrictionCoefficient = 0.25f, MaximumRecoveryVelocity = 2f }, minimumDistanceForSelfCollisions)
+            : this(filters, new PairMaterialProperties { SpringSettings = new SpringSettings(30, 1), FrictionCoefficient = Constants.C0p25, MaximumRecoveryVelocity = Constants.C0p3 }, minimumDistanceForSelfCollisions)
         {
         }
 
@@ -77,7 +79,7 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
         {
             if (a.Mobility != CollidableMobility.Static && b.Mobility != CollidableMobility.Static)
             {
@@ -118,10 +120,10 @@ namespace Demos.Demos
     {
         delegate bool KinematicDecider(int rowIndex, int columnIndex, int width, int height);
 
-        BodyHandle[,] CreateBodyGrid(Vector3 position, Quaternion orientation, int width, int height, float spacing, float bodyRadius, float massPerBody,
+        BodyHandle[,] CreateBodyGrid(Vector3 position, Quaternion orientation, int width, int height, Number spacing, Number bodyRadius, Number massPerBody,
             int instanceId, CollidableProperty<ClothCollisionFilter> filters, KinematicDecider isKinematic)
         {
-            var description = BodyDescription.CreateDynamic(orientation, default, Simulation.Shapes.Add(new Sphere(bodyRadius)), 0.01f);
+            var description = BodyDescription.CreateDynamic(orientation, default, Simulation.Shapes.Add(new Sphere(bodyRadius)), Constants.C0p01);
             var inverseMass = 1f / massPerBody;
             BodyHandle[,] handles = new BodyHandle[height, width];
             for (int rowIndex = 0; rowIndex < height; ++rowIndex)

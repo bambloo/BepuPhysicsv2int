@@ -1,11 +1,13 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
+
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
-using System.Numerics;
+
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace DemoRenderer.ShapeDrawing
 {
@@ -13,7 +15,7 @@ namespace DemoRenderer.ShapeDrawing
     public struct MeshInstance
     {
         [FieldOffset(0)]
-        public Vector3 Position;
+        public System.Numerics.Vector3 Position;
         [FieldOffset(12)]
         public uint PackedColor;
         [FieldOffset(16)]
@@ -23,7 +25,7 @@ namespace DemoRenderer.ShapeDrawing
         [FieldOffset(28)]
         public int VertexCount;
         [FieldOffset(32)]
-        public Vector3 Scale;
+        public System.Numerics.Vector3 Scale;
     }
     public class MeshRenderer : IDisposable
     {

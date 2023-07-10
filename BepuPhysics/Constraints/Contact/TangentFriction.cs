@@ -1,6 +1,5 @@
 ﻿using BepuUtilities;
-using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Constraints.Contact
@@ -76,7 +75,7 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeCorrectiveImpulse(in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, in Symmetric2x2Wide effectiveMass, in Jacobians jacobians,
-            in Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, out Vector2Wide correctiveCSI)
+            in Vector<Number> maximumImpulse, ref Vector2Wide accumulatedImpulse, out Vector2Wide correctiveCSI)
         {
             Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvA.Linear, jacobians.LinearA, out var csvaLinear);
             Matrix2x3Wide.TransformByTransposeWithoutOverlap(wsvA.Angular, jacobians.AngularA, out var csvaAngular);
@@ -97,7 +96,7 @@ namespace BepuPhysics.Constraints.Contact
             //The maximum force of friction depends upon the normal impulse. The maximum is supplied per iteration.
             Vector2Wide.Length(accumulatedImpulse, out var accumulatedMagnitude);
             //Note division by zero guard.
-            var scale = Vector.Min(Vector<float>.One, maximumImpulse / Vector.Max(new Vector<float>(1e-16f), accumulatedMagnitude));
+            var scale = Vector.Min(Vector<Number>.One, maximumImpulse / Vector.Max(new Vector<Number>(Constants.C1em16), accumulatedMagnitude));
             Vector2Wide.Scale(accumulatedImpulse, scale, out accumulatedImpulse);
 
             Vector2Wide.Subtract(accumulatedImpulse, previousAccumulated, out correctiveCSI);
@@ -117,7 +116,7 @@ namespace BepuPhysics.Constraints.Contact
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Solve(in Vector3Wide tangentX, in Vector3Wide tangentY, in Vector3Wide offsetToManifoldCenterA, in Vector3Wide offsetToManifoldCenterB, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
-            in Vector<float> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+            in Vector<Number> maximumImpulse, ref Vector2Wide accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobians(tangentX, tangentY, offsetToManifoldCenterA, offsetToManifoldCenterB, out var jacobians);
             //Compute effective mass matrix contributions.

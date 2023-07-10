@@ -1,13 +1,13 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System.Numerics;
-using System;
-using DemoContentLoader;
-using DemoUtilities;
-using Demos.Demos.Characters;
+using BepuUtilities;
 using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
+using DemoContentLoader;
+using DemoRenderer;
+using Demos.Demos.Characters;
+using DemoUtilities;
 
 namespace Demos.SpecializedTests
 {
@@ -23,7 +23,7 @@ namespace Demos.SpecializedTests
             characters = new CharacterControllers(BufferPool);
             Simulation = Simulation.Create(BufferPool, new CharacterNarrowphaseCallbacks(characters), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
-            var random = new Random(5);
+            var random = new System.Random(5);
             for (int i = 0; i < 8192; ++i)
             {
                 ref var character = ref characters.AllocateCharacter(
@@ -31,14 +31,14 @@ namespace Demos.SpecializedTests
                         BodyDescription.CreateDynamic(
                             new Vector3(250 * random.NextSingle() - 125, 2, 250 * random.NextSingle() - 125), new BodyInertia { InverseMass = 1 },
                             Simulation.Shapes.Add(new Capsule(0.5f, 1f)),
-                            -1)));
+                            (Number)(-1))));
 
                 character.CosMaximumSlope = .707f;
                 character.LocalUp = Vector3.UnitY;
                 character.MaximumHorizontalForce = 10;
                 character.MaximumVerticalForce = 10;
                 character.MinimumSupportContinuationDepth = -0.1f;
-                character.MinimumSupportDepth = -0.01f;
+                character.MinimumSupportDepth = -Constants.C0p01;
                 character.TargetVelocity = new Vector2(4, 0);
                 character.ViewDirection = new Vector3(0, 0, -1);
                 character.JumpVelocity = 4;
@@ -59,10 +59,10 @@ namespace Demos.SpecializedTests
             //        switch (choice)
             //        {
             //            case 0:
-            //                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(position, orientation), inertia, collidable, new BodyActivityDescription(0.01f)));
+            //                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new RigidPose(position, orientation), inertia, collidable, new BodyActivityDescription(Constants.C0p01)));
             //                break;
             //            case 1:
-            //                Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(position, orientation), collidable, new BodyActivityDescription(0.01f)));
+            //                Simulation.Bodies.Add(BodyDescription.CreateKinematic(new RigidPose(position, orientation), collidable, new BodyActivityDescription(Constants.C0p01)));
             //                break;
             //            case 2:
             //                Simulation.Statics.Add(new StaticDescription(position, orientation, collidable));
@@ -91,7 +91,7 @@ namespace Demos.SpecializedTests
 
         QuickQueue<CharacterController> removedCharacters;
         int frameIndex;
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             var rotation = Matrix3x3.CreateFromAxisAngle(new Vector3(0, 1, 0), 0.5f * dt);
             for (int i = 0; i < characters.CharacterCount; ++i)

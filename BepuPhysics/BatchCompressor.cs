@@ -2,11 +2,12 @@
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {
@@ -46,12 +47,12 @@ namespace BepuPhysics
 
         public Solver Solver { get; private set; }
         public Bodies Bodies { get; private set; }
-        float targetCandidateFraction;
-        float maximumCompressionFraction;
+        Number targetCandidateFraction;
+        Number maximumCompressionFraction;
         /// <summary>
         /// Gets or sets the desired number of candidates to analyze as a fraction of the total number of constraints.
         /// </summary>
-        public float TargetCandidateFraction
+        public Number TargetCandidateFraction
         {
             get { return targetCandidateFraction; }
             set
@@ -63,7 +64,7 @@ namespace BepuPhysics
         /// <summary>
         /// Gets or sets the maximum number of constraint moves that can occur in a single execution of Compress as a fraction of the total number of constraints.
         /// </summary>       
-        public float MaximumCompressionFraction
+        public Number MaximumCompressionFraction
         {
             get { return maximumCompressionFraction; }
             set
@@ -98,7 +99,11 @@ namespace BepuPhysics
 
 
         Action<int> analysisWorkerDelegate;
-        public BatchCompressor(Solver solver, Bodies bodies, float targetCandidateFraction = 0.005f, float maximumCompressionFraction = 0.0005f)
+
+        public BatchCompressor(Solver solver, Bodies bodies): this(solver, bodies, Constants.C0p005, Constants.C0p0005)
+        {
+        }
+        public BatchCompressor(Solver solver, Bodies bodies, Number targetCandidateFraction, Number maximumCompressionFraction)
         {
             this.Solver = solver;
             this.Bodies = bodies;

@@ -3,12 +3,14 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Numerics;
+
+
 
 namespace Demos.Demos
 {
@@ -24,11 +26,11 @@ namespace Demos.Demos
             camera.Pitch = 0;
 
             var filters = new CollidableProperty<RopeFilter>();
-            Simulation = Simulation.Create(BufferPool, new RopeNarrowPhaseCallbacks(filters, new PairMaterialProperties(0.1f, float.MaxValue, new SpringSettings(240, 0)), 3), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 12));
+            Simulation = Simulation.Create(BufferPool, new RopeNarrowPhaseCallbacks(filters, new PairMaterialProperties(0.1f, Number.MaxValue, new SpringSettings(240, 0)), 3), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 12));
 
             var beadSpacing = 0.3f;
             var beadShape = new Capsule(0.05f, beadSpacing);
-            var beadDescription = BodyDescription.CreateDynamic(new Vector3(), beadShape.ComputeInertia(1), Simulation.Shapes.Add(beadShape), 0.01f);
+            var beadDescription = BodyDescription.CreateDynamic(new Vector3(), beadShape.ComputeInertia(1), Simulation.Shapes.Add(beadShape), Constants.C0p01);
 
             const int beadCount = 4096;
             var handles = new BodyHandle[beadCount];
@@ -46,7 +48,7 @@ namespace Demos.Demos
                 var offset = currentPosition - nextPosition;
                 var cross = Vector3.Cross(Vector3.Normalize(offset), new Vector3(0, 1, 0));
                 var crossLength = cross.Length();
-                var orientation = crossLength > 1e-8f ? QuaternionEx.CreateFromAxisAngle(cross / crossLength, (float)Math.Asin(crossLength)) : Quaternion.Identity;
+                var orientation = crossLength > 1e-8f ? QuaternionEx.CreateFromAxisAngle(cross / crossLength, (Number)Math.Asin(crossLength)) : Quaternion.Identity;
 
                 //Include a little nudge. This is going to create constraint error, but that's fine. It distributes the rope over the platform to avoid tangles.
                 beadDescription.Pose = new RigidPose(currentPosition + new Vector3(0, 0, i * 0.006f), orientation);
@@ -63,14 +65,14 @@ namespace Demos.Demos
                 }
             }
 
-            Simulation.Statics.Add(new StaticDescription(new Vector3(0, 0f, 0), Simulation.Shapes.Add(new Box(11.6f, .2f, 40))));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(0, Constants.C0, 0), Simulation.Shapes.Add(new Box(11.6f, .2f, 40))));
             var wall = Simulation.Shapes.Add(new Box(.4f, 1, 40));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(5.65f, 2.4f - 2f, 0), wall));
-            Simulation.Statics.Add(new StaticDescription(new Vector3(-5.65f, 2.4f - 2f, 0), wall));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(5.65f, 2.4f - Constants.C0p3, 0), wall));
+            Simulation.Statics.Add(new StaticDescription(new Vector3(-5.65f, 2.4f - Constants.C0p3, 0), wall));
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -500f, 0), Simulation.Shapes.Add(new Box(500, 1, 500))));
 
         }
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             //If you want smooth slow mo (instead of discrete slow mo by holding middle mouse), try uncommenting this (and commenting the base.Update).
             //Simulation.Timestep(TimestepDuration / 16, ThreadDispatcher);

@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using BepuUtilities.Numerics;
+using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
-using System.Text;
 
 namespace BepuUtilities
 {
@@ -87,33 +82,33 @@ namespace BepuUtilities
             //AVX codepath is not helpful in my tests.
             //if (Vector256.IsHardwareAccelerated && Avx.IsSupported)
             //{
-            //    var a = Vector256.LoadUnsafe(ref Unsafe.As<TA, float>(ref Unsafe.AsRef(childA)));
-            //    var b = Vector256.LoadUnsafe(ref Unsafe.As<TB, float>(ref Unsafe.AsRef(childB)));
+            //    var a = Vector256.LoadUnsafe(ref Unsafe.As<TA, Number>(ref Unsafe.AsRef(childA)));
+            //    var b = Vector256.LoadUnsafe(ref Unsafe.As<TB, Number>(ref Unsafe.AsRef(childB)));
             //    var min = Avx.Permute2x128(a, b, (0) | (2 << 4)); //(aMin, aMax) (bMin, bMax) -> (aMin, bMin)
             //    var max = Avx.Permute2x128(a, b, (3) | (1 << 4)); //(aMin, aMax) (bMin, bMax) -> (bMax, aMax)
             //    var noIntersection = Vector256.LessThan(max, min);
             //    return (Vector256.ExtractMostSignificantBits(noIntersection) & 0b1110111) == 0;
             //}
             //else
-            if (Vector128.IsHardwareAccelerated)
-            {
-                //THIS IS A POTENTIAL GC HOLE IF CHILDREN ARE PASSED FROM UNPINNED MANAGED MEMORY
-                ref var a = ref Unsafe.As<TA, float>(ref Unsafe.AsRef(boundingBoxA));
-                ref var b = ref Unsafe.As<TB, float>(ref Unsafe.AsRef(boundingBoxB));
-                var aMin = Vector128.LoadUnsafe(ref a);
-                var aMax = Vector128.LoadUnsafe(ref Unsafe.Add(ref a, 4));
-                var bMin = Vector128.LoadUnsafe(ref b);
-                var bMax = Vector128.LoadUnsafe(ref Unsafe.Add(ref b, 4));
-                var noIntersectionOnAxes = Vector128.LessThan(aMax, bMin) | Vector128.LessThan(bMax, aMin);
-                return (Vector128.ExtractMostSignificantBits(noIntersectionOnAxes) & 0b111) == 0;
-            }
-            else
-            {
-                var a = (float*)Unsafe.AsPointer(ref Unsafe.AsRef(boundingBoxA));
-                var b = (float*)Unsafe.AsPointer(ref Unsafe.AsRef(boundingBoxB));
+            //if (Vector128.IsHardwareAccelerated)
+            //{
+            //    //THIS IS A POTENTIAL GC HOLE IF CHILDREN ARE PASSED FROM UNPINNED MANAGED MEMORY
+            //    ref var a = ref Unsafe.As<TA, Number>(ref Unsafe.AsRef(boundingBoxA));
+            //    ref var b = ref Unsafe.As<TB, Number>(ref Unsafe.AsRef(boundingBoxB));
+            //    var aMin = Vector128.LoadUnsafe(ref a);
+            //    var aMax = Vector128.LoadUnsafe(ref Unsafe.Add(ref a, 4));
+            //    var bMin = Vector128.LoadUnsafe(ref b);
+            //    var bMax = Vector128.LoadUnsafe(ref Unsafe.Add(ref b, 4));
+            //    var noIntersectionOnAxes = Vector128.LessThan(aMax, bMin) | Vector128.LessThan(bMax, aMin);
+            //    return (Vector128.ExtractMostSignificantBits(noIntersectionOnAxes) & 0b111) == 0;
+            //}
+            //else
+            //{
+                var a = (Number*)Unsafe.AsPointer(ref Unsafe.AsRef(boundingBoxA));
+                var b = (Number*)Unsafe.AsPointer(ref Unsafe.AsRef(boundingBoxB));
                 return a[4] >= b[0] & a[5] >= b[1] & a[6] >= b[2] &
                        b[4] >= a[0] & b[5] >= a[1] & b[6] >= a[2];
-            }
+            //}
         }
 
         /// <summary>
@@ -141,11 +136,11 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Intersects(Vector3 minA, Vector3 maxA, Vector3 minB, Vector3 maxB)
         {
-            if (Vector128.IsHardwareAccelerated)
-            {
-                var noIntersectionOnAxes = Vector128.LessThan(maxA.AsVector128(), minB.AsVector128()) | Vector128.LessThan(maxB.AsVector128(), minA.AsVector128());
-                return (Vector128.ExtractMostSignificantBits(noIntersectionOnAxes) & 0b111) == 0;
-            }
+            //if (Vector128.IsHardwareAccelerated)
+            //{
+            //    var noIntersectionOnAxes = Vector128.LessThan(maxA.AsVector128(), minB.AsVector128()) | Vector128.LessThan(maxB.AsVector128(), minA.AsVector128());
+            //    return (Vector128.ExtractMostSignificantBits(noIntersectionOnAxes) & 0b111) == 0;
+            //}
             return maxA.X >= minB.X & maxA.Y >= minB.Y & maxA.Z >= minB.Z &
                    maxB.X >= minA.X & maxB.Y >= minA.Y & maxB.Z >= minA.Z;
         }
@@ -156,7 +151,7 @@ namespace BepuUtilities
         /// <param name="box">Bounding box to measure.</param>
         /// <returns>Volume of the bounding box.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static unsafe float ComputeVolume(ref BoundingBox box)
+        public static unsafe Number ComputeVolume(ref BoundingBox box)
         {
             var diagonal = (box.Max - box.Min);
             return diagonal.X * diagonal.Y * diagonal.Z;
@@ -204,27 +199,27 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void CreateMergedUnsafeWithPreservation<TA, TB>(in TA boundingBoxA, in TB boundingBoxB, out TA merged) where TA : unmanaged where TB : unmanaged
         {
-            if (Sse41.IsSupported)
-            {
-                Unsafe.SkipInit(out merged);
-                ref var resultMin = ref Unsafe.As<TA, Vector128<float>>(ref merged);
-                ref var resultMax = ref Unsafe.Add(ref Unsafe.As<TA, Vector128<float>>(ref merged), 1);
-                resultMin = Sse41.Blend(Vector128.Min(
-                    Unsafe.As<TA, Vector128<float>>(ref Unsafe.AsRef(boundingBoxA)),
-                    Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB))), resultMin, 0b111111);
-                resultMax = Sse41.Blend(Vector128.Max(
-                    Unsafe.Add(ref Unsafe.As<TA, Vector128<float>>(ref Unsafe.AsRef(boundingBoxA)), 1),
-                    Unsafe.Add(ref Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB)), 1)), resultMax, 0b111111);
-            }
-            else
-            {
+            //if (Sse41.IsSupported)
+            //{
+            //    Unsafe.SkipInit(out merged);
+            //    ref var resultMin = ref Unsafe.As<TA, Vector128<Number>>(ref merged);
+            //    ref var resultMax = ref Unsafe.Add(ref Unsafe.As<TA, Vector128<Number>>(ref merged), 1);
+            //    resultMin = Sse41.Blend(Vector128.Min(
+            //        Unsafe.As<TA, Vector128<Number>>(ref Unsafe.AsRef(boundingBoxA)),
+            //        Unsafe.As<TB, Vector128<Number>>(ref Unsafe.AsRef(boundingBoxB))), resultMin, 0b111111);
+            //    resultMax = Sse41.Blend(Vector128.Max(
+            //        Unsafe.Add(ref Unsafe.As<TA, Vector128<Number>>(ref Unsafe.AsRef(boundingBoxA)), 1),
+            //        Unsafe.Add(ref Unsafe.As<TB, Vector128<Number>>(ref Unsafe.AsRef(boundingBoxB)), 1)), resultMax, 0b111111);
+            //}
+            //else
+            //{
                 ref var a = ref Unsafe.As<TA, BoundingBox>(ref Unsafe.AsRef(boundingBoxA));
                 ref var b = ref Unsafe.As<TB, BoundingBox>(ref Unsafe.AsRef(boundingBoxB));
                 Unsafe.SkipInit(out merged);
                 ref var result = ref Unsafe.As<TA, BoundingBox>(ref Unsafe.AsRef(merged));
                 result.Min = Vector3.Min(a.Min, b.Min);
                 result.Max = Vector3.Max(a.Max, b.Max);
-            }
+            //}
         }
         /// <summary>
         /// Merges two structures with memory layouts equivalent to the <see cref="BoundingBox"/>.
@@ -239,27 +234,27 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe static void CreateMergedUnsafe<TA, TB>(in TA boundingBoxA, in TB boundingBoxB, out TA merged) where TA : unmanaged where TB : unmanaged
         {
-            if (Vector128.IsHardwareAccelerated)
-            {
-                Unsafe.SkipInit(out merged);
-                ref var resultMin = ref Unsafe.As<TA, Vector128<float>>(ref merged);
-                ref var resultMax = ref Unsafe.Add(ref Unsafe.As<TA, Vector128<float>>(ref merged), 1);
-                resultMin = Vector128.Min(
-                    Unsafe.As<TA, Vector128<float>>(ref Unsafe.AsRef(boundingBoxA)),
-                    Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB)));
-                resultMax = Vector128.Max(
-                    Unsafe.Add(ref Unsafe.As<TA, Vector128<float>>(ref Unsafe.AsRef(boundingBoxA)), 1),
-                    Unsafe.Add(ref Unsafe.As<TB, Vector128<float>>(ref Unsafe.AsRef(boundingBoxB)), 1));
-            }
-            else
-            {
+            //if (Vector128.IsHardwareAccelerated)
+            //{
+            //    Unsafe.SkipInit(out merged);
+            //    ref var resultMin = ref Unsafe.As<TA, Vector128<Number>>(ref merged);
+            //    ref var resultMax = ref Unsafe.Add(ref Unsafe.As<TA, Vector128<Number>>(ref merged), 1);
+            //    resultMin = Vector128.Min(
+            //        Unsafe.As<TA, Vector128<Number>>(ref Unsafe.AsRef(boundingBoxA)),
+            //        Unsafe.As<TB, Vector128<Number>>(ref Unsafe.AsRef(boundingBoxB)));
+            //    resultMax = Vector128.Max(
+            //        Unsafe.Add(ref Unsafe.As<TA, Vector128<Number>>(ref Unsafe.AsRef(boundingBoxA)), 1),
+            //        Unsafe.Add(ref Unsafe.As<TB, Vector128<Number>>(ref Unsafe.AsRef(boundingBoxB)), 1));
+            //}
+            //else
+            //{
                 ref var a = ref Unsafe.As<TA, BoundingBox>(ref Unsafe.AsRef(boundingBoxA));
                 ref var b = ref Unsafe.As<TB, BoundingBox>(ref Unsafe.AsRef(boundingBoxB));
                 Unsafe.SkipInit(out merged);
                 ref var result = ref Unsafe.As<TA, BoundingBox>(ref Unsafe.AsRef(merged));
                 result.Min = Vector3.Min(a.Min, b.Min);
                 result.Max = Vector3.Max(a.Max, b.Max);
-            }
+            //}
         }
 
         /// <summary>

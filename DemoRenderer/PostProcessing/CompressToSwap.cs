@@ -1,9 +1,7 @@
-﻿using DemoContentLoader;
+﻿using BepuUtilities.Numerics;
+using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
 
 namespace DemoRenderer.PostProcessing
 {
@@ -15,7 +13,7 @@ namespace DemoRenderer.PostProcessing
         /// <summary>
         /// Gets or sets the display gamma. This isn't SRGB, but it'll do.
         /// </summary>
-        public float Gamma { get; set; }
+        public Number Gamma { get; set; }
         ConstantsBuffer<float> constants; //alas, lack of root constants
         VertexShader vertexShader;
         PixelShader pixelShader;
@@ -24,7 +22,11 @@ namespace DemoRenderer.PostProcessing
         //At the moment, this is the only form of post processing in the pipeline. We'll isolate the state changes needed in here rather than outside.
         DepthStencilState depthState;
 
-        public CompressToSwap(Device device, ShaderCache cache, float gamma = 2.2f)
+        public CompressToSwap(Device device, ShaderCache cache) : this(device, cache, (Number)2.2f)
+        {
+        }
+
+            public CompressToSwap(Device device, ShaderCache cache, Number gamma)
         {
             Gamma = gamma;
             constants = new ConstantsBuffer<float>(device, debugName: "CompressToSwap Constants");
@@ -41,7 +43,7 @@ namespace DemoRenderer.PostProcessing
 
         public void Render(DeviceContext context, ShaderResourceView source, RenderTargetView target)
         {
-            float inverseGamma = 1f / Gamma;
+            float inverseGamma = 1f / (float)Gamma;
             constants.Update(context, ref inverseGamma);
 
             context.OutputMerger.SetRenderTargets(null, target);

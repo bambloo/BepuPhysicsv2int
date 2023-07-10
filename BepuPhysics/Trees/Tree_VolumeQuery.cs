@@ -1,6 +1,6 @@
 ﻿using BepuUtilities;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees

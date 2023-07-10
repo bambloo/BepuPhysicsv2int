@@ -2,14 +2,12 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
 
 namespace Demos.Demos.Media
 {
@@ -41,7 +39,7 @@ namespace Demos.Demos.Media
                             (-columnCount * 0.5f + columnIndex) * boxShape.Width,
                             (rowIndex + 0.5f) * boxShape.Height,
                             (pyramidIndex - pyramidCount * 0.5f) * (boxShape.Length + 4)),
-                            boxInertia, boxIndex, 0.01f));
+                            boxInertia, boxIndex, Constants.C0p01));
                     }
                 }
             }
@@ -51,7 +49,7 @@ namespace Demos.Demos.Media
 
         //We'll randomize the size of bullets.
         Random random = new Random(5);
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             if (input != null && input.WasPushed(OpenTK.Input.Key.Z))
             {

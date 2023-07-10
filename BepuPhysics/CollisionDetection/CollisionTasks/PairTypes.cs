@@ -1,7 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using static BepuUtilities.GatherScatter;
@@ -36,7 +36,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public Vector3 OffsetB;
         public Quaternion OrientationA;
         public Quaternion OrientationB;
-        public float SpeculativeMargin;
+        public Number SpeculativeMargin;
         public PairContinuation Continuation;
 
         public readonly CollisionTaskPairType PairType => CollisionTaskPairType.StandardPair;
@@ -55,7 +55,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public Vector3 OffsetB;
         public Quaternion OrientationA;
         public Quaternion OrientationB;
-        public float SpeculativeMargin;
+        public Number SpeculativeMargin;
         public PairContinuation Continuation;
 
         public readonly CollisionTaskPairType PairType => CollisionTaskPairType.FliplessPair;
@@ -72,7 +72,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public Sphere A;
         public Sphere B;
         public Vector3 OffsetB;
-        public float SpeculativeMargin;
+        public Number SpeculativeMargin;
         public PairContinuation Continuation;
 
         public readonly CollisionTaskPairType PairType => CollisionTaskPairType.SpherePair;
@@ -94,7 +94,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public int FlipMask;
         public Vector3 OffsetB;
         public Quaternion OrientationB;
-        public float SpeculativeMargin;
+        public Number SpeculativeMargin;
         public PairContinuation Continuation;
 
         public readonly CollisionTaskPairType PairType => CollisionTaskPairType.SphereIncludingPair;
@@ -121,8 +121,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public Vector3 RelativeLinearVelocityA;
         public Vector3 AngularVelocityA;
         public Vector3 AngularVelocityB;
-        public float MaximumExpansion;
-        public float SpeculativeMargin;
+        public Number MaximumExpansion;
+        public Number SpeculativeMargin;
         public PairContinuation Continuation;
 
         public readonly CollisionTaskPairType PairType => CollisionTaskPairType.BoundsTestedPair;
@@ -142,7 +142,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         int OrientationCount { get; }
         //Note the pair parameter. This is just to get around the fact that you cannot ref return struct fields like you can with classes, at least right now
         ref Vector<int> GetFlipMask(ref TPairWide pair);
-        ref Vector<float> GetSpeculativeMargin(ref TPairWide pair);
+        ref Vector<Number> GetSpeculativeMargin(ref TPairWide pair);
         ref TShapeWideA GetShapeA(ref TPairWide pair);
         ref TShapeWideB GetShapeB(ref TPairWide pair);
         ref QuaternionWide GetOrientationA(ref TPairWide pair);
@@ -164,7 +164,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public Vector3Wide OffsetB;
         public QuaternionWide OrientationA;
         public QuaternionWide OrientationB;
-        public Vector<float> SpeculativeMargin;
+        public Vector<Number> SpeculativeMargin;
 
         public bool HasFlipMask
         {
@@ -184,7 +184,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return ref pair.FlipMask;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
+        public ref Vector<Number> GetSpeculativeMargin(ref ConvexPairWide<TShapeA, TShapeWideA, TShapeB, TShapeWideB> pair)
         {
             return ref pair.SpeculativeMargin;
         }
@@ -241,7 +241,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public Vector3Wide OffsetB;
         public QuaternionWide OrientationA;
         public QuaternionWide OrientationB;
-        public Vector<float> SpeculativeMargin;
+        public Vector<Number> SpeculativeMargin;
 
         public bool HasFlipMask
         {
@@ -260,7 +260,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             throw new NotImplementedException();
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref FliplessPairWide<TShape, TShapeWide> pair)
+        public ref Vector<Number> GetSpeculativeMargin(ref FliplessPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.SpeculativeMargin;
         }
@@ -318,7 +318,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public Vector<int> FlipMask;
         public Vector3Wide OffsetB;
         public QuaternionWide OrientationB;
-        public Vector<float> SpeculativeMargin;
+        public Vector<Number> SpeculativeMargin;
 
         public bool HasFlipMask
         {
@@ -339,7 +339,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             return ref pair.FlipMask;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
+        public ref Vector<Number> GetSpeculativeMargin(ref SphereIncludingPairWide<TShape, TShapeWide> pair)
         {
             return ref pair.SpeculativeMargin;
         }
@@ -388,7 +388,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public SphereWide A;
         public SphereWide B;
         public Vector3Wide OffsetB;
-        public Vector<float> SpeculativeMargin;
+        public Vector<Number> SpeculativeMargin;
 
         public bool HasFlipMask
         {
@@ -406,7 +406,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             throw new NotImplementedException();
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetSpeculativeMargin(ref SpherePairWide pair)
+        public ref Vector<Number> GetSpeculativeMargin(ref SpherePairWide pair)
         {
             return ref pair.SpeculativeMargin;
         }

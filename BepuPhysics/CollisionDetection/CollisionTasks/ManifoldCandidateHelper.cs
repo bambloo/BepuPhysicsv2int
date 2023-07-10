@@ -1,25 +1,21 @@
 ﻿using BepuUtilities;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 using static BepuUtilities.GatherScatter;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
     public struct ManifoldCandidateScalar
     {
-        public float X;
-        public float Y;
+        public Number X;
+        public Number Y;
         public int FeatureId;
     }
     public struct ManifoldCandidate
     {
-        public Vector<float> X;
-        public Vector<float> Y;
-        public Vector<float> Depth;
+        public Vector<Number> X;
+        public Vector<Number> Y;
+        public Vector<Number> Depth;
         public Vector<int> FeatureId;
     }
     public static class ManifoldCandidateHelper
@@ -30,12 +26,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Incrementally maintaining a list is unfortunately a very poor fit for wide vectorization.
             //Each pair has its own count, so the target memory location for storing a new contact in the list is different.
             //If we had efficient scatters, this would look something like:
-            //stride = Unsafe.SizeOf<Candidate>() / Unsafe.SizeOf<float>();
+            //stride = Unsafe.SizeOf<Candidate>() / Unsafe.SizeOf<Number>();
             //laneIndices = new Vector<int> { 0, 1, 2, 3... }
             //targetIndices = count * stride + laneIndices;
-            //Scatter(ref candidate.X, ref Unsafe.As<Vector<float>, float>(ref candidates[0].X), count)
-            //Scatter(ref candidate.Y, ref Unsafe.As<Vector<float>, float>(ref candidates[0].Y), count)
-            //Scatter(ref candidate.FeatureId, ref Unsafe.As<Vector<int>, float>(ref candidates[0].FeatureId), count)
+            //Scatter(ref candidate.X, ref Unsafe.As<Vector<Number>, Number>(ref candidates[0].X), count)
+            //Scatter(ref candidate.Y, ref Unsafe.As<Vector<Number>, Number>(ref candidates[0].Y), count)
+            //Scatter(ref candidate.FeatureId, ref Unsafe.As<Vector<int>, Number>(ref candidates[0].FeatureId), count)
             //But we don't have scatter at the moment. We have two options:
             //1) Maintain the vectorized pipeline and emulate the scatters as well as we can with scalar operations. Some risk for running into undefined behavior or compiler issues.
             //2) Immediately drop to full scalar mode, and output an array of AOS ContactManifolds from this test.
@@ -89,7 +85,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void CandidateExists(in ManifoldCandidate candidate, in Vector<float> minimumDepth, in Vector<int> rawContactCount, int i, out Vector<int> exists)
+        static void CandidateExists(in ManifoldCandidate candidate, in Vector<Number> minimumDepth, in Vector<int> rawContactCount, int i, out Vector<int> exists)
         {
             exists = Vector.BitwiseAnd(Vector.GreaterThan(candidate.Depth, minimumDepth), Vector.LessThan(new Vector<int>(i), rawContactCount));
         }
@@ -116,8 +112,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ComputeDepthsForReduction(ref int maxCandidateCount, in Vector3Wide faceNormalA, Vector<float> inverseFaceNormalADotNormal,
-            in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY, Vector<float> minimumDepth, Vector<int> maskedContactCount, ref ManifoldCandidate candidates)
+        static void ComputeDepthsForReduction(ref int maxCandidateCount, in Vector3Wide faceNormalA, Vector<Number> inverseFaceNormalADotNormal,
+            in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY, Vector<Number> minimumDepth, Vector<int> maskedContactCount, ref ManifoldCandidate candidates)
         {
             //It's important to keep the deepest contact if there's any significant depth disparity, so we need to calculate depths before reduction.
             //Conceptually, we cast a ray from the point on face B toward the plane of face A along the contact normal:
@@ -152,7 +148,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void InternalReduce(ref ManifoldCandidate candidates, int maxCandidateCount,
-            Vector<float> epsilonScale, Vector<float> minimumDepth, Vector<int> maskedContactCount,
+            Vector<Number> epsilonScale, Vector<Number> minimumDepth, Vector<int> maskedContactCount,
             out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
             out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
         {
@@ -190,9 +186,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //}
 
             //minor todo: don't really need to waste time initializing to an invalid value.
-            var bestScore = new Vector<float>(-float.MaxValue);
+            var bestScore = new Vector<Number>(-Number.MaxValue);
             //While depth is the dominant heuristic, extremity is used as a bias to keep initial contact selection a little more consistent in near-equal cases.
-            var extremityScale = epsilonScale * 1e-2f;
+            var extremityScale = epsilonScale * Constants.C1em2;
             for (int i = 0; i < maxCandidateCount; ++i)
             {
                 ref var candidate = ref Unsafe.Add(ref candidates, i);
@@ -205,16 +201,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //X and Y added together is slightly better, but 45 degree angles are not uncommon and can result in the same problem.
                 //So we just use a dot product with an arbitrary direction.
                 //This is a pretty small detail, but it is cheap enough that there's no reason not to take advantage of it.
-                var extremity = Vector.Abs(candidate.X * 0.7946897654f + candidate.Y * 0.60701579614f);
-                var candidateScore = candidate.Depth + Vector.ConditionalSelect(Vector.GreaterThanOrEqual(candidate.Depth, Vector<float>.Zero), extremity * extremityScale, Vector<float>.Zero);
+                var extremity = Vector.Abs(candidate.X * Constants.C0p7946897654 + candidate.Y * Constants.C0p60701579614);
+                var candidateScore = candidate.Depth + Vector.ConditionalSelect(Vector.GreaterThanOrEqual(candidate.Depth, Vector<Number>.Zero), extremity * extremityScale, Vector<Number>.Zero);
                 var candidateIsHighestScore = Vector.BitwiseAnd(candidateExists, Vector.GreaterThan(candidateScore, bestScore));
                 ConditionalSelect(candidateIsHighestScore, candidate, contact0, out contact0);
                 bestScore = Vector.ConditionalSelect(candidateIsHighestScore, candidateScore, bestScore);
             }
-            contact0Exists = Vector.GreaterThan(bestScore, new Vector<float>(-float.MaxValue));
+            contact0Exists = Vector.GreaterThan(bestScore, new Vector<Number>(-Number.MaxValue));
 
             //Find the most distant point from the starting contact.
-            var maxDistanceSquared = Vector<float>.Zero;
+            var maxDistanceSquared = Vector<Number>.Zero;
             for (int i = 0; i < maxCandidateCount; ++i)
             {
                 ref var candidate = ref Unsafe.Add(ref candidates, i);
@@ -222,21 +218,21 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var offsetY = candidate.Y - contact0.Y;
                 var distanceSquared = offsetX * offsetX + offsetY * offsetY;
                 ////Penalize speculative contacts; they are not as important in general.
-                //distanceSquared = Vector.ConditionalSelect(Vector.LessThan(candidate.Depth, Vector<float>.Zero), 0.125f * distanceSquared, distanceSquared);
+                //distanceSquared = Vector.ConditionalSelect(Vector.LessThan(candidate.Depth, Vector<Number>.Zero), 0.125f * distanceSquared, distanceSquared);
                 CandidateExists(candidate, minimumDepth, maskedContactCount, i, out var candidateExists);
                 var candidateIsMostDistant = Vector.BitwiseAnd(Vector.GreaterThan(distanceSquared, maxDistanceSquared), candidateExists);
                 maxDistanceSquared = Vector.ConditionalSelect(candidateIsMostDistant, distanceSquared, maxDistanceSquared);
                 ConditionalSelect(candidateIsMostDistant, candidate, contact1, out contact1);
             }
             //There's no point in additional contacts if the distance between the first and second candidates is zero. Note that this captures the case where there is 0 or 1 contact.
-            contact1Exists = Vector.GreaterThan(maxDistanceSquared, epsilonScale * epsilonScale * new Vector<float>(1e-6f));
+            contact1Exists = Vector.GreaterThan(maxDistanceSquared, epsilonScale * epsilonScale * new Vector<Number>(Constants.C1em6));
 
             //Now identify two more points. Using the two existing contacts as a starting edge, pick the points which, when considered as a triangle with the edge,
             //have the largest magnitude negative and positive signed areas.
             var edgeOffsetX = contact1.X - contact0.X;
             var edgeOffsetY = contact1.Y - contact0.Y;
-            var minSignedArea = Vector<float>.Zero;
-            var maxSignedArea = Vector<float>.Zero;
+            var minSignedArea = Vector<Number>.Zero;
+            var maxSignedArea = Vector<Number>.Zero;
             for (int i = 0; i < maxCandidateCount; ++i)
             {
                 //The area of a triangle is proportional to the magnitude of the cross product of two of its edge offsets. 
@@ -246,7 +242,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var candidateOffsetY = candidate.Y - contact0.Y;
                 var signedArea = candidateOffsetX * edgeOffsetY - candidateOffsetY * edgeOffsetX;
                 //Penalize speculative contacts; they are not as important in general.
-                signedArea = Vector.ConditionalSelect(Vector.LessThan(candidate.Depth, Vector<float>.Zero), 0.25f * signedArea, signedArea);
+                signedArea = Vector.ConditionalSelect(Vector.LessThan(candidate.Depth, Vector<Number>.Zero), Constants.C0p25 * signedArea, signedArea);
 
                 CandidateExists(candidate, minimumDepth, maskedContactCount, i, out var candidateExists);
                 var isMinArea = Vector.BitwiseAnd(Vector.LessThan(signedArea, minSignedArea), candidateExists);
@@ -260,7 +256,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Area can be approximated as a box for the purposes of an epsilon test: (edgeLength0 * span)^2 = (edgeLength0 * edgeLength0 * span * span).
             //This comparison is basically checking if 'span' is irrelevantly small, so we can change this to:
             //edgeLength0 * edgeLength0 * (edgeLength0 * tinyNumber) * (edgeLength0 * tinyNumber) = (edgeLength0^2) * (edgelength0^2) * (tinyNumber^2)
-            var epsilon = maxDistanceSquared * maxDistanceSquared * new Vector<float>(1e-6f);
+            var epsilon = maxDistanceSquared * maxDistanceSquared * new Vector<Number>(Constants.C1em6);
             //Note that minSignedArea is guaranteed to be zero or lower by construction, so it's safe to square for magnitude comparison.
             //Note that these epsilons capture the case where there are two or less raw contacts.
             contact2Exists = Vector.GreaterThan(minSignedArea * minSignedArea, epsilon);
@@ -268,8 +264,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         public static void Reduce(ref ManifoldCandidate candidates, Vector<int> rawContactCount, int maxCandidateCount,
-            in Vector3Wide faceNormalA, Vector<float> inverseFaceNormalDotNormal, in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
-            Vector<float> epsilonScale, Vector<float> minimumDepth, int pairCount,
+            in Vector3Wide faceNormalA, Vector<Number> inverseFaceNormalDotNormal, in Vector3Wide faceCenterBToFaceCenterA, in Vector3Wide tangentBX, in Vector3Wide tangentBY,
+            Vector<Number> epsilonScale, Vector<Number> minimumDepth, int pairCount,
             out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
             out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
         {
@@ -278,7 +274,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             InternalReduce(ref candidates, maxCandidateCount, epsilonScale, minimumDepth, maskedContactCount, out contact0, out contact1, out contact2, out contact3, out contact0Exists, out contact1Exists, out contact2Exists, out contact3Exists);
         }
         public static void ReduceWithoutComputingDepths(ref ManifoldCandidate candidates, Vector<int> rawContactCount, int maxCandidateCount,
-            Vector<float> epsilonScale, Vector<float> minimumDepth, int pairCount,
+            Vector<Number> epsilonScale, Vector<Number> minimumDepth, int pairCount,
             out ManifoldCandidate contact0, out ManifoldCandidate contact1, out ManifoldCandidate contact2, out ManifoldCandidate contact3,
             out Vector<int> contact0Exists, out Vector<int> contact1Exists, out Vector<int> contact2Exists, out Vector<int> contact3Exists)
         {
@@ -288,7 +284,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         unsafe static void PlaceCandidateInSlot(in ManifoldCandidateScalar candidate, int contactIndex,
-            Vector3 faceCenterB, Vector3 faceBX, Vector3 faceBY, float depth,
+            Vector3 faceCenterB, Vector3 faceBX, Vector3 faceBY, Number depth,
             in Matrix3x3 orientationB, Vector3 offsetB, ref Convex4ContactManifoldWide manifoldSlot)
         {
             var localPosition = candidate.X * faceBX + candidate.Y * faceBY + faceCenterB;
@@ -302,7 +298,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static unsafe void RemoveCandidateAt(ManifoldCandidateScalar* candidates, float* depths, int removalIndex, ref int candidateCount)
+        static unsafe void RemoveCandidateAt(ManifoldCandidateScalar* candidates, Number* depths, int removalIndex, ref int candidateCount)
         {
             var lastIndex = candidateCount - 1;
             if (removalIndex < lastIndex)
@@ -314,8 +310,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         public unsafe static void Reduce(ManifoldCandidateScalar* candidates, int candidateCount,
-            Vector3 faceNormalA, float inverseFaceNormalADotLocalNormal, Vector3 faceCenterA, Vector3 faceCenterB, Vector3 tangentBX, Vector3 tangentBY,
-            float epsilonScale, float minimumDepth, in Matrix3x3 rotationToWorld, Vector3 worldOffsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
+            Vector3 faceNormalA, Number inverseFaceNormalADotLocalNormal, Vector3 faceCenterA, Vector3 faceCenterB, Vector3 tangentBX, Vector3 tangentBY,
+            Number epsilonScale, Number minimumDepth, in Matrix3x3 rotationToWorld, Vector3 worldOffsetB, int slotIndex, ref Convex4ContactManifoldWide manifoldWide)
         {
             if (candidateCount == 0)
             {
@@ -338,7 +334,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var baseDot = Vector3.Dot(faceCenterAToFaceCenterB, dotAxis);
             var xDot = Vector3.Dot(tangentBX, dotAxis);
             var yDot = Vector3.Dot(tangentBY, dotAxis);
-            var candidateDepths = stackalloc float[candidateCount];
+            var candidateDepths = stackalloc Number[candidateCount];
             for (int i = candidateCount - 1; i >= 0; --i)
             {
                 ref var candidate = ref candidates[i];
@@ -361,17 +357,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
 
             //minor todo: don't really need to waste time initializing to an invalid value.
-            var bestScore0 = float.MinValue;
+            var bestScore0 = Number.MinValue;
             var bestIndex0 = 0;
             //While depth is the dominant heuristic, extremity is used as a bias to keep initial contact selection a little more consistent in near-equal cases.
-            var extremityScale = epsilonScale * 1e-2f;
-            var extremityX = 0.7946897654f * extremityScale;
-            var extremityY = 0.60701579614f * extremityScale;
+            var extremityScale = epsilonScale * Constants.C1em2;
+            var extremityX = Constants.C0p7946897654 * extremityScale;
+            var extremityY = Constants.C0p60701579614 * extremityScale;
             for (int i = 0; i < candidateCount; ++i)
             {
                 ref var candidate = ref candidates[i];
                 ref var candidateDepth = ref candidateDepths[i];
-                float candidateScore = candidateDepth;
+                Number candidateScore = candidateDepth;
                 if (candidateDepth >= 0)
                 {
                     //Note extremity heuristic. We want a few properties:
@@ -399,7 +395,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             RemoveCandidateAt(candidates, candidateDepths, bestIndex0, ref candidateCount);
 
             //Find the most distant point from the starting contact.
-            var maximumDistanceSquared = -1f;
+            var maximumDistanceSquared = Constants.Cm1;
             var bestIndex1 = 0;
             for (int i = 0; i < candidateCount; ++i)
             {
@@ -415,7 +411,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     bestIndex1 = i;
                 }
             }
-            if (maximumDistanceSquared < 1e-6f * epsilonScale * epsilonScale)
+            if (maximumDistanceSquared < Constants.C1em6 * epsilonScale * epsilonScale)
             {
                 //There's no point in additional contacts if the distance between the first and second candidates is zero. 
                 return;
@@ -430,8 +426,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //have the largest magnitude negative and positive signed areas.
             var edgeOffsetX = candidate1.X - candidate0.X;
             var edgeOffsetY = candidate1.Y - candidate0.Y;
-            var minSignedArea = 0f;
-            var maxSignedArea = 0f;
+            var minSignedArea = Constants.C0;
+            var maxSignedArea = Constants.C0;
             var bestIndex2 = 0;
             var bestIndex3 = 0;
             for (int i = 0; i < candidateCount; ++i)
@@ -446,7 +442,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var signedArea = candidateOffsetX * edgeOffsetY - candidateOffsetY * edgeOffsetX;
                 //Penalize speculative contacts; they are not as important in general.
                 if (candidateDepths[i] < 0)
-                    signedArea *= 0.25f;
+                    signedArea *= Constants.C0p25;
 
                 if (signedArea < minSignedArea)
                 {
@@ -463,7 +459,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //Area can be approximated as a box for the purposes of an epsilon test: (edgeLength0 * span)^2 = (edgeLength0 * edgeLength0 * span * span).
             //This comparison is basically checking if 'span' is irrelevantly small, so we can change this to:
             //edgeLength0 * edgeLength0 * (edgeLength0 * tinyNumber) * (edgeLength0 * tinyNumber) = (edgeLength0^2) * (edgelength0^2) * (tinyNumber^2)
-            var areaEpsilon = maximumDistanceSquared * maximumDistanceSquared * 1e-6f;
+            var areaEpsilon = maximumDistanceSquared * maximumDistanceSquared * Constants.C1em6;
             if (minSignedArea * minSignedArea > areaEpsilon)
             {
                 PlaceCandidateInSlot(candidates[bestIndex2], 2, faceCenterB, tangentBX, tangentBY, candidateDepths[bestIndex2], rotationToWorld, worldOffsetB, ref manifoldSlot);

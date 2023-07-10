@@ -6,7 +6,7 @@
 <#@ output extension=".cs" #>
 using BepuPhysics.CollisionDetection;
 using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using BepuUtilities;
@@ -19,9 +19,9 @@ namespace BepuPhysics.Constraints.Contact
     {
         public Vector2Wide Tangent;
 <#for (int i = 0; i < contactCount ; ++i) {#>
-        public Vector<float> Penetration<#=i#>;
+        public Vector<Number> Penetration<#=i#>;
 <#}#>
-        public Vector<float> Twist;
+        public Vector<Number> Twist;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ref Vector2Wide GetTangentFriction(ref Contact<#= contactCount #>AccumulatedImpulses impulses)
@@ -30,12 +30,12 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetTwistFriction(ref Contact<#= contactCount #>AccumulatedImpulses impulses)
+        public ref Vector<Number> GetTwistFriction(ref Contact<#= contactCount #>AccumulatedImpulses impulses)
         {
             return ref impulses.Twist;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref Vector<float> GetPenetrationImpulseForContact(ref Contact<#= contactCount #>AccumulatedImpulses impulses, int index)
+        public ref Vector<Number> GetPenetrationImpulseForContact(ref Contact<#= contactCount #>AccumulatedImpulses impulses, int index)
         {
             Debug.Assert(index >= 0 && index < <#=contactCount#>);
             return ref Unsafe.Add(ref impulses.Penetration0, index);
@@ -51,18 +51,18 @@ namespace BepuPhysics.Constraints.Contact
         public static void ComputeFrictionCenter(
             <#for (int i = 0; i < contactCount; ++i) {#>in Vector3Wide offsetA<#=i#>, <#}#>
 
-            <#for (int i = 0; i < contactCount; ++i) {#>in Vector<float> depth<#=i#>,<#}#> out Vector3Wide center)
+            <#for (int i = 0; i < contactCount; ++i) {#>in Vector<Number> depth<#=i#>,<#}#> out Vector3Wide center)
         {
             //This can sometimes cause a weird center of friction. That's a bit strange, but the alternative is often stranger:
             //Without this, if one contact is active and the other is speculative, friction will use the manifold center as halfway between the two points. If something is holding 
             //the inactive contact side up and swinging it around, the existence of speculative contacts would make friction work against the free swinging.
 <#for (int i = 0; i < contactCount; ++i) {#>
-            var weight<#=i#> = Vector.ConditionalSelect(Vector.LessThan(depth<#=i#>, Vector<float>.Zero), Vector<float>.Zero, Vector<float>.One);
+            var weight<#=i#> = Vector.ConditionalSelect(Vector.LessThan(depth<#=i#>, Vector<Number>.Zero), Vector<Number>.Zero, Vector<Number>.One);
 <#}#>
             var weightSum = <#for (int i = 0; i < contactCount; ++i) {#>weight<#=i#><#if (i < contactCount - 1) {#> + <#}#><#}#>;
-            var useFallback = Vector.Equals(weightSum, Vector<float>.Zero);
-            weightSum = Vector.ConditionalSelect(useFallback, new Vector<float>(<#=contactCount#>), weightSum);
-            var inverseWeightSum = Vector<float>.One / weightSum;
+            var useFallback = Vector.Equals(weightSum, Vector<Number>.Zero);
+            weightSum = Vector.ConditionalSelect(useFallback, new Vector<Number>(<#=contactCount#>), weightSum);
+            var inverseWeightSum = Vector<Number>.One / weightSum;
 <#for (int i = 0; i < contactCount; ++i) {#>
             weight<#=i#> = Vector.ConditionalSelect(useFallback, inverseWeightSum, weight<#=i#> * inverseWeightSum);
 <#}#>
@@ -104,9 +104,9 @@ for (int i = 0; i < contactCount; ++i)
         public Vector3 OffsetB;
 <#}#>
         public Vector3 Normal;
-        public float FrictionCoefficient;
+        public Number FrictionCoefficient;
         public SpringSettings SpringSettings;
-        public float MaximumRecoveryVelocity;
+        public Number MaximumRecoveryVelocity;
 
         public readonly void ApplyDescription(ref TypeBatch batch, int bundleIndex, int innerIndex)
         {
@@ -222,7 +222,7 @@ for (int i = 0; i < contactCount; ++i)
         public bool RequiresIncrementalSubstepUpdates => true;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide velocityA,<#if(bodyCount == 2) {#> in BodyVelocityWide velocityB,<#}#> ref Contact<#=contactCount#><#=suffix#>PrestepData prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide velocityA,<#if(bodyCount == 2) {#> in BodyVelocityWide velocityB,<#}#> ref Contact<#=contactCount#><#=suffix#>PrestepData prestep)
         {
 <#for (int i = 0; i < contactCount; ++i) {#>
             PenetrationLimit<#=suffix#>.UpdatePenetrationDepth(dt, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.OffsetB, <#}#>prestep.Normal, velocityA, <#if (bodyCount == 2) {#>velocityB, <#}#>ref prestep.Contact<#=i#>.Depth);
@@ -249,20 +249,20 @@ for (int i = 0; i < contactCount; ++i)
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(bodyCount == 2) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>float dt, float inverseDt, ref Contact<#=contactCount#><#=suffix#>PrestepData prestep, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA<#if(bodyCount == 2) {#>, ref BodyVelocityWide wsvB<#}#>)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, <#if(bodyCount == 2) {#>in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, <#}#>Number dt, Number inverseDt, ref Contact<#=contactCount#><#=suffix#>PrestepData prestep, ref Contact<#=contactCount#>AccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA<#if(bodyCount == 2) {#>, ref BodyVelocityWide wsvB<#}#>)
         {            
             //Note that we solve the penetration constraints before the friction constraints. 
             //This makes the friction constraints more authoritative, since they happen last.
             //It's a pretty minor effect either way, but penetration constraints have error correction feedback- penetration depth.
             //Friction is velocity only and has no error correction, so introducing error there might cause drift.
             SpringSettingsWide.ComputeSpringiness(prestep.MaterialProperties.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
-            var inverseDtWide = new Vector<float>(inverseDt);
+            var inverseDtWide = new Vector<Number>(inverseDt);
 <#for (int i = 0; i < contactCount; ++i) {#>
             PenetrationLimit<#=suffix#>.Solve(inertiaA<#=bodyCount == 2 ? ", inertiaB" : ""#>, prestep.Normal, prestep.Contact<#=i#>.OffsetA, <#if(bodyCount == 2) {#>prestep.Contact<#=i#>.OffsetA - prestep.OffsetB, <#}#>prestep.Contact<#=i#>.Depth, positionErrorToVelocity, effectiveMassCFMScale, prestep.MaterialProperties.MaximumRecoveryVelocity, inverseDtWide, softnessImpulseScale, ref accumulatedImpulses.Penetration<#=i#>, ref wsvA<#if (bodyCount == 2) {#>, ref wsvB<#}#>);
 <#}#>
             Helpers.BuildOrthonormalBasis(prestep.Normal, out var x, out var z);
 <#if (contactCount > 1) {#>
-            var premultipliedFrictionCoefficient = new Vector<float>(1f / <#=contactCount#>f) * prestep.MaterialProperties.FrictionCoefficient;
+            var premultipliedFrictionCoefficient = new Vector<Number>(Constants.C1 / <#=contactCount#>f) * prestep.MaterialProperties.FrictionCoefficient;
 <#}#>
             var maximumTangentImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * (<#for (int i = 0; i < contactCount; ++i) {#>accumulatedImpulses.Penetration<#=i#><#if(i < contactCount - 1){#> + <#}}#>);
 <#if (contactCount > 1) {#>
@@ -277,7 +277,7 @@ for (int i = 0; i < contactCount; ++i)
 <#if (contactCount == 1) {#>
             //If there's only one contact, then the contact patch as determined by contact distance would be zero.
             //That can cause some subtle behavioral issues sometimes, so we approximate lever arm with the contact depth, assuming that the contact surface area will increase as the depth increases.
-            var maximumTwistImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * accumulatedImpulses.Penetration0 * Vector.Max(Vector<float>.Zero, prestep.Contact0.Depth);
+            var maximumTwistImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * accumulatedImpulses.Penetration0 * Vector.Max(Vector<Number>.Zero, prestep.Contact0.Depth);
 <#} else {#>
             var maximumTwistImpulse = <#=contactCount > 1 ? "premultipliedFrictionCoefficient" : "prestep.MaterialProperties.FrictionCoefficient"#> * (
 <#for (int i = 0; i < contactCount; ++i) {#>

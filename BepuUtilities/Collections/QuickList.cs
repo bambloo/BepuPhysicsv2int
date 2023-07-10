@@ -4,6 +4,7 @@ using BepuUtilities.Memory;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuUtilities.Collections
 {

@@ -1,13 +1,15 @@
 ﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using Demos.UI;
 using System;
+using Math = BepuUtilities.Utils.Math;
 
 namespace Demos
 {
     public class TimingsRingBuffer : IDataSeries, IDisposable
     {
-        QuickQueue<double> queue;
+        QuickQueue<Number> queue;
         BufferPool pool;
 
         /// <summary>
@@ -31,10 +33,10 @@ namespace Demos
             if(maximumCapacity <= 0)
                 throw new ArgumentException("Capacity must be positive.");
             this.pool = pool;
-            queue = new QuickQueue<double>(maximumCapacity, pool);
+            queue = new QuickQueue<Number>(maximumCapacity, pool);
         }
 
-        public void Add(double time)
+        public void Add(Number time)
         {
             if(queue.Count == Capacity)
             {
@@ -44,7 +46,7 @@ namespace Demos
         }
 
 
-        public double this[int index] => queue[index];
+        public Number this[int index] => queue[index];
 
         public int Start => 0;
 
@@ -53,10 +55,10 @@ namespace Demos
         public TimelineStats ComputeStats()
         {
             TimelineStats stats;
-            stats.Total = 0.0;
-            var sumOfSquares = 0.0;
-            stats.Min = double.MaxValue;
-            stats.Max = double.MinValue;
+            stats.Total = Constants.C0;
+            Number sumOfSquares = 0;
+            stats.Min = Number.MaxValue;
+            stats.Max = Number.MinValue;
             for (int i = 0; i < queue.Count; ++i)
             {
                 var time = queue[i];

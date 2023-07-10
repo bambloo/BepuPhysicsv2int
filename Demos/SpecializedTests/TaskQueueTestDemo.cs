@@ -1,14 +1,14 @@
-﻿using BepuUtilities;
-using System;
-using System.Diagnostics;
-using System.Numerics;
+﻿using BepuPhysics;
+using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.TaskScheduling;
 using DemoContentLoader;
 using DemoRenderer;
-using BepuPhysics;
-using BepuPhysics.Constraints;
-using System.Threading;
+using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
-using BepuUtilities.TaskScheduling;
+using System.Threading;
 
 namespace Demos.SpecializedTests;
 
@@ -123,7 +123,7 @@ public unsafe class TaskQueueTestDemo : Demo
     public override void Initialize(ContentArchive content, Camera camera)
     {
         camera.Position = new Vector3(-10, 3, -10);
-        camera.Yaw = MathHelper.Pi * 3f / 4;
+        camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
         camera.Pitch = 0;
 
         Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));

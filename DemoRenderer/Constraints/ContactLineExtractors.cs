@@ -1,12 +1,9 @@
-﻿using BepuPhysics.CollisionDetection;
-using System;
-using System.Numerics;
-using System.Runtime.CompilerServices;
+﻿using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
 using DemoRenderer.Constraints;
-using BepuUtilities.Collections;
 
 namespace BepuPhysics.Constraints.Contact
-{  
+{
     struct Contact1OneBodyLineExtractor : IConstraintLineExtractor<Contact1OneBodyPrestepData>
     {
         public int LinesPerConstraint => 2;

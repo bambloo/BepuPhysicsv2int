@@ -1,17 +1,13 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Demos.Demos
 {
@@ -24,7 +20,7 @@ namespace Demos.Demos
         struct PlanetaryGravityCallbacks : IPoseIntegratorCallbacks
         {
             public Vector3 PlanetCenter;
-            public float Gravity;
+            public Number Gravity;
 
             public readonly AngularIntegrationMode AngularIntegrationMode => AngularIntegrationMode.Nonconserving;
 
@@ -36,18 +32,18 @@ namespace Demos.Demos
             {
             }
 
-            float gravityDt;
-            public void PrepareForIntegration(float dt)
+            Number gravityDt;
+            public void PrepareForIntegration(Number dt)
             {
                 //No point in repeating this for every body; cache it.
                 gravityDt = dt * Gravity;
             }
 
-            public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<float> dt, ref BodyVelocityWide velocity)
+            public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<Number> dt, ref BodyVelocityWide velocity)
             {
                 var offset = position - Vector3Wide.Broadcast(PlanetCenter);
                 var distance = offset.Length();
-                velocity.Linear -= new Vector<float>(gravityDt) * offset / Vector.Max(Vector<float>.One, distance * distance * distance);
+                velocity.Linear -= new Vector<Number>(gravityDt) * offset / Vector.Max(Vector<Number>.One, distance * distance * distance);
             }
         }
 
@@ -76,7 +72,7 @@ namespace Demos.Demos
                     for (int k = 0; k < width; ++k)
                     {
                         Simulation.Bodies.Add(BodyDescription.CreateDynamic(
-                            origin + new Vector3(i, j, k) * spacing, new Vector3(30, 0, 0), inertia, orbiterShapeIndex, 0.01f));
+                            origin + new Vector3(i, j, k) * spacing, new Vector3(30, 0, 0), inertia, orbiterShapeIndex, Constants.C0p01));
                     }
                 }
             }

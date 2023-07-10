@@ -1,10 +1,10 @@
 ﻿using BepuPhysics.CollisionDetection;
-using System;
-using System.Numerics;
-using System.Runtime.CompilerServices;
 using BepuUtilities;
+using BepuUtilities.Numerics;
+using System;
+using System.Runtime.CompilerServices;
 namespace BepuPhysics.Constraints.Contact
-{  
+{
     public struct Contact2Nonconvex : INonconvexTwoBodyContactConstraintDescription<Contact2Nonconvex>
     {
         public NonconvexTwoBodyManifoldConstraintProperties Common;

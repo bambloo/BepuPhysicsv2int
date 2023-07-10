@@ -4,14 +4,18 @@ using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.CollisionDetection.CollisionTasks;
-using System;
+
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
+
 using System.Runtime.CompilerServices;
 using System.Text;
 using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
+using System;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.SpecializedTests
 {
@@ -72,20 +76,20 @@ namespace Demos.SpecializedTests
             var start = Stopwatch.GetTimestamp();
             TestPair(ref a, ref b, ref posesA, ref posesB, ref callbacks, pool, shapes, registry, iterationCount);
             var end = Stopwatch.GetTimestamp();
-            var time = (end - start) / (double)Stopwatch.Frequency;
+            var time = (end - start) / (Number)Stopwatch.Frequency;
             Console.WriteLine($"Completed {count} {typeof(TA).Name}-{typeof(TB).Name} pairs, time (ms): {1e3 * time}, time per pair (ns): {1e9 * time / *callbacks.Count}");
             //Console.WriteLine($"{typeof(TA).Name}-{typeof(TB).Name}, {1e9 * time / *callbacks.Count}");
             //Console.WriteLine($"{typeof(TA).Name}-{typeof(TB).Name} {1e9 * time / *callbacks.Count}");
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        static float TestPair<TA, TAWide, TB, TBWide, TDistanceTester>(ref TAWide a, ref TBWide b, ref TDistanceTester tester,
+        static Number TestPair<TA, TAWide, TB, TBWide, TDistanceTester>(ref TAWide a, ref TBWide b, ref TDistanceTester tester,
             ref Buffer<RigidPose> posesA, ref Buffer<RigidPose> posesB, int iterationCount)
             where TA : IShape where TB : IShape
             where TAWide : struct, IShapeWide<TA> where TBWide : struct, IShapeWide<TB>
             where TDistanceTester : IPairDistanceTester<TAWide, TBWide>
         {
-            var distanceSum = Vector<float>.Zero;
+            var distanceSum = Vector<Number>.Zero;
             for (int i = 0; i < iterationCount; ++i)
             {
                 ref var poseA = ref posesA[i];
@@ -114,8 +118,8 @@ namespace Demos.SpecializedTests
             var start = Stopwatch.GetTimestamp();
             TestPair<TA, TAWide, TB, TBWide, TDistanceTester>(ref aWide, ref bWide, ref tester, ref posesA, ref posesB, iterationCount);
             var end = Stopwatch.GetTimestamp();
-            var time = (end - start) / (double)Stopwatch.Frequency;
-            var instanceCount = Vector<float>.Count * iterationCount;
+            var time = (end - start) / (Number)Stopwatch.Frequency;
+            var instanceCount = Vector<Number>.Count * iterationCount;
             Console.WriteLine($"Completed {instanceCount} {typeof(TA).Name}-{typeof(TB).Name} distance test instances using {typeof(TDistanceTester).Name}, time (ms): {1e3 * time}, time per instance (ns): {1e9 * time / instanceCount}");
         }
 
@@ -123,7 +127,7 @@ namespace Demos.SpecializedTests
         {
             pose.Position = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle());
 
-            float orientationLengthSquared;
+            Number orientationLengthSquared;
             do
             {
                 pose.Orientation = new Quaternion
@@ -202,7 +206,7 @@ namespace Demos.SpecializedTests
             {
                 RigidPose localPose;
                 localPose.Position = new Vector3(12, 12, 12) * (0.5f * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One);
-                float orientationLengthSquared;
+                Number orientationLengthSquared;
                 do
                 {
                     localPose.Orientation = new Quaternion(random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle());

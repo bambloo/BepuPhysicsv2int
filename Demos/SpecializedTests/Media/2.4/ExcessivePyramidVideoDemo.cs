@@ -2,13 +2,14 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
+
 using System.Text;
 
 namespace Demos.SpecializedTests.Media
@@ -23,7 +24,7 @@ namespace Demos.SpecializedTests.Media
             camera.Position = new Vector3(-120, 32, 1045);
             camera.Yaw = MathHelper.Pi * 1f / 4;
             camera.Pitch = 0;
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1), frictionCoefficient: 2), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1), 2, 2), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
             var boxShape = new Box(1, 1, 1);
             var boxInertia = boxShape.ComputeInertia(1);
@@ -41,7 +42,7 @@ namespace Demos.SpecializedTests.Media
                             (-columnCount * 0.5f + columnIndex) * boxShape.Width,
                             (rowIndex + 0.5f) * boxShape.Height,
                             (pyramidIndex - pyramidCount * 0.5f) * (boxShape.Length + 4)),
-                            boxInertia, new CollidableDescription(boxIndex, 0.1f), 0.01f));
+                            boxInertia, new CollidableDescription(boxIndex, 0.1f), Constants.C0p01));
                     }
                 }
             }
@@ -51,14 +52,14 @@ namespace Demos.SpecializedTests.Media
         }
 
         int frameCount;
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             ++frameCount;
             if (frameCount == 128 || (input != null && input.WasPushed(OpenTK.Input.Key.Z)))
             {
                 var bulletShape = new Sphere(6);
                 var bodyDescription = BodyDescription.CreateDynamic(
-                    new Vector3(0, 8, -1200), new Vector3(0, 0, 230), bulletShape.ComputeInertia(5000000), new(Simulation.Shapes.Add(bulletShape), 0.1f), 0.01f);
+                    new Vector3(0, 8, -1200), new Vector3(0, 0, 230), bulletShape.ComputeInertia(5000000), new(Simulation.Shapes.Add(bulletShape), 0.1f), Constants.C0p01);
                 Simulation.Bodies.Add(bodyDescription);
             }
             base.Update(window, camera, input, dt);

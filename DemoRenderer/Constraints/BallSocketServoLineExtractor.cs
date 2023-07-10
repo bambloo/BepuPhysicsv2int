@@ -1,8 +1,8 @@
-﻿using BepuUtilities.Collections;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Constraints;
-using System.Numerics;
 using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
 
 namespace DemoRenderer.Constraints
 {
@@ -22,9 +22,9 @@ namespace DemoRenderer.Constraints
             QuaternionEx.Transform(localOffsetB, poseB.Orientation, out var worldOffsetB);
             var endA = poseA.Position + worldOffsetA;
             var endB = poseB.Position + worldOffsetB;
-            var color = new Vector3(0.2f, 0.2f, 1f) * tint;
+            var color = new Vector3(Constants.C0p2, Constants.C0p2, Constants.C1) * tint;
             var packedColor = Helpers.PackColor(color);
-            var backgroundColor = new Vector3(0f, 0f, 1f) * tint;
+            var backgroundColor = new Vector3(Constants.C0, Constants.C0, Constants.C1) * tint;
             lines.AllocateUnsafely() = new LineInstance(poseA.Position, endA, packedColor, 0);
             lines.AllocateUnsafely() = new LineInstance(poseB.Position, endB, packedColor, 0);
 

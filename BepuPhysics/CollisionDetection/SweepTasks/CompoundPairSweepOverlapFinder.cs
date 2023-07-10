@@ -1,7 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuUtilities.Memory;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
@@ -10,7 +10,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     public interface ICompoundPairSweepOverlapFinder<TCompoundA, TCompoundB> where TCompoundA : struct, ICompoundShape where TCompoundB : struct, IBoundsQueryableCompound
     {
         unsafe void FindOverlaps(ref TCompoundA compoundA, Quaternion orientationA, in BodyVelocity velocityA,
-              ref TCompoundB compoundB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+              ref TCompoundB compoundB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, Number maximumT,
               Shapes shapes, BufferPool pool, out CompoundPairSweepOverlaps overlaps);
     }
 
@@ -20,7 +20,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     {
         public unsafe void FindOverlaps(
             ref TCompoundA compoundA, Quaternion orientationA, in BodyVelocity velocityA,
-            ref TCompoundB compoundB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
+            ref TCompoundB compoundB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, Number maximumT,
             Shapes shapes, BufferPool pool, out CompoundPairSweepOverlaps overlaps)
         {
             overlaps = new CompoundPairSweepOverlaps(pool, compoundA.ChildCount);

@@ -1,8 +1,9 @@
-﻿using System.Numerics;
+﻿
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 
 namespace Demos.Demos.Cars
 {
@@ -17,7 +18,7 @@ namespace Demos.Demos.Cars
         private Vector3 suspensionDirection;
         private AngularHinge hingeDescription;
 
-        public void Steer(Simulation simulation, in WheelHandles wheel, float angle)
+        public void Steer(Simulation simulation, in WheelHandles wheel, Number angle)
         {
             var steeredHinge = hingeDescription;
             Matrix3x3.CreateFromAxisAngle(suspensionDirection, -angle, out var rotation);
@@ -25,7 +26,7 @@ namespace Demos.Demos.Cars
             simulation.Solver.ApplyDescription(wheel.Hinge, steeredHinge);
         }
 
-        public void SetSpeed(Simulation simulation, in WheelHandles wheel, float speed, float maximumForce)
+        public void SetSpeed(Simulation simulation, in WheelHandles wheel, Number speed, Number maximumForce)
         {
             simulation.Solver.ApplyDescription(wheel.Motor, new AngularAxisMotor
             {
@@ -36,14 +37,14 @@ namespace Demos.Demos.Cars
         }
 
         public static WheelHandles CreateWheel(Simulation simulation, CollidableProperty<CarBodyProperties> properties, in RigidPose bodyPose,
-            TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, BodyHandle bodyHandle, ref SubgroupCollisionFilter bodyFilter, Vector3 bodyToWheelSuspension, Vector3 suspensionDirection, float suspensionLength,
+            TypedIndex wheelShape, BodyInertia wheelInertia, Number wheelFriction, BodyHandle bodyHandle, ref SubgroupCollisionFilter bodyFilter, Vector3 bodyToWheelSuspension, Vector3 suspensionDirection, Number suspensionLength,
             in AngularHinge hingeDescription, in SpringSettings suspensionSettings, Quaternion localWheelOrientation)
         {
             RigidPose wheelPose;
             RigidPose.Transform(bodyToWheelSuspension + suspensionDirection * suspensionLength, bodyPose, out wheelPose.Position);
             QuaternionEx.ConcatenateWithoutOverlap(localWheelOrientation, bodyPose.Orientation, out wheelPose.Orientation);
             WheelHandles handles;
-            handles.Wheel = simulation.Bodies.Add(BodyDescription.CreateDynamic(wheelPose, wheelInertia, new(wheelShape, 0.5f), 0.01f));
+            handles.Wheel = simulation.Bodies.Add(BodyDescription.CreateDynamic(wheelPose, wheelInertia, new(wheelShape, Constants.C0p5), Constants.C0p01));
 
             handles.SuspensionSpring = simulation.Solver.Add(bodyHandle, handles.Wheel, new LinearAxisServo
             {
@@ -80,12 +81,12 @@ namespace Demos.Demos.Cars
         }
 
         public static SimpleCar Create(Simulation simulation, CollidableProperty<CarBodyProperties> properties, in RigidPose pose,
-            TypedIndex bodyShape, BodyInertia bodyInertia, float bodyFriction, TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction,
+            TypedIndex bodyShape, BodyInertia bodyInertia, Number bodyFriction, TypedIndex wheelShape, BodyInertia wheelInertia, Number wheelFriction,
             Vector3 bodyToFrontLeftSuspension, Vector3 bodyToFrontRightSuspension, Vector3 bodyToBackLeftSuspension, Vector3 bodyToBackRightSuspension,
-            Vector3 suspensionDirection, float suspensionLength, in SpringSettings suspensionSettings, Quaternion localWheelOrientation)
+            Vector3 suspensionDirection, Number suspensionLength, in SpringSettings suspensionSettings, Quaternion localWheelOrientation)
         {
             SimpleCar car;
-            car.Body = simulation.Bodies.Add(BodyDescription.CreateDynamic(pose, bodyInertia, new(bodyShape, 0.5f), 0.01f));
+            car.Body = simulation.Bodies.Add(BodyDescription.CreateDynamic(pose, bodyInertia, new(bodyShape, Constants.C0p5), Constants.C0p01));
             ref var bodyProperties = ref properties.Allocate(car.Body);
             bodyProperties = new CarBodyProperties { Friction = bodyFriction, Filter = new SubgroupCollisionFilter(car.Body.Value, 0) };
             QuaternionEx.TransformUnitY(localWheelOrientation, out var wheelAxis);

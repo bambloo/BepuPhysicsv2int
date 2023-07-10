@@ -1,17 +1,13 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Demos.Demos
 {
@@ -29,7 +25,7 @@ namespace Demos.Demos
             /// Unlike active set body indices, body handles don't move around when other bodies are removed or slept.
             /// There's nothing special about the CollidableProperty; it's just a helper, feel free to use any approach that works.
             /// </summary>
-            public CollidableProperty<float> BodyGravities;
+            public CollidableProperty<Number> BodyGravities;
             /// <summary>
             /// Used to look up body handles using the callback-provided body indices.
             /// </summary>
@@ -49,11 +45,11 @@ namespace Demos.Demos
                 bodies = simulation.Bodies;
             }
 
-            public void PrepareForIntegration(float dt)
+            public void PrepareForIntegration(Number dt)
             {
             }
 
-            public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<float> dt, ref BodyVelocityWide velocity)
+            public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<Number> dt, ref BodyVelocityWide velocity)
             {
                 //Velocity integration runs over bundles of bodies, not just one at a time.
                 //The reason is that all calling contexts of this function are vectorized and transitioning from AOSOA to the more familiar AOS layout is not free.
@@ -68,8 +64,8 @@ namespace Demos.Demos
 
                 //While this is more expensive than not looking up per-body data, it's a good idea to keep things in perspective:
                 //On a 3970x running this simulation, the full frame cost difference between this per-body lookup
-                //(versus something like velocity.Linear.Y += new Vector<float>(-10) * dt) is about 50-100 microseconds.
-                Span<float> gravityValues = stackalloc float[Vector<float>.Count];
+                //(versus something like velocity.Linear.Y += new Vector<Number>(-10) * dt) is about 50-100 microseconds.
+                Span<Number> gravityValues = stackalloc Number[Vector<Number>.Count];
                 for (int bundleSlotIndex = 0; bundleSlotIndex < Vector<int>.Count; ++bundleSlotIndex)
                 {
                     var bodyIndex = bodyIndices[bundleSlotIndex];
@@ -82,7 +78,7 @@ namespace Demos.Demos
                 }
                 //Note that the callback doesn't have to filter writes based on the integration mask, even though not every slot might be active.
                 //The caller is responsible for only using the active slots.
-                velocity.Linear.Y += new Vector<float>(gravityValues) * dt;
+                velocity.Linear.Y += new Vector<Number>(gravityValues) * dt;
             }
         }
 
@@ -94,7 +90,7 @@ namespace Demos.Demos
             camera.Pitch = 0;
 
             //The CollidableProperty is a helper that associates body handles to whatever data you'd like to store. You don't have to use it, but it's fairly convenient.
-            var bodyGravities = new CollidableProperty<float>(BufferPool);
+            var bodyGravities = new CollidableProperty<Number>(BufferPool);
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new PerBodyGravityDemoCallbacks() { BodyGravities = bodyGravities }, new SolveDescription(4, 1));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(1000, 10, 1000))));
@@ -121,7 +117,7 @@ namespace Demos.Demos
                     {
                         BodyInertia inertia;
                         TypedIndex shapeIndex;
-                        float gravity;
+                        Number gravity;
                         switch ((i + k) % 3)
                         {
                             case 0:
@@ -142,7 +138,7 @@ namespace Demos.Demos
                         }
 
                         var bodyHandle = Simulation.Bodies.Add(BodyDescription.CreateDynamic(
-                            origin + new Vector3(i, j, k) * spacing, new Vector3(0, 0, 0), inertia, shapeIndex, 0.001f));
+                            origin + new Vector3(i, j, k) * spacing, new Vector3(0, 0, 0), inertia, shapeIndex, Constants.C0p001));
                         bodyGravities.Allocate(bodyHandle) = gravity;
                     }
                 }

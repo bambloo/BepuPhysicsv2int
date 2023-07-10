@@ -1,11 +1,11 @@
 ﻿using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using Demos.UI;
 using DemoUtilities;
 using System;
-using System.Numerics;
 
 namespace Demos
 {
@@ -70,15 +70,15 @@ namespace Demos
             {
                 BodyLineColor = new Vector3(1, 1, 1),
                 AxisLabelHeight = 16,
-                AxisLineRadius = 0.5f,
+                AxisLineRadius = Constants.C0p5,
                 HorizontalAxisLabel = "Frames",
                 VerticalAxisLabel = "Time (ms)",
-                VerticalIntervalValueScale = 1e3f,
+                VerticalIntervalValueScale = (Number)1e3f,
                 VerticalIntervalLabelRounding = 2,
-                BackgroundLineRadius = 0.125f,
+                BackgroundLineRadius = (Number)0.125f,
                 IntervalTextHeight = 12,
-                IntervalTickRadius = 0.25f,
-                IntervalTickLength = 6f,
+                IntervalTickRadius = (Number)0.25f,
+                IntervalTickLength = 6,
                 TargetHorizontalTickCount = 5,
                 HorizontalTickTextPadding = 0,
                 VerticalTickTextPadding = 3,
@@ -96,12 +96,12 @@ namespace Demos
             });
             timingGraph.AddSeries("Total", new Vector3(1, 1, 1), 0.75f, timeSamples.Simulation);
             timingGraph.AddSeries("Pose Integrator", new Vector3(0, 0, 1), 0.25f, timeSamples.PoseIntegrator);
-            timingGraph.AddSeries("Sleeper", new Vector3(0.5f, 0, 1), 0.25f, timeSamples.Sleeper);
+            timingGraph.AddSeries("Sleeper", new Vector3(Constants.C0p5, 0, 1), 0.25f, timeSamples.Sleeper);
             timingGraph.AddSeries("Broad Update", new Vector3(1, 1, 0), 0.25f, timeSamples.BroadPhaseUpdate);
             timingGraph.AddSeries("Collision Test", new Vector3(0, 1, 0), 0.25f, timeSamples.CollisionTesting);
             timingGraph.AddSeries("Narrow Flush", new Vector3(1, 0, 1), 0.25f, timeSamples.NarrowPhaseFlush);
-            timingGraph.AddSeries("Solver", new Vector3(1, 0, 0), 0.5f, timeSamples.Solver);
-            timingGraph.AddSeries("Batch Compress", new Vector3(0, 0.5f, 0), 0.125f, timeSamples.BatchCompressor);
+            timingGraph.AddSeries("Solver", new Vector3(1, 0, 0), Constants.C0p5, timeSamples.Solver);
+            timingGraph.AddSeries("Batch Compress", new Vector3(0, Constants.C0p5, 0), 0.125f, timeSamples.BatchCompressor);
 
             demoSet = new DemoSet();
             demo = demoSet.Build(0, content, loop.Camera, loop.Surface);
@@ -118,7 +118,7 @@ namespace Demos
             {
                 case TimingDisplayMode.Big:
                     {
-                        const float inset = 150;
+                        Number inset = 150;
                         description.BodyMinimum = new Vector2(inset);
                         description.BodySpan = new Vector2(resolution.X, resolution.Y) - description.BodyMinimum - new Vector2(inset);
                         description.LegendMinimum = description.BodyMinimum - new Vector2(110, 0);
@@ -127,7 +127,7 @@ namespace Demos
                     break;
                 case TimingDisplayMode.Regular:
                     {
-                        const float inset = 50;
+                        Number inset = 50;
                         var targetSpan = new Vector2(400, 150);
                         description.BodyMinimum = new Vector2(resolution.X - targetSpan.X - inset, inset);
                         description.BodySpan = targetSpan;
@@ -153,7 +153,7 @@ namespace Demos
         CameraMoveSpeedState cameraSpeedState;
         Int2? grabberCachedMousePosition;
 
-        public void Update(float dt)
+        public void Update(Number dt)
         {
             //Don't bother responding to input if the window isn't focused.
             var input = loop.Input;
@@ -209,7 +209,7 @@ namespace Demos
 
                 if (length > 1e-7f)
                 {
-                    float cameraMoveSpeed;
+                    Number cameraMoveSpeed;
                     switch (cameraSpeedState)
                     {
                         case CameraMoveSpeedState.Slow:
@@ -268,7 +268,8 @@ namespace Demos
                     incrementalGrabRotation = Quaternion.Identity;
                     grabberCachedMousePosition = null;
                 }
-                grabber.Update(demo.Simulation, camera, input.MouseLocked, controls.Grab.IsDown(input), incrementalGrabRotation, window.GetNormalizedMousePosition(input.MousePosition));
+                var pos = window.GetNormalizedMousePosition(input.MousePosition);
+                grabber.Update(demo.Simulation, camera, input.MouseLocked, controls.Grab.IsDown(input), incrementalGrabRotation, new Vector2(pos.X, pos.Y));
 
 
 
@@ -320,12 +321,12 @@ namespace Demos
             //Perform any demo-specific rendering first.
             demo.Render(renderer, loop.Camera, loop.Input, uiText, font);
 #if DEBUG
-            float warningHeight = 15f;
+            Number warningHeight = 15f;
             renderer.TextBatcher.Write(uiText.Clear().Append("Running in Debug configuration. Compile in Release or, better yet, ReleaseStrip configuration for performance testing."),
-                new Vector2((loop.Window.Resolution.X - GlyphBatch.MeasureLength(uiText, font, warningHeight)) * 0.5f, warningHeight), warningHeight, new Vector3(1, 0, 0), font);
+                new Vector2((loop.Window.Resolution.X - GlyphBatch.MeasureLength(uiText, font, warningHeight)) * Constants.C0p5, warningHeight), warningHeight, new Vector3(1, 0, 0), font);
 #endif            
-            float textHeight = 16;
-            float lineSpacing = textHeight * 1.0f;
+            Number textHeight = 16;
+            Number lineSpacing = textHeight * 1.0f;
             var textColor = new Vector3(1, 1, 1);
             if (showControls)
             {
@@ -333,11 +334,11 @@ namespace Demos
                 penPosition.Y -= 19 * lineSpacing;
                 uiText.Clear().Append("Controls: ");
                 var headerHeight = textHeight * 1.2f;
-                renderer.TextBatcher.Write(uiText, penPosition - new Vector2(0.5f * GlyphBatch.MeasureLength(uiText, font, headerHeight), 0), headerHeight, textColor, font);
+                renderer.TextBatcher.Write(uiText, penPosition - new Vector2(Constants.C0p5 * GlyphBatch.MeasureLength(uiText, font, headerHeight), 0), headerHeight, textColor, font);
                 penPosition.Y += lineSpacing;
 
                 var controlPosition = penPosition;
-                controlPosition.X += textHeight * 0.5f;
+                controlPosition.X += textHeight * Constants.C0p5;
 
                 void WriteInstantName(string controlName, InstantBind control)
                 {
@@ -384,7 +385,7 @@ namespace Demos
             else
             {
                 controls.ShowControls.AppendString(uiText.Clear().Append("Press ")).Append(" for controls.");
-                const float inset = 25;
+                Number inset = 25;
                 renderer.TextBatcher.Write(uiText,
                     new Vector2(loop.Window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, textHeight), loop.Window.Resolution.Y - inset),
                     textHeight, textColor, font);
@@ -398,13 +399,14 @@ namespace Demos
             }
             else
             {
-                const float timingTextSize = 14;
-                const float inset = 25;
+                Number timingTextSize = 14;
+                Number inset = 25;
                 renderer.TextBatcher.Write(
-                    uiText.Clear().Append(1e3 * timeSamples.Simulation[timeSamples.Simulation.End - 1], timingGraph.Description.VerticalIntervalLabelRounding).Append(" ms/step"),
+                    uiText.Clear().Append(1e3 * (float)timeSamples.Simulation[timeSamples.Simulation.End - 1], timingGraph.Description.VerticalIntervalLabelRounding).Append(" ms/step"),
                     new Vector2(loop.Window.Resolution.X - inset - GlyphBatch.MeasureLength(uiText, font, timingTextSize), inset), timingTextSize, timingGraph.Description.TextColor, font);
             }
-            grabber.Draw(renderer.Lines, loop.Camera, loop.Input.MouseLocked, controls.Grab.IsDown(loop.Input), loop.Window.GetNormalizedMousePosition(loop.Input.MousePosition));
+            var pos = loop.Window.GetNormalizedMousePosition(loop.Input.MousePosition);
+            grabber.Draw(renderer.Lines, loop.Camera, loop.Input.MouseLocked, controls.Grab.IsDown(loop.Input), new Vector2(pos.X, pos.Y));
             renderer.Shapes.AddInstances(demo.Simulation, demo.ThreadDispatcher);
             renderer.Lines.ShowConstraints = showConstraints;
             renderer.Lines.ShowContacts = showContacts;

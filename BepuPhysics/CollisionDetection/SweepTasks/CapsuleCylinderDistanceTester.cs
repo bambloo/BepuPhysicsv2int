@@ -1,7 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuUtilities;
-using System.Numerics;
+using BepuUtilities.Numerics;
 
 namespace BepuPhysics.CollisionDetection.SweepTasks
 {
@@ -10,7 +10,7 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
     internal struct CapsuleCylinderDistanceTester : IPairDistanceTester<CapsuleWide, CylinderWide>
     {
         public void Test(in CapsuleWide a, in CylinderWide b, in Vector3Wide offsetB, in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector<int> inactiveLanes,
-            out Vector<int> intersected, out Vector<float> distance, out Vector3Wide closestA, out Vector3Wide normal)
+            out Vector<int> intersected, out Vector<Number> distance, out Vector3Wide closestA, out Vector3Wide normal)
         {
             QuaternionWide.Conjugate(orientationB, out var inverseOrientationB);
             QuaternionWide.ConcatenateWithoutOverlap(orientationA, inverseOrientationB, out var localOrientationA);
@@ -21,9 +21,9 @@ namespace BepuPhysics.CollisionDetection.SweepTasks
             CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(localOffsetA, capsuleAxis, a.HalfLength, b, Vector<int>.Zero, out var t, out var offsetFromCylinderToLineSegment);
 
             Vector3Wide.Length(offsetFromCylinderToLineSegment, out distance);
-            Vector3Wide.Scale(offsetFromCylinderToLineSegment, Vector<float>.One / distance, out var localNormal);
+            Vector3Wide.Scale(offsetFromCylinderToLineSegment, Vector<Number>.One / distance, out var localNormal);
             distance -= a.Radius;
-            intersected = Vector.LessThanOrEqual(distance, Vector<float>.Zero);
+            intersected = Vector.LessThanOrEqual(distance, Vector<Number>.Zero);
             QuaternionWide.TransformWithoutOverlap(localNormal, orientationB, out normal);
             Vector3Wide.Scale(capsuleAxis, t, out var localClosestA);
             Vector3Wide.Scale(localNormal, a.Radius, out var normalOffset);

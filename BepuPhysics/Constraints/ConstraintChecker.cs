@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace BepuPhysics.Constraints
 {
@@ -15,9 +12,9 @@ namespace BepuPhysics.Constraints
         /// <param name="value">Value to check.</param>
         /// <returns>True if the value is neither infinite nor NaN, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsFiniteNumber(float value)
+        public static bool IsFiniteNumber(Number value)
         {
-            return !float.IsInfinity(value) && !float.IsNaN(value);
+            return !Number.IsInfinity(value) && !Number.IsNaN(value);
         }
         /// <summary>
         /// Checks if a value is a finite value greater than zero and not NaN.
@@ -25,7 +22,7 @@ namespace BepuPhysics.Constraints
         /// <param name="value">Value to check.</param>
         /// <returns>True if the value is a finite number greater than zero and not NaN, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsPositiveNumber(float value)
+        public static bool IsPositiveNumber(Number value)
         {
             return IsFiniteNumber(value) && value > 0;
         }
@@ -35,7 +32,7 @@ namespace BepuPhysics.Constraints
         /// <param name="value">Value to check.</param>
         /// <returns>True if the value is a finite number greater than or equal to zero and not NaN, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsNonnegativeNumber(float value)
+        public static bool IsNonnegativeNumber(Number value)
         {
             return IsFiniteNumber(value) && value >= 0;
         }
@@ -45,7 +42,7 @@ namespace BepuPhysics.Constraints
         /// <param name="value">Value to check.</param>
         /// <returns>True if the value is a finite number less than zero and not NaN, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsNegativeNumber(float value)
+        public static bool IsNegativeNumber(Number value)
         {
             return IsFiniteNumber(value) && value < 0;
         }
@@ -55,7 +52,7 @@ namespace BepuPhysics.Constraints
         /// <param name="value">Value to check.</param>
         /// <returns>True if the value is a finite number less than or equal to zero and not NaN, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool IsNonpositiveNumber(float value)
+        public static bool IsNonpositiveNumber(Number value)
         {
             return IsFiniteNumber(value) && value <= 0;
         }
@@ -63,7 +60,7 @@ namespace BepuPhysics.Constraints
         public static void AssertUnitLength(Vector3 v, string typeName, string propertyName)
         {
             var lengthSquared = v.LengthSquared();
-            if (lengthSquared > 1 + 1e-5f || lengthSquared < 1 - 1e-5f || !IsFiniteNumber(lengthSquared))
+            if (lengthSquared > 1 + Constants.C1em5 || lengthSquared < 1 - Constants.C1em5 || !IsFiniteNumber(lengthSquared))
             {
                 Debug.Fail($"{typeName}.{propertyName} must be unit length.");
             }
@@ -72,7 +69,7 @@ namespace BepuPhysics.Constraints
         public static void AssertUnitLength(Quaternion q, string typeName, string propertyName)
         {
             var lengthSquared = q.LengthSquared();
-            if (lengthSquared > 1 + 1e-5f || lengthSquared < 1 - 1e-5f || !IsFiniteNumber(lengthSquared))
+            if (lengthSquared > 1 + Constants.C1em5 || lengthSquared < 1 - Constants.C1em5 || !IsFiniteNumber(lengthSquared))
             {
                 Debug.Fail($"{typeName}.{propertyName} must be unit length.");
             }

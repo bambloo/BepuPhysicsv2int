@@ -1,9 +1,9 @@
-﻿using System;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using BepuUtilities.Memory;
+﻿using BepuPhysics.CollisionDetection;
 using BepuUtilities;
-using BepuPhysics.CollisionDetection;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Collidables
 {
@@ -15,28 +15,28 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Half of the box's width along its local X axis.
         /// </summary>
-        public float HalfWidth;
+        public Number HalfWidth;
         /// <summary>
         /// Half of the box's height along its local Y axis.
         /// </summary>
-        public float HalfHeight;
+        public Number HalfHeight;
         /// <summary>
         /// Half of the box's length along its local Z axis.
         /// </summary>
-        public float HalfLength;
+        public Number HalfLength;
 
         /// <summary>
         /// Gets or sets the width of the box along its local X axis.
         /// </summary>
-        public float Width { get { return HalfWidth * 2; } set { HalfWidth = value * 0.5f; } }
+        public Number Width { get { return HalfWidth * 2; } set { HalfWidth = value * Constants.C0p5; } }
         /// <summary>
         /// Gets or sets the height of the box along its local Y axis.
         /// </summary>
-        public float Height { get { return HalfHeight * 2; } set { HalfHeight = value * 0.5f; } }
+        public Number Height { get { return HalfHeight * 2; } set { HalfHeight = value * Constants.C0p5; } }
         /// <summary>
         /// Gets or sets the length of the box along its local Z axis.
         /// </summary>
-        public float Length { get { return HalfLength * 2; } set { HalfLength = value * 0.5f; } }
+        public Number Length { get { return HalfLength * 2; } set { HalfLength = value * Constants.C0p5; } }
 
         /// <summary>
         /// Creates a Box shape.
@@ -44,11 +44,11 @@ namespace BepuPhysics.Collidables
         /// <param name="width">Width of the box along the local X axis.</param>
         /// <param name="height">Height of the box along the local Y axis.</param>
         /// <param name="length">Length of the box along the local Z axis.</param>
-        public Box(float width, float height, float length)
+        public Box(Number width, Number height, Number length)
         {
-            HalfWidth = width * 0.5f;
-            HalfHeight = height * 0.5f;
-            HalfLength = length * 0.5f;
+            HalfWidth = width * Constants.C0p5;
+            HalfHeight = height * Constants.C0p5;
+            HalfLength = length * Constants.C0p5;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -63,13 +63,13 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        public readonly void ComputeAngularExpansionData(out Number maximumRadius, out Number maximumAngularExpansion)
         {
-            maximumRadius = (float)Math.Sqrt(HalfWidth * HalfWidth + HalfHeight * HalfHeight + HalfLength * HalfLength);
+            maximumRadius = (Number)Math.Sqrt(HalfWidth * HalfWidth + HalfHeight * HalfHeight + HalfLength * HalfLength);
             maximumAngularExpansion = maximumRadius - Vector4.Min(new Vector4(HalfLength), Vector4.Min(new Vector4(HalfHeight), new Vector4(HalfLength))).X;
         }
 
-        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out Number t, out Vector3 normal)
         {
             var offset = origin - pose.Position;
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
@@ -81,7 +81,7 @@ namespace BepuPhysics.Collidables
             //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
             //2) To compensate for the clamp and abs, we reintroduce the sign in the numerator. Note that it has the reverse sign since it will be applied to the offset to get the T value.
             var offsetToTScale =
-                new Vector3(localDirection.X < 0 ? 1 : -1, localDirection.Y < 0 ? 1 : -1, localDirection.Z < 0 ? 1 : -1) / Vector3.Max(new Vector3(1e-15f), Vector3.Abs(localDirection));
+                new Vector3(localDirection.X < 0 ? 1 : -1, localDirection.Y < 0 ? 1 : -1, localDirection.Z < 0 ? 1 : -1) / Vector3.Max(new Vector3(Constants.C1em15), Vector3.Abs(localDirection));
 
             //Compute impact times for each pair of planes in local space.
             var halfExtent = new Vector3(HalfWidth, HalfHeight, HalfLength);
@@ -102,7 +102,7 @@ namespace BepuPhysics.Collidables
                 normal = new Vector3();
                 return false;
             }
-            float latestEntry;
+            Number latestEntry;
             if (entryT.X > entryT.Y)
             {
                 if (entryT.X > entryT.Z)
@@ -146,10 +146,10 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
-        public readonly BodyInertia ComputeInertia(float mass)
+        public readonly BodyInertia ComputeInertia(Number mass)
         {
             BodyInertia inertia;
-            inertia.InverseMass = 1f / mass;
+            inertia.InverseMass = Constants.C1 / mass;
             var x2 = HalfWidth * HalfWidth;
             var y2 = HalfHeight * HalfHeight;
             var z2 = HalfLength * HalfLength;
@@ -177,24 +177,24 @@ namespace BepuPhysics.Collidables
 
     public struct BoxWide : IShapeWide<Box>
     {
-        public Vector<float> HalfWidth;
-        public Vector<float> HalfHeight;
-        public Vector<float> HalfLength;
+        public Vector<Number> HalfWidth;
+        public Vector<Number> HalfHeight;
+        public Vector<Number> HalfLength;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Broadcast(in Box shape)
         {
-            HalfWidth = new Vector<float>(shape.HalfWidth);
-            HalfHeight = new Vector<float>(shape.HalfHeight);
-            HalfLength = new Vector<float>(shape.HalfLength);
+            HalfWidth = new Vector<Number>(shape.HalfWidth);
+            HalfHeight = new Vector<Number>(shape.HalfHeight);
+            HalfLength = new Vector<Number>(shape.HalfLength);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteFirst(in Box source)
         {
-            Unsafe.As<Vector<float>, float>(ref HalfWidth) = source.HalfWidth;
-            Unsafe.As<Vector<float>, float>(ref HalfHeight) = source.HalfHeight;
-            Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;
+            Unsafe.As<Vector<Number>, Number>(ref HalfWidth) = source.HalfWidth;
+            Unsafe.As<Vector<Number>, Number>(ref HalfHeight) = source.HalfHeight;
+            Unsafe.As<Vector<Number>, Number>(ref HalfLength) = source.HalfLength;
         }
 
         public bool AllowOffsetMemoryAccess => true;
@@ -208,7 +208,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
+        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<Number> maximumRadius, out Vector<Number> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientations, out var basis);
             max.X = Vector.Abs(HalfWidth * basis.X.X) + Vector.Abs(HalfHeight * basis.Y.X) + Vector.Abs(HalfLength * basis.Z.X);
@@ -230,7 +230,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector<int> intersected, out Vector<Number> t, out Vector3Wide normal)
         {
             Vector3Wide.Subtract(ray.Origin, pose.Position, out var offset);
             Matrix3x3Wide.CreateFromQuaternion(pose.Orientation, out var orientation);
@@ -241,12 +241,12 @@ namespace BepuPhysics.Collidables
             //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
             //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
             //2) To compensate for the clamp and abs, we reintroduce the sign in the numerator. Note that it has the reverse sign since it will be applied to the offset to get the T value.
-            var negativeOne = -Vector<float>.One;
-            var epsilon = new Vector<float>(1e-15f);
+            var negativeOne = -Vector<Number>.One;
+            var epsilon = new Vector<Number>(Constants.C1em15);
             Vector3Wide offsetToTScale;
-            offsetToTScale.X = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.X, Vector<float>.Zero), negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.X));
-            offsetToTScale.Y = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.Y, Vector<float>.Zero), negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.Y));
-            offsetToTScale.Z = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.Z, Vector<float>.Zero), negativeOne, Vector<float>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.Z));
+            offsetToTScale.X = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.X, Vector<Number>.Zero), negativeOne, Vector<Number>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.X));
+            offsetToTScale.Y = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.Y, Vector<Number>.Zero), negativeOne, Vector<Number>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.Y));
+            offsetToTScale.Z = Vector.ConditionalSelect(Vector.GreaterThan(localDirection.Z, Vector<Number>.Zero), negativeOne, Vector<Number>.One) / Vector.Max(epsilon, Vector.Abs(localDirection.Z));
 
             //Compute impact times for each pair of planes in local space.
             Vector3Wide negativeT, positiveT;
@@ -267,7 +267,7 @@ namespace BepuPhysics.Collidables
             //In other words, the first exit must occur after the last entry.
             var earliestExit = Vector.Min(Vector.Min(exitT.X, exitT.Y), exitT.Z);
             var earliestEntry = Vector.Max(Vector.Max(entryT.X, entryT.Y), entryT.Z);
-            t = Vector.Max(Vector<float>.Zero, earliestEntry);
+            t = Vector.Max(Vector<Number>.Zero, earliestEntry);
             intersected = Vector.LessThanOrEqual(t, earliestExit);
 
             var useX = Vector.Equals(earliestEntry, entryT.X);
@@ -276,7 +276,7 @@ namespace BepuPhysics.Collidables
             normal.Y = Vector.ConditionalSelect(useX, orientation.X.Y, Vector.ConditionalSelect(useY, orientation.Y.Y, orientation.Z.Y));
             normal.Z = Vector.ConditionalSelect(useX, orientation.X.Z, Vector.ConditionalSelect(useY, orientation.Y.Z, orientation.Z.Z));
             Vector3Wide.Dot(normal, offset, out var dot);
-            var shouldNegate = Vector.LessThan(dot, Vector<float>.Zero);
+            var shouldNegate = Vector.LessThan(dot, Vector<Number>.Zero);
             normal.X = Vector.ConditionalSelect(shouldNegate, -normal.X, normal.X);
             normal.Y = Vector.ConditionalSelect(shouldNegate, -normal.Y, normal.Y);
             normal.Z = Vector.ConditionalSelect(shouldNegate, -normal.Z, normal.Z);
@@ -292,7 +292,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetMargin(in BoxWide shape, out Vector<float> margin)
+        public void GetMargin(in BoxWide shape, out Vector<Number> margin)
         {
             margin = default;
         }
@@ -308,9 +308,9 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeLocalSupport(in BoxWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
-            support.X = Vector.ConditionalSelect(Vector.LessThan(direction.X, Vector<float>.Zero), -shape.HalfWidth, shape.HalfWidth);
-            support.Y = Vector.ConditionalSelect(Vector.LessThan(direction.Y, Vector<float>.Zero), -shape.HalfHeight, shape.HalfHeight);
-            support.Z = Vector.ConditionalSelect(Vector.LessThan(direction.Z, Vector<float>.Zero), -shape.HalfLength, shape.HalfLength);
+            support.X = Vector.ConditionalSelect(Vector.LessThan(direction.X, Vector<Number>.Zero), -shape.HalfWidth, shape.HalfWidth);
+            support.Y = Vector.ConditionalSelect(Vector.LessThan(direction.Y, Vector<Number>.Zero), -shape.HalfHeight, shape.HalfHeight);
+            support.Z = Vector.ConditionalSelect(Vector.LessThan(direction.Z, Vector<Number>.Zero), -shape.HalfLength, shape.HalfLength);
         }
     }
 }

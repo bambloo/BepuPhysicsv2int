@@ -1,6 +1,6 @@
 ﻿using DemoContentLoader;
 using SharpDX.Direct3D11;
-using System.Numerics;
+
 using System.Runtime.InteropServices;
 
 namespace DemoRenderer.ShapeDrawing
@@ -10,15 +10,15 @@ namespace DemoRenderer.ShapeDrawing
     public struct TriangleInstance
     {
         [FieldOffset(0)]
-        public Vector3 A;
+        public System.Numerics.Vector3 A;
         [FieldOffset(12)]
         public uint PackedColor;
         [FieldOffset(16)]
-        public Vector3 B;
+        public System.Numerics.Vector3 B;
         [FieldOffset(28)]
         public float X;
         [FieldOffset(32)]
-        public Vector3 C;
+        public System.Numerics.Vector3 C;
         [FieldOffset(44)]
         public float Y;
         [FieldOffset(48)]

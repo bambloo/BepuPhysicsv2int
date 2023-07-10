@@ -1,12 +1,14 @@
-﻿using System;
-using System.Diagnostics;
+﻿using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using SharpDX;
 using SharpDX.Direct3D11;
-using Buffer = SharpDX.Direct3D11.Buffer;
+using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Numerics;
 using System.Runtime.InteropServices;
-using BepuUtilities;
+using Buffer = SharpDX.Direct3D11.Buffer;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace DemoRenderer
 {
@@ -173,9 +175,9 @@ namespace DemoRenderer
         {
             //We don't support any form of alpha, so we dedicate 11 bits to R, 11 bits to G, and 10 bits to B.
             //B is stored in most significant, R in least significant.
-            color.X = (packedColor & 0x7FF) / (float)((1 << 11) - 1);
-            color.Y = ((packedColor >> 11) & 0x7FF) / (float)((1 << 11) - 1);
-            color.Z = ((packedColor >> 22) & 0x3FF) / (float)((1 << 10) - 1);
+            color.X = (packedColor & 0x7FF) / (Number)((1 << 11) - 1);
+            color.Y = ((packedColor >> 11) & 0x7FF) / (Number)((1 << 11) - 1);
+            color.Z = ((packedColor >> 22) & 0x3FF) / (Number)((1 << 10) - 1);
         }
 
         /// <summary>
@@ -199,10 +201,10 @@ namespace DemoRenderer
         public static void UnpackColor(uint packedColor, out Vector4 color)
         {
             color = new Vector4(
-                (packedColor & 255) / 255f,
-                ((packedColor >> 8) & 255) / 255f,
-                ((packedColor >> 16) & 255) / 255f,
-                ((packedColor >> 24) & 255) / 255f);
+                (packedColor & 255) / Constants.C255,
+                ((packedColor >> 8) & 255) / Constants.C255,
+                ((packedColor >> 16) & 255) / Constants.C255,
+                ((packedColor >> 24) & 255) / Constants.C255);
         }
 
         /// <summary>
@@ -220,12 +222,22 @@ namespace DemoRenderer
             }
         }
 
+        public static void PackOrientation(Quaternion source, out System.Numerics.Vector3 packed)
+        {
+            packed = new System.Numerics.Vector3((float)source.X, (float)source.Y, (float)source.Z);
+            if (source.W < 0)
+            {
+                packed = -packed;
+            }
+        }
+
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void PackDuplicateZeroSNORM(float source, out ushort packed)
+        static void PackDuplicateZeroSNORM(Number source, out ushort packed)
         {
             Debug.Assert(source >= -1 && source <= 1);
             var magnitude = source * ((1 << 15) - 1);
-            ref var reinterpreted = ref Unsafe.As<float, uint>(ref magnitude);
+            ref var reinterpreted = ref Unsafe.As<Number, uint>(ref magnitude);
             //Cache the sign bit and move it into position.
             var sign = (int)((reinterpreted & 0x8000_0000u) >> 16);
             //Clear the sign bit.
@@ -241,7 +253,7 @@ namespace DemoRenderer
         public unsafe static ulong PackOrientationU64(Quaternion source)
         {
             //This isn't exactly a clever packing, but with 64 bits, cleverness isn't required.
-            ref var vectorSource = ref Unsafe.As<float, Vector4>(ref source.X);
+            ref var vectorSource = ref Unsafe.As<Number, Vector4>(ref source.X);
             var clamped = Vector4.Max(new Vector4(-1), Vector4.Min(new Vector4(1), vectorSource));
             Unsafe.SkipInit(out ulong packed);
             ref var packedShorts = ref Unsafe.As<ulong, ushort>(ref packed);
@@ -253,10 +265,10 @@ namespace DemoRenderer
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static unsafe float UnpackDuplicateZeroSNORM(ushort packed)
+        static unsafe Number UnpackDuplicateZeroSNORM(ushort packed)
         {
-            var unpacked = (packed & ((1 << 15) - 1)) * (1f / ((1 << 15) - 1));
-            ref var reinterpreted = ref Unsafe.As<float, uint>(ref unpacked);
+            var unpacked = (packed & ((1 << 15) - 1)) * (Constants.C1 / ((1 << 15) - 1));
+            ref var reinterpreted = ref Unsafe.As<Number, uint>(ref unpacked);
             //Set the sign bit.
             reinterpreted |= (packed & (1u << 15)) << 16;
             return unpacked;
@@ -282,7 +294,7 @@ namespace DemoRenderer
                 return false;
             }
             var ndc = new Vector2(projected.X, projected.Y);
-            screenLocation = (ndc * new Vector2(0.5f, -0.5f) + new Vector2(0.5f)) * resolution;
+            screenLocation = (ndc * new Vector2(Constants.C0p5, Constants.Cm0p5) + new Vector2(Constants.C0p5)) * resolution;
             return true;
         }
 
@@ -292,11 +304,11 @@ namespace DemoRenderer
         /// <param name="x">Value to apply the curve to.</param>
         /// <returns>Transformed value.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static float ToSRGB(float x)
+        public static Number ToSRGB(Number x)
         {
-            return MathF.Max(0, MathF.Min(1, x <= 0.0031308f ?
-                12.92f * x :
-                1.055f * MathF.Pow(x, 1f / 2.4f) - 0.055f));
+            return MathF.Max(0, MathF.Min(1, x <= (Number)0.0031308f ?
+                (Number)12.92f * x :
+                (Number)1.055f * MathF.Pow(x, Constants.C1 / (Number)2.4f) - (Number)0.055f));
         }
 
         /// <summary>

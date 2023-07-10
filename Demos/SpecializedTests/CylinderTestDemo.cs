@@ -1,29 +1,33 @@
-﻿using System;
-using System.Numerics;
-using BepuUtilities;
-using DemoContentLoader;
-using DemoRenderer;
+﻿
+
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection.CollisionTasks;
-using System.Diagnostics;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
+using DemoRenderer;
+using System;
+using System.Diagnostics;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.SpecializedTests
 {
     public class CylinderTestDemo : Demo
     {
-        private static void BruteForceSearch(Vector3 lineOrigin, Vector3 lineDirection, float halfLength, in Cylinder cylinder, out float closestT, out float closestDistanceSquared, out float errorMargin)
+        private static void BruteForceSearch(Vector3 lineOrigin, Vector3 lineDirection, Number halfLength, in Cylinder cylinder, out Number closestT, out Number closestDistanceSquared, out Number errorMargin)
         {
             const int sampleCount = 1 << 20;
             var inverseSampleCount = 1.0 / (sampleCount - 1);
-            errorMargin = (float)inverseSampleCount;
+            errorMargin = (Number)inverseSampleCount;
             var radiusSquared = cylinder.Radius * cylinder.Radius;
-            closestDistanceSquared = float.MaxValue;
-            closestT = float.MaxValue;
+            closestDistanceSquared = Number.MaxValue;
+            closestT = Number.MaxValue;
             for (int i = 0; i < sampleCount; ++i)
             {
-                var t = (float)(halfLength * (i * inverseSampleCount * 2 - 1));
+                var t = (Number)(halfLength * (i * inverseSampleCount * 2 - 1));
                 var point = lineOrigin + lineDirection * t;
                 var horizontalLengthSquared = point.X * point.X + point.Z * point.Z;
                 Vector3 clamped;
@@ -55,14 +59,14 @@ namespace Demos.SpecializedTests
             CylinderWide cylinderWide = default;
             cylinderWide.Broadcast(cylinder);
             Random random = new Random(5);
-            //double totalIntervalError = 0;
-            //double sumOfSquaredIntervalError = 0;
+            //Number totalIntervalError = 0;
+            //Number sumOfSquaredIntervalError = 0;
 
-            double totalBruteError = 0;
-            double sumOfSquaredBruteError = 0;
+            Number totalBruteError = 0;
+            Number sumOfSquaredBruteError = 0;
 
-            double totalBruteDistanceError = 0;
-            double sumOfSquaredBruteDistanceError = 0;
+            Number totalBruteDistanceError = 0;
+            Number sumOfSquaredBruteDistanceError = 0;
 
             //long iterationsSum = 0;
             //long iterationsSquaredSum = 0;
@@ -89,7 +93,7 @@ namespace Demos.SpecializedTests
                 }
 
                 Vector3 direction;
-                float directionLengthSquared;
+                Number directionLengthSquared;
                 do
                 {
                     direction = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * new Vector3(2) - Vector3.One;
@@ -101,15 +105,15 @@ namespace Demos.SpecializedTests
                 Vector3Wide.Broadcast(randomPointNearCylinder, out var capsuleOrigin);
                 Vector3Wide.Broadcast(direction, out var capsuleY);
 
-                //CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, out var t, out var min, out var max, out var offsetFromCylindertoLineSegment, out var iterationsRequired);
+                //CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<Number>(capsule.HalfLength), cylinderWide, out var t, out var min, out var max, out var offsetFromCylindertoLineSegment, out var iterationsRequired);
 
-                //CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, out var t, out var offsetFromCylindertoLineSegment);
-                Vector<float> t = default;
+                //CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<Number>(capsule.HalfLength), cylinderWide, out var t, out var offsetFromCylindertoLineSegment);
+                Vector<Number> t = default;
                 Vector3Wide offsetFromCylinderToLineSegment = default;
                 var innerStart = Stopwatch.GetTimestamp();
                 for (int j = 0; j < innerIterations; ++j)
                 {
-                    CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<float>(capsule.HalfLength), cylinderWide, Vector<int>.Zero, out t, out offsetFromCylinderToLineSegment);
+                    CapsuleCylinderTester.GetClosestPointBetweenLineSegmentAndCylinder(capsuleOrigin, capsuleY, new Vector<Number>(capsule.HalfLength), cylinderWide, Vector<int>.Zero, out t, out offsetFromCylinderToLineSegment);
                 }
                 var innerStop = Stopwatch.GetTimestamp();
                 if (i > warmupCount)
@@ -159,8 +163,8 @@ namespace Demos.SpecializedTests
             var bruteDistanceStandardDeviation = Math.Sqrt(Math.Max(0, averageBruteSquaredError - averageBruteError * averageBruteError));
             Console.WriteLine($"Average brute distance error: {averageBruteDistanceError}, stddev {bruteDistanceStandardDeviation}");
 
-            //var averageIterations = (double)iterationsSum / capsuleTests;
-            //var averageIterationSquared = (double)iterationsSquaredSum / capsuleTests;
+            //var averageIterations = (Number)iterationsSum / capsuleTests;
+            //var averageIterationSquared = (Number)iterationsSquaredSum / capsuleTests;
             //var iterationStandardDeviation = Math.Sqrt(Math.Max(0, averageIterationSquared - averageIterations * averageIterations));
             //Console.WriteLine($"Average iteration count: {averageIterations}, stddev {iterationStandardDeviation}");
         }
@@ -171,17 +175,17 @@ namespace Demos.SpecializedTests
             camera.Pitch = 0;
             camera.Yaw = 0;
 
-            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)), new SolveDescription(8, 1));
+            Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, Constants.C0, 0)), new SolveDescription(8, 1));
 
             var cylinderShape = new Cylinder(1f, .2f);
-            var cylinder = BodyDescription.CreateDynamic(new Vector3(10f, 3, 0), cylinderShape.ComputeInertia(1), new(Simulation.Shapes.Add(cylinderShape), 1000f, 1000f, ContinuousDetection.Passive), 0.01f);
+            var cylinder = BodyDescription.CreateDynamic(new Vector3(10f, 3, 0), cylinderShape.ComputeInertia(1), new(Simulation.Shapes.Add(cylinderShape), 1000f, 1000f, ContinuousDetection.Passive), Constants.C0p01);
             Simulation.Bodies.Add(cylinder);
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic((new Vector3(0, -6, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Sphere(2)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic((new Vector3(7, -6, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), MathHelper.PiOver4)), Simulation.Shapes, new Capsule(0.5f, 1f)));
-            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic((new Vector3(21, -3, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Box(3f, 1f, 3f)));
+            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic((new Vector3(21, -3, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Box(Constants.C3, 1f, Constants.C3)));
             Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic((new Vector3(28, -6, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes,
                 new Triangle(new Vector3(10f, 0, 10f), new Vector3(14f, 0, 10f), new Vector3(10f, 0, 14f))));
-            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic((new Vector3(14, -6, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Cylinder(3f, .2f)));
+            Simulation.Bodies.Add(BodyDescription.CreateConvexKinematic((new Vector3(14, -6, 0), QuaternionEx.CreateFromAxisAngle(Vector3.Normalize(new Vector3(1, 0, 1)), 0)), Simulation.Shapes, new Cylinder(Constants.C3, .2f)));
 
 
             cylinderShape = new Cylinder(1f, 3);
@@ -198,11 +202,11 @@ namespace Demos.SpecializedTests
             //            (rowIndex + 0.5f) * cylinderShape.Length - 9.5f, -10),
             //            cylinderInertia,
             //            new CollidableDescription(cylinderShapeIndex, 0.1f),
-            //            new BodyActivityDescription(0.01f)));
+            //            new BodyActivityDescription(Constants.C0p01)));
             //    }
             //}
 
-            var box = new Box(1f, 3f, 2f);
+            var box = new Box(1f, Constants.C3, 2f);
             var capsule = new Capsule(1f, 1f);
             var sphere = new Sphere(1.5f);
             var boxInertia = box.ComputeInertia(1);
@@ -221,7 +225,7 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         var location = new Vector3(5, 3, 5) * new Vector3(i, j, k) + new Vector3(-width * 1.5f, 2.5f, -30 - length * 1.5f);
-                        var bodyDescription = BodyDescription.CreateDynamic(location, default, default, -0.01f);
+                        var bodyDescription = BodyDescription.CreateDynamic(location, default, default, -Constants.C0p01);
                         switch (j % 4)
                         {
                             case 0:
@@ -252,7 +256,7 @@ namespace Demos.SpecializedTests
             var planeMesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
-                    var octave0 = (MathF.Sin((x + 5f) * 0.05f) + MathF.Sin((y + 11) * 0.05f)) * 3f;
+                    var octave0 = (MathF.Sin((x + 5f) * 0.05f) + MathF.Sin((y + 11) * 0.05f)) * Constants.C3;
                     var octave1 = (MathF.Sin((x + 17) * 0.15f) + MathF.Sin((y + 19) * 0.15f)) * 2f;
                     var octave2 = (MathF.Sin((x + 37) * 0.35f) + MathF.Sin((y + 93) * 0.35f)) * 1f;
                     var octave3 = (MathF.Sin((x + 53) * 0.65f) + MathF.Sin((y + 47) * 0.65f)) * 0.5f;
@@ -269,11 +273,11 @@ namespace Demos.SpecializedTests
             //    a.Broadcast(new Capsule(0.5f, 1));
             //    CylinderWide b = default;
             //    b.Broadcast(new Cylinder(0.5f, 1));
-            //    var speculativeMargin = new Vector<float>(2f);
+            //    var speculativeMargin = new Vector<Number>(2f);
             //    Vector3Wide.Broadcast(new Vector3(0, -0.4f, 0), out var offsetB);
             //    QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), MathHelper.PiOver2), out var orientationA);
             //    QuaternionWide.Broadcast(Quaternion.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var orientationB);
-            //    tester.Test(ref a, ref b, ref speculativeMargin, ref offsetB, ref orientationA, ref orientationB, Vector<float>.Count, out var manifold);
+            //    tester.Test(ref a, ref b, ref speculativeMargin, ref offsetB, ref orientationA, ref orientationB, Vector<Number>.Count, out var manifold);
             //}
             //{
             //    CylinderWide a = default;
@@ -282,12 +286,12 @@ namespace Demos.SpecializedTests
             //    b.Broadcast(new Cylinder(0.5f, 1f));
             //    var supportFinderA = new CylinderSupportFinder();
             //    var supportFinderB = new CylinderSupportFinder();
-            //    Vector3Wide.Broadcast(new Vector3(-0.8f, 0.01f, 0.71f), out var localOffsetB);
+            //    Vector3Wide.Broadcast(new Vector3(-0.8f, Constants.C0p01, 0.71f), out var localOffsetB);
             //    Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0.1f), out var localOrientationB);
             //    Vector3Wide.Normalize(localOffsetB, out var initialGuess);
 
             //    GradientDescent<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Refine(a, b, localOffsetB, localOrientationB,
-            //        ref supportFinderA, ref supportFinderB, initialGuess, new Vector<float>(-0.1f), new Vector<float>(1e-4f), 1500, Vector<int>.Zero, out var localNormal, out var depthBelowThreshold);
+            //        ref supportFinderA, ref supportFinderB, initialGuess, new Vector<Number>(-0.1f), new Vector<Number>(1e-4f), 1500, Vector<int>.Zero, out var localNormal, out var depthBelowThreshold);
 
             //    GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
             //    QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);
@@ -306,10 +310,10 @@ namespace Demos.SpecializedTests
             //    Vector3Wide.Broadcast(new Vector3(0.5f, 0.5f, 0.5f), out var localOffsetB);
             //    Vector3Wide.Broadcast(Vector3.Normalize(new Vector3(1, 0, 1)), out var localCastDirection);
             //    Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 0), out var localOrientationB);
-            //    MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-5f), Vector<int>.Zero, out var intersecting, out var localNormal);
+            //    MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<Number>(1e-5f), Vector<int>.Zero, out var intersecting, out var localNormal);
             //    for (int i = 0; i < 5; ++i)
             //    {
-            //        MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localNormal, new Vector<float>(1e-3f), Vector<int>.Zero,
+            //        MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.LocalSurfaceCast(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, localNormal, new Vector<Number>(1e-3f), Vector<int>.Zero,
             //            out var t, out localNormal);
             //    }
             //    Vector3Wide.Normalize(localNormal, out var test);
@@ -330,7 +334,7 @@ namespace Demos.SpecializedTests
             //    var supportFinderB = new CylinderSupportFinder();
             //    Vector3Wide.Broadcast(new Vector3(-0.335f, -0.0f, 1.207f), out var localOffsetB);
             //    Matrix3x3Wide.Broadcast(Matrix3x3.CreateFromAxisAngle(new Vector3(1, 0, 0), 10.0f), out var localOrientationB);
-            //    MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<float>(1e-5f), Vector<int>.Zero, out var intersecting, out var localNormal);
+            //    MPR<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.Test(a, b, localOffsetB, localOrientationB, ref supportFinderA, ref supportFinderB, new Vector<Number>(1e-5f), Vector<int>.Zero, out var intersecting, out var localNormal);
             //    Vector3Wide.Normalize(localNormal, out var test);
             //    GJKDistanceTester<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder> gjk = default;
             //    QuaternionWide.Broadcast(Quaternion.Identity, out var localOrientationQuaternionA);

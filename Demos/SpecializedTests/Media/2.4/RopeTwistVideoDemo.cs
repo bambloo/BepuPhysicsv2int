@@ -2,14 +2,12 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
-using DemoRenderer.UI;
 using Demos.Demos;
-using DemoUtilities;
 using System;
-using System.Numerics;
-using System.Runtime.CompilerServices;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.SpecializedTests.Media;
 
@@ -26,7 +24,7 @@ public class RopeTwistVideoDemo : Demo
 
         var filters = new CollidableProperty<RopeFilter>();
         Simulation = Simulation.Create(BufferPool,
-            new RopeNarrowPhaseCallbacks(filters, new PairMaterialProperties(1.0f, float.MaxValue, new SpringSettings(1200, 1))),
+            new RopeNarrowPhaseCallbacks(filters, new PairMaterialProperties(1.0f, Number.MaxValue, new SpringSettings(1200, 1))),
             new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(1, 60));
 
         for (int twistIndex = 0; twistIndex < 10; ++twistIndex)
@@ -38,11 +36,11 @@ public class RopeTwistVideoDemo : Demo
             //This wrecking ball is much, much heavier.
             var bigWreckingBallInertia = bigWreckingBall.ComputeInertia(10000);
             var bigWreckingBallIndex = Simulation.Shapes.Add(bigWreckingBall);
-            const float ropeBodySpacing = -0.1f;
-            const float ropeBodyRadius = 0.1f;
+            Number ropeBodySpacing = -0.1f;
+            Number ropeBodyRadius = 0.1f;
             const int ropeBodyCount = 130;
             var wreckingBallPosition = startLocation - new Vector3(0, ropeBodyRadius + (ropeBodyRadius * 2 + ropeBodySpacing) * ropeBodyCount + bigWreckingBall.Radius, 0);
-            var description = BodyDescription.CreateDynamic(wreckingBallPosition, bigWreckingBallInertia, bigWreckingBallIndex, 0.01f);
+            var description = BodyDescription.CreateDynamic(wreckingBallPosition, bigWreckingBallInertia, bigWreckingBallIndex, Constants.C0p01);
             var wreckingBallBodyHandle = Simulation.Bodies.Add(description);
             var wreckingBallBody = Simulation.Bodies[wreckingBallBodyHandle];
             wreckingBallBody.Velocity.Angular = new Vector3(0, 20, 0);
@@ -51,7 +49,7 @@ public class RopeTwistVideoDemo : Demo
             for (int ropeIndex = 0; ropeIndex < ropeCount; ++ropeIndex)
             {
                 var angle = ropeIndex * MathF.PI * 2 / ropeCount;
-                const float ropeDistributionRadius = 1f;
+                Number ropeDistributionRadius = 1f;
                 var horizontalOffset = ropeDistributionRadius * new Vector3(MathF.Sin(angle), 0, MathF.Cos(angle));
                 var ropeStartLocation = startLocation + horizontalOffset;
 
@@ -94,7 +92,7 @@ public class RopeTwistVideoDemo : Demo
                     var maximumDistance = Vector3.Distance(
                         new BodyReference(bodyHandles[targetBodyHandleIndex], Simulation.Bodies).Pose.Position,
                         ropeConnectionToBall);
-                    Simulation.Solver.Add(bodyHandles[targetBodyHandleIndex], wreckingBallBodyHandle, new DistanceLimit(default, wreckingBallConnectionOffset, 0.01f, maximumDistance, springSettings));
+                    Simulation.Solver.Add(bodyHandles[targetBodyHandleIndex], wreckingBallBodyHandle, new DistanceLimit(default, wreckingBallConnectionOffset, Constants.C0p01, maximumDistance, springSettings));
                 }
 
             }

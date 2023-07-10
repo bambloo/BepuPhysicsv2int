@@ -1,12 +1,11 @@
-﻿using System;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using BepuUtilities.Memory;
-using System.Diagnostics;
-using BepuUtilities;
-using BepuUtilities.Collections;
+﻿using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuPhysics.Trees;
-using BepuPhysics.CollisionDetection.CollisionTasks;
+using BepuUtilities;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Collidables
@@ -152,7 +151,7 @@ namespace BepuPhysics.Collidables
 
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            public unsafe void TestLeaf(int leafIndex, RayData* rayData, Number* maximumT)
             {
                 if (Handler.AllowTest(leafIndex))
                 {
@@ -171,7 +170,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapes, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref Number maximumT, Shapes shapes, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             Matrix3x3.TransformTranspose(ray.Origin - pose.Position, orientation, out var localOrigin);
@@ -226,7 +225,7 @@ namespace BepuPhysics.Collidables
         /// <param name="pool">Pool to use to resize the compound's children buffer if necessary.</param>
         /// <param name="shapes">Shapes collection containing the compound's children.</param>
         /// <remarks><para>This function keeps the <see cref="Tree"/> in a valid state, but significant changes over time may degrade the tree's quality and result in reduced collision/query performance.
-        /// If this happens, consider calling <see cref="Tree.RefitAndRefine(BufferPool, int, float)"/> with a refinementIndex that changes with each call (to prioritize different parts of the tree).
+        /// If this happens, consider calling <see cref="Tree.RefitAndRefine(BufferPool, int, Number)"/> with a refinementIndex that changes with each call (to prioritize different parts of the tree).
         /// Incrementing a counter with each call would work fine. The ideal frequency of refinement depends on the kind of modifications being made, but it's likely to be rare.</para></remarks>
         public void Add(CompoundChild child, BufferPool pool, Shapes shapes)
         {
@@ -243,7 +242,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childIndex">Index of the child to remove from the compound.</param>
         /// <param name="pool">Pool to use to resize the compound's children buffer if necessary.</param>
         /// <remarks>This function keeps the <see cref="Tree"/> in a valid state, but significant changes over time may degrade the tree's quality and result in reduced collision/query performance.
-        /// If this happens, consider calling <see cref="Tree.RefitAndRefine(BufferPool, int, float)"/> with a refinementIndex that changes with each call (to prioritize different parts of the tree).
+        /// If this happens, consider calling <see cref="Tree.RefitAndRefine(BufferPool, int, Number)"/> with a refinementIndex that changes with each call (to prioritize different parts of the tree).
         /// Incrementing a counter with each call would work fine. The ideal frequency of refinement depends on the kind of modifications being made, but it's likely to be rare.</remarks>
         public void RemoveAt(int childIndex, BufferPool pool)
         {
@@ -291,12 +290,12 @@ namespace BepuPhysics.Collidables
             public BufferPool Pool;
             public void* Overlaps;
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void TestLeaf(int leafIndex, ref float maximumT)
+            public void TestLeaf(int leafIndex, ref Number maximumT)
             {
                 Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
             }
         }
-        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+        public unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, Number maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             SweepLeafTester<TOverlaps> enumerator;
@@ -311,7 +310,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of the children.</param>
         /// <param name="shapes">Shapes collection containing the data for the compound child shapes.</param>
         /// <returns>Inertia of the compound.</returns>
-        public BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes)
+        public BodyInertia ComputeInertia(Span<Number> childMasses, Shapes shapes)
         {
             return CompoundBuilder.ComputeInertia(Children, childMasses, shapes);
         }
@@ -323,7 +322,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of the children.</param>
         /// <param name="centerOfMass">Calculated center of mass of the compound. Subtracted from all the compound child poses.</param>
         /// <returns>Inertia of the compound.</returns>
-        public BodyInertia ComputeInertia(Span<float> childMasses, Shapes shapes, out Vector3 centerOfMass)
+        public BodyInertia ComputeInertia(Span<Number> childMasses, Shapes shapes, out Vector3 centerOfMass)
         {
             var bodyInertia = CompoundBuilder.ComputeInertia(Children, childMasses, shapes, out centerOfMass);
             //Recentering moves the children around, so the tree needs to be updated.

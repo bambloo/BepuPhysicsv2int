@@ -1,17 +1,14 @@
-﻿using DemoContentLoader;
-using DemoRenderer;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
-using BepuPhysics;
-using DemoRenderer.UI;
-using System.IO;
-using DemoUtilities;
-using System.Diagnostics;
-using BepuUtilities.Collections;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
+using DemoContentLoader;
+using DemoRenderer;
 using Demos.Demos.Characters;
+using DemoUtilities;
+using System;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.Demos.Sponsors
 {
@@ -39,15 +36,15 @@ namespace Demos.Demos.Sponsors
             newts = new QuickList<SponsorNewt>(newtCount, BufferPool);
             newtArenaMin = new Vector2(-250);
             newtArenaMax = new Vector2(250);
-            random = new Random(8);
+            random = new System.Random(8);
             for (int i = 0; i < newtCount; ++i)
             {
                 ref var newt = ref newts.AllocateUnsafely();
                 newt = new SponsorNewt(Simulation, newtShape, 0, newtArenaMin, newtArenaMax, random, i);
             }
 
-            const float floorSize = 520;
-            const float wallThickness = 200;
+            Number floorSize = 520;
+            Number wallThickness = 200;
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, -10f, 0), Simulation.Shapes.Add(new Box(floorSize, 20, floorSize))));
             Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * -0.5f - wallThickness * 0.5f, -5, 0), Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2))));
             Simulation.Statics.Add(new StaticDescription(new Vector3(floorSize * 0.5f + wallThickness * 0.5f, -5, 0), Simulation.Shapes.Add(new Box(wallThickness, 30, floorSize + wallThickness * 2))));
@@ -66,7 +63,7 @@ namespace Demos.Demos.Sponsors
 
             const int hutCount = 120;
             var hutBoxShape = new Box(0.4f, 2, 3);
-            var obstacleDescription = BodyDescription.CreateDynamic(new Vector3(), hutBoxShape.ComputeInertia(20), new CollidableDescription(Simulation.Shapes.Add(hutBoxShape), 0.1f), 1e-2f);
+            var obstacleDescription = BodyDescription.CreateDynamic(new Vector3(), hutBoxShape.ComputeInertia(20), new CollidableDescription(Simulation.Shapes.Add(hutBoxShape), 0.1f), Constants.C1em2);
 
             for (int i = 0; i < hutCount; ++i)
             {
@@ -89,8 +86,8 @@ namespace Demos.Demos.Sponsors
 
 
 
-        double simulationTime;
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        Number simulationTime;
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             character.UpdateCharacterGoals(input, camera, TimestepDuration);
             Simulation.Timestep(TimestepDuration, ThreadDispatcher);

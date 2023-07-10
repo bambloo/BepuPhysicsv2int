@@ -1,12 +1,7 @@
-﻿using BepuUtilities;
-using BepuUtilities.Memory;
-using BepuPhysics;
-using BepuPhysics.Collidables;
+﻿using BepuPhysics;
+using DemoContentLoader;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
-using DemoContentLoader;
 
 namespace Demos.SpecializedTests
 {

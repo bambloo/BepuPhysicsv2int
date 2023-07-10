@@ -1,26 +1,26 @@
 ﻿using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
 {
     /// <summary>
-    /// Four dimensional vector with <see cref="Vector{T}.Count"/> (with generic type argument of <see cref="float"/>) SIMD lanes.
+    /// Four dimensional vector with <see cref="Vector{T}.Count"/> (with generic type argument of <see cref="Number"/>) SIMD lanes.
     /// </summary>
     public struct Vector4Wide
     {
-        public Vector<float> X;
-        public Vector<float> Y;
-        public Vector<float> Z;
-        public Vector<float> W;
+        public Vector<Number> X;
+        public Vector<Number> Y;
+        public Vector<Number> Z;
+        public Vector<Number> W;
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Broadcast(in Vector4 source, out Vector4Wide broadcasted)
         {
-            broadcasted.X = new Vector<float>(source.X);
-            broadcasted.Y = new Vector<float>(source.Y);
-            broadcasted.Z = new Vector<float>(source.Z);
-            broadcasted.W = new Vector<float>(source.W);
+            broadcasted.X = new Vector<Number>(source.X);
+            broadcasted.Y = new Vector<Number>(source.Y);
+            broadcasted.Z = new Vector<Number>(source.Z);
+            broadcasted.W = new Vector<Number>(source.W);
         }
 
 
@@ -45,7 +45,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to add to every component of the vector.</param>
         /// <param name="result">Vector with components equal to the input vector added to the input scalar.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Add(Vector4Wide v, Vector<float> s, out Vector4Wide result)
+        public static void Add(Vector4Wide v, Vector<Number> s, out Vector4Wide result)
         {
             result.X = v.X + s;
             result.Y = v.Y + s;
@@ -75,7 +75,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to add to every component of the vector.</param>
         /// <returns>Vector with components equal to the input vector added to the input scalar.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector4Wide operator +(Vector4Wide v, Vector<float> s)
+        public static Vector4Wide operator +(Vector4Wide v, Vector<Number> s)
         {
             Vector4Wide result;
             result.X = v.X + s;
@@ -91,7 +91,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to add to every component of the vector.</param>
         /// <returns>Vector with components equal to the input vector added to the input scalar.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector4Wide operator +(Vector<float> s, Vector4Wide v)
+        public static Vector4Wide operator +(Vector<Number> s, Vector4Wide v)
         {
             Vector4Wide result;
             result.X = v.X + s;
@@ -112,7 +112,7 @@ namespace BepuUtilities
   
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Dot(in Vector4Wide a, in Vector4Wide b, out Vector<float> result)
+        public static void Dot(in Vector4Wide a, in Vector4Wide b, out Vector<Number> result)
         {
             result = a.X * b.X + a.Y * b.Y + a.Z * b.Z + a.W * b.W;
         }
@@ -148,7 +148,7 @@ namespace BepuUtilities
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Vector4Wide vector, in Vector<float> scalar, out Vector4Wide result)
+        public static void Scale(in Vector4Wide vector, in Vector<Number> scalar, out Vector4Wide result)
         {
             result.X = vector.X * scalar;
             result.Y = vector.Y * scalar;
@@ -186,18 +186,18 @@ namespace BepuUtilities
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LengthSquared(in Vector4Wide v, out Vector<float> lengthSquared)
+        public static void LengthSquared(in Vector4Wide v, out Vector<Number> lengthSquared)
         {
             lengthSquared = v.X * v.X + v.Y * v.Y + v.Z * v.Z + v.W * v.W;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Length(in Vector4Wide v, out Vector<float> length)
+        public static void Length(in Vector4Wide v, out Vector<Number> length)
         {
             length = Vector.SquareRoot(v.X * v.X + v.Y * v.Y + v.Z * v.Z + v.W * v.W);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Distance(in Vector4Wide a, in Vector4Wide b, out Vector<float> distance)
+        public static void Distance(in Vector4Wide a, in Vector4Wide b, out Vector<Number> distance)
         {
             Subtract(b, a, out var offset);
             Length(offset, out distance);
@@ -207,7 +207,7 @@ namespace BepuUtilities
         public static void Normalize(in Vector4Wide v, out Vector4Wide result)
         {
             Length(v, out var length);
-            var scale = Vector<float>.One / length;
+            var scale = Vector<Number>.One / length;
             Scale(v, scale, out result);
         }
 

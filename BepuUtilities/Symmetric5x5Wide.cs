@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -28,7 +28,7 @@ namespace BepuUtilities
         /// <param name="scale">Scale to apply to the components of m.</param>
         /// <param name="result">Result of scaling each component of m by scale.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Symmetric5x5Wide m, in Vector<float> scale, out Symmetric5x5Wide result)
+        public static void Scale(in Symmetric5x5Wide m, in Vector<Number> scale, out Symmetric5x5Wide result)
         {
             Symmetric3x3Wide.Scale(m.A, scale, out result.A);
             Matrix2x3Wide.Scale(m.B, scale, out result.B);

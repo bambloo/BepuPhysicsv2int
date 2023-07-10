@@ -2,7 +2,7 @@
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 
@@ -24,7 +24,7 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// Goal relative twist velocity around the body axes.
         /// </summary>
-        public float TargetVelocity;
+        public Number TargetVelocity;
         /// <summary>
         /// Motor control parameters.
         /// </summary>
@@ -70,11 +70,11 @@ namespace BepuPhysics.Constraints
     {
         public Vector3Wide LocalAxisA;
         public Vector3Wide LocalAxisB;
-        public Vector<float> TargetVelocity;
+        public Vector<Number> TargetVelocity;
         public MotorSettingsWide Settings;
     }
 
-    public struct TwistMotorFunctions : ITwoBodyConstraintFunctions<TwistMotorPrestepData, Vector<float>>
+    public struct TwistMotorFunctions : ITwoBodyConstraintFunctions<TwistMotorPrestepData, Vector<Number>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeJacobian(in QuaternionWide orientationA, in QuaternionWide orientationB, in Vector3Wide localAxisA, in Vector3Wide localAxisB, out Vector3Wide jacobianA)
@@ -84,11 +84,11 @@ namespace BepuPhysics.Constraints
             QuaternionWide.TransformWithoutOverlap(localAxisB, orientationB, out var axisB);
             Vector3Wide.Add(axisA, axisB, out jacobianA);
             Vector3Wide.Length(jacobianA, out var length);
-            Vector3Wide.Scale(jacobianA, Vector<float>.One / length, out jacobianA);
-            Vector3Wide.ConditionalSelect(Vector.LessThan(length, new Vector<float>(1e-10f)), axisA, jacobianA, out jacobianA);
+            Vector3Wide.Scale(jacobianA, Vector<Number>.One / length, out jacobianA);
+            Vector3Wide.ConditionalSelect(Vector.LessThan(length, new Vector<Number>(Constants.C1em10)), axisA, jacobianA, out jacobianA);
         }
 
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TwistMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref TwistMotorPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(orientationA, orientationB, prestep.LocalAxisA, prestep.LocalAxisB, out var jacobianA);
             Symmetric3x3Wide.TransformWithoutOverlap(jacobianA, inertiaA.InverseInertiaTensor, out var impulseToVelocityA);
@@ -96,7 +96,7 @@ namespace BepuPhysics.Constraints
             TwistServoFunctions.ApplyImpulse(ref wsvA.Angular, ref wsvB.Angular, impulseToVelocityA, negatedImpulseToVelocityB, accumulatedImpulses);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TwistMotorPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, Number dt, Number inverseDt, ref TwistMotorPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(orientationA, orientationB, prestep.LocalAxisA, prestep.LocalAxisB, out var jacobianA);
 
@@ -122,10 +122,10 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TwistMotorPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TwistMotorPrestepData prestepData) { }
     }
 
-    public class TwistMotorTypeProcessor : TwoBodyTypeProcessor<TwistMotorPrestepData, Vector<float>, TwistMotorFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
+    public class TwistMotorTypeProcessor : TwoBodyTypeProcessor<TwistMotorPrestepData, Vector<Number>, TwistMotorFunctions, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular, AccessOnlyAngular>
     {
         public const int BatchTypeId = 28;
     }

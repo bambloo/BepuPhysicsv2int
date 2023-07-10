@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
-using BepuUtilities;
+﻿using BepuUtilities;
+using BepuUtilities.Numerics;
+using System;
 
 namespace BepuPhysics
 {
@@ -29,8 +27,13 @@ namespace BepuPhysics
         /// </summary>
         public event TimestepperStageHandler ConstraintsSolved;
 
-        public void Timestep(Simulation simulation, float dt, IThreadDispatcher threadDispatcher = null)
+        public static int Frame = 0;
+        public void Timestep(Simulation simulation, Number dt, IThreadDispatcher threadDispatcher = null)
         {
+            if (++Frame == 4)
+            {
+                Console.WriteLine("Hello");
+            }
             simulation.Sleep(threadDispatcher);
             Slept?.Invoke(dt, threadDispatcher);
 

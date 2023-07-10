@@ -1,10 +1,11 @@
 ﻿using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace DemoRenderer.Constraints
 {
@@ -15,11 +16,11 @@ namespace DemoRenderer.Constraints
     public struct LineInstance
     {
         [FieldOffset(0)]
-        public Vector3 Start;
+        public System.Numerics.Vector3 Start;
         [FieldOffset(12)]
         public uint PackedBackgroundColor;
         [FieldOffset(16)]
-        public Vector3 End;
+        public System.Numerics.Vector3 End;
         [FieldOffset(28)]
         public uint PackedColor;
 
@@ -47,7 +48,7 @@ namespace DemoRenderer.Constraints
         struct VertexConstants
         {
             [FieldOffset(0)]
-            public Matrix ViewProjection;
+            public MatrixFloat ViewProjection;
             [FieldOffset(64)]
             public Vector2 NDCToScreenScale;
             [FieldOffset(80)]
@@ -83,7 +84,7 @@ namespace DemoRenderer.Constraints
             var vertexConstantsData = new VertexConstants
             {
                 ViewProjection = Matrix.Transpose(camera.ViewProjection), //compensate for the shader packing.
-                NDCToScreenScale = new Vector2(resolution.X / 2f, resolution.Y / 2f),
+                NDCToScreenScale = new Vector2(resolution.X / Constants.C2, resolution.Y / Constants.C2),
                 CameraForward = camera.Forward,
                 TanAnglePerPixel = (float)Math.Tan(camera.FieldOfView / resolution.Y),
                 CameraRight = camera.Right,

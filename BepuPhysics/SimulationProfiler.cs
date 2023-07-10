@@ -1,9 +1,6 @@
-﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
-using System;
+﻿using BepuUtilities.Numerics;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Text;
 
 namespace BepuPhysics
 {
@@ -24,14 +21,14 @@ namespace BepuPhysics
         /// </summary>
         /// <param name="stage">Stage to look up the time for.</param>
         /// <returns>Time it took to complete the last execution of the given stage.</returns>
-        public double this[object stage]
+        public Number this[object stage]
         {
             get
             {
 #if PROFILE
                 if (stages.TryGetValue(stage, out var time))
                 {
-                    return time;
+                    return (Number)time;
                 }
 #endif
                 return -1;

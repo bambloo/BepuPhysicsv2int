@@ -2,11 +2,8 @@
 using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Memory;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -15,7 +12,7 @@ namespace BepuPhysics.CollisionDetection
     /// </summary>
     public interface IBroadPhaseSweepTester
     {
-        unsafe void Test(CollidableReference collidable, ref float maximumT);
+        unsafe void Test(CollidableReference collidable, ref Number maximumT);
     }
 
     partial class BroadPhase
@@ -26,7 +23,7 @@ namespace BepuPhysics.CollisionDetection
             public Buffer<CollidableReference> Leaves;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            public unsafe void TestLeaf(int leafIndex, RayData* rayData, Number* maximumT)
             {
                 LeafTester.RayTest(Leaves[leafIndex], rayData, maximumT);
             }
@@ -41,7 +38,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="maximumT">Maximum length of the ray traversal in units of the direction's length.</param>
         /// <param name="rayTester">Callback to execute on ray-leaf bounding box intersections.</param>
         /// <param name="id">User specified id of the ray.</param>
-        public unsafe void RayCast<TRayTester>(Vector3 origin, Vector3 direction, float maximumT, ref TRayTester rayTester, int id = 0) where TRayTester : IBroadPhaseRayTester
+        public unsafe void RayCast<TRayTester>(Vector3 origin, Vector3 direction, Number maximumT, ref TRayTester rayTester, int id = 0) where TRayTester : IBroadPhaseRayTester
         {
             TreeRay.CreateFrom(origin, direction, maximumT, id, out var rayData, out var treeRay);
             RayLeafTester<TRayTester> tester;
@@ -60,7 +57,7 @@ namespace BepuPhysics.CollisionDetection
             public Buffer<CollidableReference> Leaves;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, ref float maximumT)
+            public unsafe void TestLeaf(int leafIndex, ref Number maximumT)
             {
                 LeafTester.Test(Leaves[leafIndex], ref maximumT);
             }
@@ -76,7 +73,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="direction">Direction along which to sweep the bounding box.</param>
         /// <param name="maximumT">Maximum length of the sweep in units of the direction's length.</param>
         /// <param name="sweepTester">Callback to execute on sweep-leaf bounding box intersections.</param>
-        public unsafe void Sweep<TSweepTester>(Vector3 min, Vector3 max, Vector3 direction, float maximumT, ref TSweepTester sweepTester) where TSweepTester : IBroadPhaseSweepTester
+        public unsafe void Sweep<TSweepTester>(Vector3 min, Vector3 max, Vector3 direction, Number maximumT, ref TSweepTester sweepTester) where TSweepTester : IBroadPhaseSweepTester
         {
             Tree.ConvertBoxToCentroidWithExtent(min, max, out var origin, out var expansion);
             TreeRay.CreateFrom(origin, direction, maximumT, out var treeRay);
@@ -98,7 +95,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="direction">Direction along which to sweep the bounding box.</param>
         /// <param name="maximumT">Maximum length of the sweep in units of the direction's length.</param>
         /// <param name="sweepTester">Callback to execute on sweep-leaf bounding box intersections.</param>
-        public unsafe void Sweep<TSweepTester>(in BoundingBox boundingBox, Vector3 direction, float maximumT, ref TSweepTester sweepTester) where TSweepTester : IBroadPhaseSweepTester
+        public unsafe void Sweep<TSweepTester>(in BoundingBox boundingBox, Vector3 direction, Number maximumT, ref TSweepTester sweepTester) where TSweepTester : IBroadPhaseSweepTester
         {
             Sweep(boundingBox.Min, boundingBox.Max, direction, maximumT, ref sweepTester);
         }

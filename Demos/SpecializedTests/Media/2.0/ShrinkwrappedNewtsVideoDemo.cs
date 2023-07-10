@@ -3,11 +3,11 @@ using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoUtilities;
 using System;
-using System.Numerics;
 
 namespace Demos.SpecializedTests.Media
 {
@@ -58,7 +58,7 @@ namespace Demos.SpecializedTests.Media
 
         Mesh mesh;
 
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             if(input.WasPushed(OpenTK.Input.Key.Z))
             {

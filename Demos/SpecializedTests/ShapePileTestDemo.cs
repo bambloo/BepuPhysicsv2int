@@ -3,13 +3,15 @@ using DemoRenderer;
 using DemoUtilities;
 using BepuPhysics;
 using BepuPhysics.Collidables;
-using System;
-using System.Numerics;
+
+
 using System.Diagnostics;
 using BepuUtilities.Memory;
 using BepuUtilities.Collections;
 using DemoContentLoader;
 using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 
 namespace Demos.SpecializedTests
 {
@@ -19,14 +21,14 @@ namespace Demos.SpecializedTests
         {
             camera.Position = new Vector3(-30, 10, -30);
             //camera.Yaw = MathHelper.Pi ; 
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(4, 1));
             Simulation.Deterministic = true;
 
             var sphere = new Sphere(1.5f);
             var capsule = new Capsule(1f, 1f);
-            var box = new Box(1f, 3f, 2f);
+            var box = new Box(1f, Constants.C3, 2f);
             var cylinder = new Cylinder(1.5f, 0.3f);
             var points = new QuickList<Vector3>(32, BufferPool);
             //Boxlike point cloud.
@@ -56,8 +58,8 @@ namespace Demos.SpecializedTests
             points.Allocate(BufferPool) = new Vector3(1, 1, -1);
             points.Allocate(BufferPool) = new Vector3(1, 1, 1);
 
-            const float goldenRatio = 1.618033988749f;
-            const float oogr = 1f / goldenRatio;
+            Number goldenRatio = 1.618033988749f;
+            Number oogr = 1f / goldenRatio;
 
             points.Allocate(BufferPool) = new Vector3(0, goldenRatio, oogr);
             points.Allocate(BufferPool) = new Vector3(0, -goldenRatio, oogr);
@@ -96,7 +98,7 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         var location = new Vector3(6, 3, 6) * new Vector3(i, j, k) + new Vector3(-width * 3, 5.5f, -length * 3);
-                        var bodyDescription = BodyDescription.CreateKinematic(location, new(default, ContinuousDetection.Passive), 0.01f);
+                        var bodyDescription = BodyDescription.CreateKinematic(location, new(default, ContinuousDetection.Passive), Constants.C0p01);
                         var index = shapeCount++;
                         switch (index % 5)
                         {
@@ -129,7 +131,7 @@ namespace Demos.SpecializedTests
             }
 
             //Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(500, 1, 500))));
-            var mesh = DemoMeshHelper.CreateDeformedPlane(128, 128, (x, y) => new Vector3(x - 64, 2f * (float)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - 64), new Vector3(4, 1, 4), BufferPool);
+            var mesh = DemoMeshHelper.CreateDeformedPlane(128, 128, (x, y) => new Vector3(x - 64, 2f * (Number)(Math.Sin(x * 0.5f) * Math.Sin(y * 0.5f)), y - 64), new Vector3(4, 1, 4), BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(mesh)));
         }
 

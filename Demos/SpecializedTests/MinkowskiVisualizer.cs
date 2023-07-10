@@ -3,10 +3,12 @@ using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoRenderer;
 using DemoRenderer.Constraints;
-using System;
-using System.Numerics;
+
+
 using System.Runtime.CompilerServices;
 using Helpers = DemoRenderer.Helpers;
 
@@ -60,8 +62,8 @@ namespace Demos.SpecializedTests
 
         public unsafe static Buffer<LineInstance> CreateLines<TShapeA, TShapeWideA, TSupportFinderA, TShapeB, TShapeWideB, TSupportFinderB>(
             in TShapeA a, in TShapeB b, in RigidPose poseA, in RigidPose poseB, int sampleCount,
-            float lineLength, Vector3 lineColor,
-            float originLength, Vector3 originColor, Vector3 backgroundColor, Vector3 basePosition, BufferPool pool)
+            Number lineLength, Vector3 lineColor,
+            Number originLength, Vector3 originColor, Vector3 backgroundColor, Vector3 basePosition, BufferPool pool)
             where TShapeA : unmanaged, IConvexShape
             where TShapeWideA : unmanaged, IShapeWide<TShapeA>
             where TSupportFinderA : struct, ISupportFinder<TShapeA, TShapeWideA>

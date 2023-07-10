@@ -1,7 +1,7 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics.Collidables;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using BepuPhysics.Collidables;
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 
 namespace BepuPhysics.CollisionDetection
 {
+    using Math = BepuUtilities.Utils.Math;
     using OverlapMapping = QuickDictionary<CollidablePair, ConstraintCache, CollidablePairComparer>;
 
     [StructLayout(LayoutKind.Explicit, Size = 8)]

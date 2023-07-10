@@ -2,12 +2,13 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Numerics;
+
 using System.Runtime.CompilerServices;
 
 namespace Demos.Demos
@@ -29,8 +30,8 @@ namespace Demos.Demos
         public struct SimpleMaterial
         {
             public SpringSettings SpringSettings;
-            public float FrictionCoefficient;
-            public float MaximumRecoveryVelocity;
+            public Number FrictionCoefficient;
+            public Number MaximumRecoveryVelocity;
         }
         public unsafe struct BounceCallbacks : INarrowPhaseCallbacks
         {
@@ -50,7 +51,7 @@ namespace Demos.Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
             {
                 //While the engine won't even try creating pairs between statics at all, it will ask about kinematic-kinematic pairs.
                 //Those pairs cannot emit constraints since both involved bodies have infinite inertia. Since most of the demos don't need
@@ -101,7 +102,7 @@ namespace Demos.Demos
             Simulation = Simulation.Create(BufferPool, new BounceCallbacks() { CollidableMaterials = collidableMaterials }, new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(1, 8));
 
             var shape = new Sphere(1);
-            var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, shape.ComputeInertia(1), Simulation.Shapes.Add(shape), 1e-2f);
+            var ballDescription = BodyDescription.CreateDynamic(RigidPose.Identity, shape.ComputeInertia(1), Simulation.Shapes.Add(shape), Constants.C1em2);
 
             for (int i = 0; i < 100; ++i)
             {
@@ -110,12 +111,12 @@ namespace Demos.Demos
                     //We'll drop balls in a grid. From left to right, we increase stiffness, and from back to front (relative to the camera), we'll increase damping.
                     //Note that higher frequency values tend to result in smaller bounces even at 0 damping. This is not physically realistic; it's a byproduct of the solver timestep being too long to properly handle extremely brief contacts.
                     //(Try increasing the substep count above to higher values and watch how the bounce gets closer and closer to equal height across frequency values.
-                    ballDescription.Pose.Position = new Vector3(i * 3 - 99f * 3f / 2f, 100, j * 3 - 230);
-                    collidableMaterials.Allocate(Simulation.Bodies.Add(ballDescription)) = new SimpleMaterial { FrictionCoefficient = 1, MaximumRecoveryVelocity = float.MaxValue, SpringSettings = new SpringSettings(5 + 0.25f * i, j * j / 10000f) };
+                    ballDescription.Pose.Position = new Vector3(i * 3 - (Number)99f * Constants.C3 / Constants.C0p3, 100, j * 3 - 230);
+                    collidableMaterials.Allocate(Simulation.Bodies.Add(ballDescription)) = new SimpleMaterial { FrictionCoefficient = 1, MaximumRecoveryVelocity = Number.MaxValue, SpringSettings = new SpringSettings(5 + Constants.C0p25 * i, j * j / 10000) };
                 }
             }
 
-            collidableMaterials.Allocate(Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15f, 0), Simulation.Shapes.Add(new Box(2500, 30, 2500))))) =
+            collidableMaterials.Allocate(Simulation.Statics.Add(new StaticDescription(new Vector3(0, -15, 0), Simulation.Shapes.Add(new Box(2500, 30, 2500))))) =
                 new SimpleMaterial { FrictionCoefficient = 1, MaximumRecoveryVelocity = 2, SpringSettings = new SpringSettings(30, 1) };
         }
 

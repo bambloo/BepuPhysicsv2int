@@ -1,12 +1,9 @@
-﻿using BepuPhysics;
-using BepuPhysics.CollisionDetection;
+﻿using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Memory;
-using BepuPhysics.Trees;
+using BepuUtilities.Numerics;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
 using System.Runtime.CompilerServices;
 
 namespace Demos.SpecializedTests
@@ -57,7 +54,7 @@ namespace Demos.SpecializedTests
             var treeB = new Tree(pool, 1);
 
             var aBounds = new BoundingBox(new Vector3(-40, 0, -40), new Vector3(40, 0, 40));
-            var aOffset = new Vector3(3f, 3f, 3f);
+            var aOffset = new Vector3(Constants.C3, Constants.C3, Constants.C3);
             var aCount = 1024;
             var bBounds = new BoundingBox(new Vector3(-5, -2, -5), new Vector3(5, 2, 5));
             var bOffset = new Vector3(0.5f, 0.5f, 0.5f);

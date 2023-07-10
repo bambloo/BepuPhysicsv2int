@@ -1,10 +1,10 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using System;
 using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -21,7 +21,7 @@ namespace BepuPhysics.Trees
 
             int RefitNodeIndex;
             public QuickList<int> RefitNodes;
-            float RefitCostChange;
+            Number RefitCostChange;
 
             int RefinementLeafCountThreshold;
             Buffer<QuickList<int>> RefinementCandidates;
@@ -74,7 +74,12 @@ namespace BepuPhysics.Trees
                 RefitNodeIndex = -1;
             }
 
-            public unsafe void CreateRefinementJobs(BufferPool pool, int frameIndex, float refineAggressivenessScale = 1)
+            public unsafe void CreateRefinementJobs(BufferPool pool, int frameIndex)
+            {
+                CreateRefinementJobs(pool, frameIndex, Constants.C1);
+            }
+
+            public unsafe void CreateRefinementJobs(BufferPool pool, int frameIndex, Number refineAggressivenessScale)
             {
                 if (Tree.LeafCount <= 2)
                 {
@@ -152,8 +157,13 @@ namespace BepuPhysics.Trees
                 this.threadDispatcher = null;
             }
 
+            public unsafe void RefitAndRefine(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher, int frameIndex)
+            {
+                RefitAndRefine(ref tree, pool, threadDispatcher, frameIndex, Constants.C1);
+            }
+
             public unsafe void RefitAndRefine(ref Tree tree, BufferPool pool, IThreadDispatcher threadDispatcher, int frameIndex,
-                float refineAggressivenessScale = 1)
+                Number refineAggressivenessScale)
             {
                 CreateRefitAndMarkJobs(ref tree, pool, threadDispatcher);
                 threadDispatcher.DispatchWorkers(RefitAndMarkAction, RefitNodes.Count);
@@ -224,11 +234,13 @@ namespace BepuPhysics.Trees
                 if (shouldUseMark)
                 {
                     var costChange = Tree.RefitAndMark(ref childInParent, RefinementLeafCountThreshold, ref RefinementCandidates[workerIndex], threadPool);
+                    Debug.Assert(!Number.IsNaN(costChange) && !Number.IsInfinity(costChange));
                     metanode.LocalCostChange = costChange;
                 }
                 else
                 {
                     var costChange = Tree.RefitAndMeasure(ref childInParent);
+                    Debug.Assert(!Number.IsNaN(costChange) && !Number.IsInfinity(costChange));
                     metanode.LocalCostChange = costChange;
                 }
 
@@ -270,17 +282,19 @@ namespace BepuPhysics.Trees
                             //Refinement can't change the root's bounds, so the fact that the world got bigger or smaller
                             //doesn't really have any bearing on how much refinement should be done.
                             //We do, however, need to divide by root volume so that we get the change in cost metric rather than volume.
-                            var merged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
+                            var merged = new BoundingBox { Min = new Vector3(Number.MaxValue), Max = new Vector3(Number.MinValue) };
                             for (int i = 0; i < 2; ++i)
                             {
                                 ref var child = ref Unsafe.Add(ref children, i);
                                 BoundingBox.CreateMerged(child.Min, child.Max, merged.Min, merged.Max, out merged.Min, out merged.Max);
                             }
                             var postmetric = ComputeBoundsMetric(ref merged);
-                            if (postmetric > 1e-9f)
+                            if (postmetric > Constants.C1em9)
                                 RefitCostChange = metanode.LocalCostChange / postmetric;
                             else
                                 RefitCostChange = 0;
+
+                            Debug.Assert(!Number.IsNaN(RefitCostChange) && !Number.IsInfinity(RefitCostChange));
                             //Clear the root's refine flag (unioned).
                             metanode.RefineFlag = 0;
                             break;
@@ -290,15 +304,19 @@ namespace BepuPhysics.Trees
                             parent = ref Tree.Nodes[metanode.Parent];
                             childInParent = ref Unsafe.Add(ref parent.A, metanode.IndexInParent);
                             var premetric = ComputeBoundsMetric(ref childInParent.Min, ref childInParent.Max);
-                            childInParent.Min = new Vector3(float.MaxValue);
-                            childInParent.Max = new Vector3(float.MinValue);
+                            childInParent.Min = new Vector3(Number.MaxValue);
+                            childInParent.Max = new Vector3(Number.MinValue);
                             for (int i = 0; i < 2; ++i)
                             {
                                 ref var child = ref Unsafe.Add(ref children, i);
                                 BoundingBox.CreateMerged(child.Min, child.Max, childInParent.Min, childInParent.Max, out childInParent.Min, out childInParent.Max);
                             }
                             var postmetric = ComputeBoundsMetric(ref childInParent.Min, ref childInParent.Max);
+                            Debug.Assert(!Number.IsNaN(metanode.LocalCostChange) && !Number.IsInfinity(metanode.LocalCostChange));
+
                             metanode.LocalCostChange += postmetric - premetric;
+
+                            Debug.Assert(!Number.IsNaN(metanode.LocalCostChange) && !Number.IsInfinity(metanode.LocalCostChange));
                             node = ref parent;
                             metanode = ref Tree.Metanodes[metanode.Parent];
                         }

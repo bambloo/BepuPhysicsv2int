@@ -1,9 +1,10 @@
-﻿using System;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using BepuUtilities.Memory;
+﻿using BepuPhysics.CollisionDetection;
 using BepuUtilities;
-using BepuPhysics.CollisionDetection;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace BepuPhysics.Collidables
 {
@@ -15,32 +16,32 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Radius of the cylinder.
         /// </summary>
-        public float Radius;
+        public Number Radius;
         /// <summary>
         /// Half length of the cylinder along its local Y axis.
         /// </summary>
-        public float HalfLength;
+        public Number HalfLength;
 
         /// <summary>
         /// Gets or sets the length of the cylinder along its local Y axis.
         /// </summary>
-        public float Length { get { return HalfLength * 2; } set { HalfLength = value * 0.5f; } }
+        public Number Length { get { return HalfLength * 2; } set { HalfLength = value * Constants.C0p5; } }
 
         /// <summary>
         /// Creates a cylinder shape.
         /// </summary>
         /// <param name="radius">Radius of the cylinder.</param>
         /// <param name="length">Length of the cylinder along its local Y axis.</param>
-        public Cylinder(float radius, float length)
+        public Cylinder(Number radius, Number length)
         {
             Radius = radius;
-            HalfLength = length * 0.5f;
+            HalfLength = length * Constants.C0p5;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        public readonly void ComputeAngularExpansionData(out Number maximumRadius, out Number maximumAngularExpansion)
         {
-            maximumRadius = (float)Math.Sqrt(HalfLength * HalfLength + Radius * Radius);
+            maximumRadius = (Number)Math.Sqrt(HalfLength * HalfLength + Radius * Radius);
             maximumAngularExpansion = maximumRadius - Math.Min(HalfLength, Radius);
         }
 
@@ -73,7 +74,7 @@ namespace BepuPhysics.Collidables
         }
 
 
-        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out Number t, out Vector3 normal)
         {
             //It's convenient to work in local space, so pull the ray into the cylinder's local space.
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
@@ -82,11 +83,11 @@ namespace BepuPhysics.Collidables
             Matrix3x3.TransformTranspose(direction, orientation, out var d);
 
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
-            var inverseDLength = 1f / d.Length();
+            var inverseDLength = Constants.C1 / d.Length();
             d *= inverseDLength;
 
             //Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
-            var tOffset = float.Max(0, -Vector3.Dot(o, d) - (HalfLength + Radius));
+            var tOffset = Number.Max(0, -Vector3.Dot(o, d) - (HalfLength + Radius));
             o += d * tOffset;
             var oh = new Vector3(o.X, 0, o.Z);
             var dh = new Vector3(d.X, 0, d.Z);
@@ -102,8 +103,8 @@ namespace BepuPhysics.Collidables
                 return false;
             }
 
-            float discY;
-            if (a > 1e-8f)
+            Number discY;
+            if (a > Constants.C1em8)
             {
                 var discriminant = b * b - a * c;
                 if (discriminant < 0)
@@ -114,7 +115,7 @@ namespace BepuPhysics.Collidables
                     return false;
                 }
                 t = (-b - MathF.Sqrt(discriminant)) / a;
-                t = float.Max(t, -tOffset);
+                t = Number.Max(t, -tOffset);
                 var cylinderHitLocation = o + d * t;
                 if (cylinderHitLocation.Y < -HalfLength)
                 {
@@ -141,7 +142,7 @@ namespace BepuPhysics.Collidables
 
             //Intersect the ray with the plane anchored at discY with normal equal to (0,1,0).
             //t = dot(rayOrigin - (0,discY,0), (0,1,0)) / dot(rayDirection, (0,1,0)
-            if (float.Abs(o.Y) > HalfLength && o.Y * d.Y >= 0)
+            if (Number.Abs(o.Y) > HalfLength && o.Y * d.Y >= 0)
             {
                 //The ray can only hit the disc if the ray is inside the cylinder or the direction points toward the cylinder.
                 t = 0;
@@ -162,14 +163,14 @@ namespace BepuPhysics.Collidables
             return true;
         }
 
-        public readonly BodyInertia ComputeInertia(float mass)
+        public readonly BodyInertia ComputeInertia(Number mass)
         {
             BodyInertia inertia;
-            inertia.InverseMass = 1f / mass;
-            float diagValue = inertia.InverseMass / ((4 * .0833333333f) * HalfLength * HalfLength + .25f * Radius * Radius);
+            inertia.InverseMass = Constants.C1 / mass;
+            Number diagValue = inertia.InverseMass / ((4 * Constants.OneTwelfth) * HalfLength * HalfLength + Constants.C0p25 * Radius * Radius);
             inertia.InverseInertiaTensor.XX = diagValue;
             inertia.InverseInertiaTensor.YX = 0;
-            inertia.InverseInertiaTensor.YY = 2f * inertia.InverseMass / (Radius * Radius);
+            inertia.InverseInertiaTensor.YY = Constants.C2 * inertia.InverseMass / (Radius * Radius);
             inertia.InverseInertiaTensor.ZX = 0;
             inertia.InverseInertiaTensor.ZY = 0;
             inertia.InverseInertiaTensor.ZZ = diagValue;
@@ -190,21 +191,21 @@ namespace BepuPhysics.Collidables
 
     public struct CylinderWide : IShapeWide<Cylinder>
     {
-        public Vector<float> Radius;
-        public Vector<float> HalfLength;
+        public Vector<Number> Radius;
+        public Vector<Number> HalfLength;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Broadcast(in Cylinder shape)
         {
-            Radius = new Vector<float>(shape.Radius);
-            HalfLength = new Vector<float>(shape.HalfLength);
+            Radius = new Vector<Number>(shape.Radius);
+            HalfLength = new Vector<Number>(shape.HalfLength);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteFirst(in Cylinder source)
         {
-            Unsafe.As<Vector<float>, float>(ref Radius) = source.Radius;
-            Unsafe.As<Vector<float>, float>(ref HalfLength) = source.HalfLength;
+            Unsafe.As<Vector<Number>, Number>(ref Radius) = source.Radius;
+            Unsafe.As<Vector<Number>, Number>(ref HalfLength) = source.HalfLength;
         }
 
         public bool AllowOffsetMemoryAccess => true;
@@ -218,14 +219,14 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
+        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<Number> maximumRadius, out Vector<Number> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             var y = QuaternionWide.TransformUnitY(orientations);
             Vector3Wide.Multiply(y, y, out var yy);
-            Vector3Wide.Subtract(Vector<float>.One, yy, out var squared);
-            max.X = Vector.Abs(HalfLength * y.X) + Vector.SquareRoot(Vector.Max(Vector<float>.Zero, squared.X)) * Radius;
-            max.Y = Vector.Abs(HalfLength * y.Y) + Vector.SquareRoot(Vector.Max(Vector<float>.Zero, squared.Y)) * Radius;
-            max.Z = Vector.Abs(HalfLength * y.Z) + Vector.SquareRoot(Vector.Max(Vector<float>.Zero, squared.Z)) * Radius;
+            Vector3Wide.Subtract(Vector<Number>.One, yy, out var squared);
+            max.X = Vector.Abs(HalfLength * y.X) + Vector.SquareRoot(Vector.Max(Vector<Number>.Zero, squared.X)) * Radius;
+            max.Y = Vector.Abs(HalfLength * y.Y) + Vector.SquareRoot(Vector.Max(Vector<Number>.Zero, squared.Y)) * Radius;
+            max.Z = Vector.Abs(HalfLength * y.Z) + Vector.SquareRoot(Vector.Max(Vector<Number>.Zero, squared.Z)) * Radius;
             //Cylinders are symmetric.
             Vector3Wide.Negate(max, out min);
 
@@ -242,7 +243,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector<int> intersected, out Vector<Number> t, out Vector3Wide normal)
         {
             //It's convenient to work in local space, so pull the ray into the capsule's local space.
             Matrix3x3Wide.CreateFromQuaternion(pose.Orientation, out var orientation);
@@ -252,12 +253,12 @@ namespace BepuPhysics.Collidables
 
             //Normalize the direction. Sqrts aren't *that* bad, and it both simplifies things and helps avoid numerical problems.
             Vector3Wide.Length(d, out var dLength);
-            var inverseDLength = Vector<float>.One / dLength;
+            var inverseDLength = Vector<Number>.One / dLength;
             Vector3Wide.Scale(d, inverseDLength, out d);
 
             //Move the origin up to the earliest possible impact time. This isn't necessary for math reasons, but it does help avoid some numerical problems.
             Vector3Wide.Dot(o, d, out var od);
-            var tOffset = Vector.Max(-od - (HalfLength + Radius), Vector<float>.Zero);
+            var tOffset = Vector.Max(-od - (HalfLength + Radius), Vector<Number>.Zero);
             Vector3Wide.Scale(d, tOffset, out var oOffset);
             Vector3Wide.Add(o, oOffset, out o);
             var a = d.X * d.X + d.Z * d.Z;
@@ -265,31 +266,31 @@ namespace BepuPhysics.Collidables
             var radiusSquared = Radius * Radius;
             var c = (o.X * o.X + o.Z * o.Z) - radiusSquared;
 
-            var rayIsntParallel = Vector.GreaterThan(a, new Vector<float>(1e-8f));
+            var rayIsntParallel = Vector.GreaterThan(a, new Vector<Number>(Constants.C1em8));
             var discriminant = b * b - a * c;
             var cylinderIntersected = Vector.BitwiseAnd(
                 Vector.BitwiseOr(
-                    Vector.LessThanOrEqual(b, Vector<float>.Zero),
-                    Vector.LessThanOrEqual(c, Vector<float>.Zero)),
-                Vector.GreaterThanOrEqual(discriminant, Vector<float>.Zero));
+                    Vector.LessThanOrEqual(b, Vector<Number>.Zero),
+                    Vector.LessThanOrEqual(c, Vector<Number>.Zero)),
+                Vector.GreaterThanOrEqual(discriminant, Vector<Number>.Zero));
             var cylinderT = Vector.Max(-tOffset, (-b - Vector.SquareRoot(discriminant)) / a);
             Vector3Wide.Scale(d, cylinderT, out oOffset);
             Vector3Wide.Add(o, oOffset, out var cylinderHitLocation);
-            var inverseRadius = Vector<float>.One / Radius;
+            var inverseRadius = Vector<Number>.One / Radius;
             var cylinderNormalX = cylinderHitLocation.X * inverseRadius;
             var cylinderNormalZ = cylinderHitLocation.Z * inverseRadius;
             var useCylinder = Vector.BitwiseAnd(Vector.GreaterThanOrEqual(cylinderHitLocation.Y, -HalfLength), Vector.LessThanOrEqual(cylinderHitLocation.Y, HalfLength));
 
             //Intersect the disc cap for any lane which ended up not using the cylinder.
-            Vector<float> discY = Vector.ConditionalSelect(
+            Vector<Number> discY = Vector.ConditionalSelect(
                 Vector.BitwiseOr(
                     Vector.BitwiseAnd(Vector.GreaterThan(cylinderHitLocation.Y, HalfLength), rayIsntParallel),
-                    Vector.AndNot(Vector.LessThanOrEqual(d.Y, Vector<float>.Zero), rayIsntParallel)), HalfLength, -HalfLength);
+                    Vector.AndNot(Vector.LessThanOrEqual(d.Y, Vector<Number>.Zero), rayIsntParallel)), HalfLength, -HalfLength);
 
             //Intersect the ray with the plane anchored at discY with normal equal to (0,1,0).
             //t = dot(rayOrigin - (0,discY,0), (0,1,0)) / dot(rayDirection, (0,1,0)
             //The ray can only hit the disc if the ray is inside the cylinder or the direction points toward the cylinder.
-            var withinDiscsOrRayPointsTowardDisc = Vector.BitwiseOr(Vector.LessThanOrEqual(Vector.Abs(o.Y), HalfLength), Vector.LessThan(o.Y * d.Y, Vector<float>.Zero));
+            var withinDiscsOrRayPointsTowardDisc = Vector.BitwiseOr(Vector.LessThanOrEqual(Vector.Abs(o.Y), HalfLength), Vector.LessThan(o.Y * d.Y, Vector<Number>.Zero));
 
             var capT = (discY - o.Y) / d.Y;
 
@@ -298,12 +299,12 @@ namespace BepuPhysics.Collidables
             var capHitWithinRadius = Vector.LessThanOrEqual(hitLocationX * hitLocationX + hitLocationZ * hitLocationZ, radiusSquared);
             var hitCap = Vector.BitwiseAnd(withinDiscsOrRayPointsTowardDisc, capHitWithinRadius);
 
-            t = (tOffset + Vector.ConditionalSelect(useCylinder, cylinderT, Vector.ConditionalSelect(hitCap, capT, Vector<float>.Zero))) * inverseDLength;
-            var capUsesUpwardFacingNormal = Vector.LessThan(d.Y, Vector<float>.Zero);
+            t = (tOffset + Vector.ConditionalSelect(useCylinder, cylinderT, Vector.ConditionalSelect(hitCap, capT, Vector<Number>.Zero))) * inverseDLength;
+            var capUsesUpwardFacingNormal = Vector.LessThan(d.Y, Vector<Number>.Zero);
             Vector3Wide localNormal;
-            localNormal.X = Vector.ConditionalSelect(useCylinder, cylinderNormalX, Vector<float>.Zero);
-            localNormal.Y = Vector.ConditionalSelect(useCylinder, Vector<float>.Zero, Vector.ConditionalSelect(capUsesUpwardFacingNormal, Vector<float>.One, new Vector<float>(-1)));
-            localNormal.Z = Vector.ConditionalSelect(useCylinder, cylinderNormalZ, Vector<float>.Zero);
+            localNormal.X = Vector.ConditionalSelect(useCylinder, cylinderNormalX, Vector<Number>.Zero);
+            localNormal.Y = Vector.ConditionalSelect(useCylinder, Vector<Number>.Zero, Vector.ConditionalSelect(capUsesUpwardFacingNormal, Vector<Number>.One, new Vector<Number>(-1)));
+            localNormal.Z = Vector.ConditionalSelect(useCylinder, cylinderNormalZ, Vector<Number>.Zero);
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, orientation, out normal);
             intersected = Vector.ConditionalSelect(useCylinder, cylinderIntersected, hitCap);
         }
@@ -318,7 +319,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetMargin(in CylinderWide shape, out Vector<float> margin)
+        public void GetMargin(in CylinderWide shape, out Vector<Number> margin)
         {
             margin = default;
         }
@@ -334,14 +335,14 @@ namespace BepuPhysics.Collidables
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeLocalSupport(in CylinderWide shape, in Vector3Wide direction, in Vector<int> terminatedLanes, out Vector3Wide support)
         {
-            support.Y = Vector.ConditionalSelect(Vector.GreaterThan(direction.Y, Vector<float>.Zero), shape.HalfLength, -shape.HalfLength);
+            support.Y = Vector.ConditionalSelect(Vector.GreaterThan(direction.Y, Vector<Number>.Zero), shape.HalfLength, -shape.HalfLength);
             //TODO: Using a hardware accelerated reciprocal sqrt approximation would be hugely beneficial here.
             //It would actually be meaningful to full frame time in simulations that rely on cylinders.
             var horizontalLength = Vector.SquareRoot(direction.X * direction.X + direction.Z * direction.Z);
             var normalizeScale = shape.Radius / horizontalLength;
-            var useHorizontal = Vector.GreaterThan(horizontalLength, new Vector<float>(1e-8f));
-            support.X = Vector.ConditionalSelect(useHorizontal, direction.X * normalizeScale, Vector<float>.Zero);
-            support.Z = Vector.ConditionalSelect(useHorizontal, direction.Z * normalizeScale, Vector<float>.Zero);
+            var useHorizontal = Vector.GreaterThan(horizontalLength, new Vector<Number>(Constants.C1em8));
+            support.X = Vector.ConditionalSelect(useHorizontal, direction.X * normalizeScale, Vector<Number>.Zero);
+            support.Z = Vector.ConditionalSelect(useHorizontal, direction.Z * normalizeScale, Vector<Number>.Zero);
         }
     }
 }

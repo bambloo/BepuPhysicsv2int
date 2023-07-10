@@ -1,11 +1,11 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace DemoRenderer.UI
 {
@@ -33,21 +33,21 @@ namespace DemoRenderer.UI
         public uint PackedColor;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public GlyphInstance(ref Vector2 start, ref Vector2 horizontalAxis, float scale, int sourceId, ref Vector4 color, ref Vector2 screenToPackedScale)
+        public GlyphInstance(ref Vector2 start, ref Vector2 horizontalAxis, Number scale, int sourceId, ref Vector4 color, ref Vector2 screenToPackedScale)
         {
             //Note that this can do some weird stuff if the position is outside of the target range. For the sake of the demos, we just assume everything's in frame.
             //If you want to use this for a game where you can't guarantee that everything's in frame, this packing range would need to be modified.
             //One simple option is to just set the mapped region to extend beyond the rendered target. It reduces the precision density a bit, but that's not too important.
             PackedMinimum = (uint)(start.X * screenToPackedScale.X) | ((uint)(start.Y * screenToPackedScale.Y) << 16);
-            var scaledAxisX = (uint)(horizontalAxis.X * 32767f + 32767f);
-            var scaledAxisY = (uint)(horizontalAxis.Y * 32767f + 32767f);
+            var scaledAxisX = (uint)(horizontalAxis.X * (Number)32767f + (Number)32767f);
+            var scaledAxisY = (uint)(horizontalAxis.Y * (Number)32767f + (Number)32767f);
             Debug.Assert(scaledAxisX <= 65534);
             Debug.Assert(scaledAxisY <= 65534);
             PackedHorizontalAxis = scaledAxisX | (scaledAxisY << 16);
-            var packScaledScale = scale * (65535f / 16f);
+            var packScaledScale = scale * ((Number)65535f / (Number)16f);
             Debug.Assert(packScaledScale >= 0);
-            if (packScaledScale > 65535f)
-                packScaledScale = 65535f;
+            if (packScaledScale > (Number)65535f)
+                packScaledScale = (Number)65535f;
             Debug.Assert(sourceId >= 0 && sourceId < 65536);
             PackedScaleAndSourceId = (uint)packScaledScale | (uint)(sourceId << 16);
             PackedColor = Helpers.PackColor(color);
@@ -58,9 +58,9 @@ namespace DemoRenderer.UI
     {
         struct VertexConstants
         {
-            public Vector2 PackedToScreenScale;
-            public Vector2 ScreenToNDCScale;
-            public Vector2 InverseAtlasResolution;
+            public System.Numerics.Vector2 PackedToScreenScale;
+            public System.Numerics.Vector2 ScreenToNDCScale;
+            public System.Numerics.Vector2 InverseAtlasResolution;
         }
         ConstantsBuffer<VertexConstants> vertexConstants;
 
@@ -108,9 +108,9 @@ namespace DemoRenderer.UI
             {
                 //These first two scales could be uploaded once, but it would require another buffer. Not important enough.
                 //The packed minimum must permit subpixel locations. So, distribute the range 0 to 65535 over the pixel range 0 to resolution.
-                PackedToScreenScale = new Vector2(screenResolution.X / 65535f, screenResolution.Y / 65535f),
-                ScreenToNDCScale = new Vector2(2f / screenResolution.X, -2f / screenResolution.Y),
-                InverseAtlasResolution = new Vector2(1f / font.Content.Atlas.Width, 1f / font.Content.Atlas.Height)
+                PackedToScreenScale = new System.Numerics.Vector2(screenResolution.X / 65535f, screenResolution.Y / 65535f),
+                ScreenToNDCScale = new System.Numerics.Vector2(2f / screenResolution.X, -2f / screenResolution.Y),
+                InverseAtlasResolution = new System.Numerics.Vector2(1f / font.Content.Atlas.Width, 1f / font.Content.Atlas.Height)
             };
             vertexConstants.Update(context, ref vertexConstantsData);
             context.VertexShader.SetShaderResource(1, font.Sources.SRV);

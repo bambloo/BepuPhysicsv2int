@@ -1,5 +1,5 @@
 ﻿using BepuPhysics.Collidables;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.InteropServices;
 
 namespace BepuPhysics

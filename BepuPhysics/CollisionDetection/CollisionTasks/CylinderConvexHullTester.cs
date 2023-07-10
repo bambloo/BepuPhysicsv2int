@@ -1,9 +1,9 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
-using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
@@ -12,7 +12,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public int BatchSize => 16;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ProjectOntoCap(Vector3 capCenter, in Matrix3x3 cylinderOrientation, float inverseLocalNormalDotAY, Vector3 localNormal, Vector3 point, out Vector2 projected)
+        static void ProjectOntoCap(Vector3 capCenter, in Matrix3x3 cylinderOrientation, Number inverseLocalNormalDotAY, Vector3 localNormal, Vector3 point, out Vector2 projected)
         {
             var pointToCapCenter = capCenter - point;
             var t = Vector3.Dot(pointToCapCenter, cylinderOrientation.Y) * inverseLocalNormalDotAY;
@@ -25,13 +25,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static bool IntersectLineCircle(in Vector2 linePosition, in Vector2 lineDirection, float radius, out float tMin, out float tMax)
+        internal static bool IntersectLineCircle(in Vector2 linePosition, in Vector2 lineDirection, Number radius, out Number tMin, out Number tMax)
         {
             //||linePosition + lineDirection * t|| = radius
             //dot(linePosition + lineDirection * t, linePosition + lineDirection * t) = radius * radius
             //dot(linePosition, linePosition) - radius * radius + t * 2 * dot(linePosition, lineDirection) + t^2 * dot(lineDirection, lineDirection) = 0
             var a = Vector2.Dot(lineDirection, lineDirection);
-            var inverseA = 1f / a;
+            var inverseA = Constants.C1 / a;
             var b = Vector2.Dot(linePosition, lineDirection);
             var c = Vector2.Dot(linePosition, linePosition);
             var radiusSquared = radius * radius;
@@ -43,9 +43,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 tMax = 0;
                 return false;
             }
-            var tOffset = (float)Math.Sqrt(d) * inverseA;
+            var tOffset = (Number)Math.Sqrt(d) * inverseA;
             var tBase = -b * inverseA;
-            if (a < 1e-12f && a > -1e-12f)
+            if (a < Constants.C1em12 && a > Constants.Cm1em12)
             {
                 //If the projected line direction is zero, just compress the interval to tBase.
                 tMin = tBase;
@@ -64,10 +64,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void InsertContact(Vector3 slotSideEdgeCenter, Vector3 slotCylinderEdgeAxis, float t,
-            Vector3 hullFaceOrigin, Vector3 slotHullFaceNormal, float inverseDepthDenominator,
+        static void InsertContact(Vector3 slotSideEdgeCenter, Vector3 slotCylinderEdgeAxis, Number t,
+            Vector3 hullFaceOrigin, Vector3 slotHullFaceNormal, Number inverseDepthDenominator,
             in Matrix3x3 slotHullOrientation, Vector3 slotOffsetB, int featureId,
-            ref Vector3Wide contactOffsetAWide, ref Vector<float> contactDepthWide, ref Vector<int> contactFeatureIdWide, ref Vector<int> contactExistsWide)
+            ref Vector3Wide contactOffsetAWide, ref Vector<Number> contactDepthWide, ref Vector<int> contactFeatureIdWide, ref Vector<int> contactExistsWide)
         {
             //Create max contact.
             var localPoint = slotSideEdgeCenter + slotCylinderEdgeAxis * t;
@@ -81,7 +81,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             GatherScatter.GetFirst(ref contactExistsWide) = -1;
         }
 
-        public unsafe void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public unsafe void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             Unsafe.SkipInit(out manifold);
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var cylinderOrientation);
@@ -91,11 +91,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, hullOrientation, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
             Vector3Wide.Length(localOffsetA, out var centerDistance);
-            Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
-            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
-            initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
-            initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
-            initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
+            Vector3Wide.Scale(localOffsetA, Vector<Number>.One / centerDistance, out var initialNormal);
+            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<Number>(Constants.C1em8));
+            initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<Number>.Zero, initialNormal.X);
+            initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<Number>.One, initialNormal.Y);
+            initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<Number>.Zero, initialNormal.Z);
             var hullSupportFinder = default(ConvexHullSupportFinder);
             var cylinderSupportFinder = default(CylinderSupportFinder);
             var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
@@ -103,7 +103,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var epsilonScale = Vector.Min(Vector.Max(a.HalfLength, a.Radius), hullEpsilonScale);
             var depthThreshold = -speculativeMargin;
             DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-                b, a, localOffsetA, hullLocalCylinderOrientation, ref hullSupportFinder, ref cylinderSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
+                b, a, localOffsetA, hullLocalCylinderOrientation, ref hullSupportFinder, ref cylinderSupportFinder, initialNormal, inactiveLanes, Constants.C1em5 * epsilonScale, depthThreshold,
                 out var depth, out var localNormal, out var closestOnHull);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
@@ -122,8 +122,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Scale(localNormal, depth, out var closestOnCylinderOffset);
             Vector3Wide.Subtract(closestOnHull, closestOnCylinderOffset, out var closestOnCylinder);
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(localNormal, hullLocalCylinderOrientation, out var localNormalInA);
-            var inverseLocalNormalDotCapNormal = Vector<float>.One / localNormalInA.Y;
-            var useCap = Vector.GreaterThan(Vector.Abs(localNormalInA.Y), new Vector<float>(0.70710678118f));
+            var inverseLocalNormalDotCapNormal = Vector<Number>.One / localNormalInA.Y;
+            var useCap = Vector.GreaterThan(Vector.Abs(localNormalInA.Y), new Vector<Number>(Constants.HalfRoot2));
             Unsafe.SkipInit(out Vector3Wide capCenter);
             Unsafe.SkipInit(out Vector2Wide interior0);
             Unsafe.SkipInit(out Vector2Wide interior1);
@@ -131,7 +131,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Unsafe.SkipInit(out Vector2Wide interior3);
             if (Vector.LessThanAny(Vector.AndNot(useCap, inactiveLanes), Vector<int>.Zero))
             {
-                var useBottom = Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero);
+                var useBottom = Vector.GreaterThan(localNormalInA.Y, Vector<Number>.Zero);
                 Vector3Wide.Scale(hullLocalCylinderOrientation.Y, Vector.ConditionalSelect(useBottom, -a.HalfLength, a.HalfLength), out capCenter);
                 Vector3Wide.Add(capCenter, localOffsetA, out capCenter);
 
@@ -160,7 +160,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             }
             var candidates = stackalloc ManifoldCandidateScalar[maximumCandidateCount];
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
-            var boundingPlaneEpsilon = 1e-3f * epsilonScale;
+            var boundingPlaneEpsilon = Constants.C1em3 * epsilonScale;
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
             {
                 if (inactiveLanes[slotIndex] < 0)
@@ -223,7 +223,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                 //Create max contact.
                                 var newContactIndex = candidateCount++;
                                 ref var candidate = ref candidates[newContactIndex];
-                                Unsafe.As<float, Vector2>(ref candidate.X) = hullEdgeOffset * tMax + previousVertex;
+                                Unsafe.As<Number, Vector2>(ref candidate.X) = hullEdgeOffset * tMax + previousVertex;
                                 candidate.FeatureId = baseFeatureId + endId;
 
                             }
@@ -232,7 +232,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                                 //Create min contact.
                                 var newContactIndex = candidateCount++;
                                 ref var candidate = ref candidates[newContactIndex];
-                                Unsafe.As<float, Vector2>(ref candidate.X) = hullEdgeOffset * tMin + previousVertex;
+                                Unsafe.As<Number, Vector2>(ref candidate.X) = hullEdgeOffset * tMin + previousVertex;
                                 candidate.FeatureId = baseFeatureId + startId;
 
                             }
@@ -286,7 +286,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.ReadSlot(ref hullLocalCylinderOrientation.Z, slotIndex, out var slotCylinderFaceY);
                     Matrix3x3Wide.ReadSlot(ref hullOrientation, slotIndex, out var slotHullOrientation);
                     //Note that we're working on the cylinder's cap, so the parameters get flipped around. Gets pushed back onto the hull in the postpass.
-                    ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotHullFaceNormal, -1f / Vector3.Dot(slotLocalNormal, slotHullFaceNormal), hullFaceOrigin, slotCapCenter, slotCylinderFaceX, slotCylinderFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
+                    ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotHullFaceNormal, Constants.Cm1 / Vector3.Dot(slotLocalNormal, slotHullFaceNormal), hullFaceOrigin, slotCapCenter, slotCylinderFaceX, slotCylinderFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex],
                        slotHullOrientation, slotOffsetB, slotIndex, ref manifold);
                 }
                 else
@@ -297,10 +297,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var previousIndex = faceVertexIndices[faceVertexIndices.Length - 1];
                     Vector3Wide.ReadSlot(ref hull.Points[previousIndex.BundleIndex], previousIndex.InnerIndex, out var hullFaceOrigin);
                     var previousVertex = hullFaceOrigin;
-                    var latestEntryNumerator = float.MaxValue;
-                    var latestEntryDenominator = -1f;
-                    var earliestExitNumerator = float.MaxValue;
-                    var earliestExitDenominator = 1f;
+                    var latestEntryNumerator = Number.MaxValue;
+                    var latestEntryDenominator = Constants.Cm1;
+                    var earliestExitNumerator = Number.MaxValue;
+                    var earliestExitDenominator = Constants.C1;
                     for (int i = 0; i < faceVertexIndices.Length; ++i)
                     {
                         var index = faceVertexIndices[i];
@@ -321,9 +321,9 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         var edgePlaneNormalLengthSquared = edgePlaneNormal.LengthSquared();
                         var denominatorSquared = denominator * denominator;
 
-                        const float min = 1e-5f;
-                        const float max = 3e-4f;
-                        const float inverseSpan = 1f / (max - min);
+                        Number min = Constants.C1em5;
+                        Number max = Constants.C3em4;
+                        Number inverseSpan = Constants.C1 / (max - min);
                         if (denominatorSquared > min * edgePlaneNormalLengthSquared)
                         {
                             if (denominatorSquared < max * edgePlaneNormalLengthSquared)
@@ -362,7 +362,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var slotSideEdgeHalfLength = a.HalfLength[slotIndex];
                     var latestEntry = latestEntryNumerator / latestEntryDenominator;
                     var earliestExit = earliestExitNumerator / earliestExitDenominator;
-                    var inverseDepthDenominator = 1f / Vector3.Dot(slotHullFaceNormal, slotLocalNormal);
+                    var inverseDepthDenominator = Constants.C1 / Vector3.Dot(slotHullFaceNormal, slotLocalNormal);
                     var negatedEdgeLength = -slotSideEdgeHalfLength;
                     if (latestEntry < negatedEdgeLength)
                         latestEntry = negatedEdgeLength;
@@ -379,7 +379,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         slotSideEdgeCenter, slotCylinderEdgeAxis, earliestExit,
                         hullFaceOrigin, slotHullFaceNormal, inverseDepthDenominator, slotHullOrientation, slotOffsetB, 0,
                         ref slotManifold.OffsetA0, ref slotManifold.Depth0, ref slotManifold.FeatureId0, ref slotManifold.Contact0Exists);
-                    if (earliestExit - latestEntry > slotSideEdgeHalfLength * 1e-3f)
+                    if (earliestExit - latestEntry > slotSideEdgeHalfLength * Constants.C1em3)
                     {
                         InsertContact(
                             slotSideEdgeCenter, slotCylinderEdgeAxis, latestEntry,
@@ -407,12 +407,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(manifold.OffsetA3, offset3, out manifold.OffsetA3);
         }
 
-        public void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref CylinderWide a, ref ConvexHullWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

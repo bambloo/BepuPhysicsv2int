@@ -1,23 +1,24 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using DemoUtilities;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System;
-using System.Numerics;
-using System.Diagnostics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
-using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Trees;
-using DemoRenderer.UI;
-using DemoRenderer.Constraints;
-using System.Threading;
-using Demos.SpecializedTests;
+using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
-using Demos.Demos;
+using DemoRenderer;
+using DemoRenderer.Constraints;
+using DemoRenderer.UI;
+using Demos.SpecializedTests;
+using DemoUtilities;
+using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using Helpers = DemoRenderer.Helpers;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos
 {
@@ -30,7 +31,7 @@ namespace Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
             {
                 return false;
             }
@@ -61,7 +62,7 @@ namespace Demos
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20f, 13, -20f);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
@@ -89,7 +90,7 @@ namespace Demos
             const int length = 16;
             var spacing = new Vector3(2.01f);
             var halfSpacing = spacing / 2;
-            float randomizationSubset = 0.9f;
+            Number randomizationSubset = 0.9f;
             var randomizationSpan = (spacing - new Vector3(1)) * randomizationSubset;
             var randomizationBase = randomizationSpan * -0.5f;
             for (int i = 0; i < width; ++i)
@@ -105,7 +106,7 @@ namespace Demos
                         orientation.X = -1 + 2 * random.NextSingle();
                         orientation.Y = -1 + 2 * random.NextSingle();
                         orientation.Z = -1 + 2 * random.NextSingle();
-                        orientation.W = 0.01f + random.NextSingle();
+                        orientation.W = Constants.C0p01 + random.NextSingle();
                         QuaternionEx.Normalize(ref orientation);
                         var shapeIndex = ((i + j + k) % 5) switch
                         {
@@ -117,7 +118,7 @@ namespace Demos
                         };
                         if ((i + j + k) % 2 == 1)
                         {
-                            Simulation.Bodies.Add(BodyDescription.CreateKinematic((location, orientation), shapeIndex, -0.1f));
+                            Simulation.Bodies.Add(BodyDescription.CreateKinematic((location, orientation), shapeIndex, -Constants.C0p1));
                         }
                         else
                         {
@@ -149,10 +150,10 @@ namespace Demos
             for (int i = 0; i < randomRayCount; ++i)
             {
                 var direction = GetDirection(random);
-                var originScale = (float)Math.Sqrt(random.NextDouble());
+                var originScale = (Number)Math.Sqrt(random.NextDouble());
                 randomRays.AllocateUnsafely() = new TestRay
                 {
-                    Origin = originScale * GetDirection(random) * width * spacing * 0.25f,
+                    Origin = originScale * GetDirection(random) * width * spacing * Constants.C0p25,
                     Direction = GetDirection(random),
                     MaximumT = 50
                 };
@@ -161,8 +162,8 @@ namespace Demos
             //Send rays out matching a planar projection.
             int frustumRayWidth = 128;
             int frustumRayHeight = 128;
-            float aspectRatio = 1.6f;
-            float verticalFOV = MathHelper.Pi * 0.16f;
+            Number aspectRatio = 1.6f;
+            Number verticalFOV = MathHelper.Pi * 0.16f;
             var unitZScreenHeight = 2 * MathF.Tan(verticalFOV / 2);
             var unitZScreenWidth = unitZScreenHeight * aspectRatio;
             var unitZSpacing = new Vector2(unitZScreenWidth / frustumRayWidth, unitZScreenHeight / frustumRayHeight);
@@ -214,7 +215,7 @@ namespace Demos
         static Vector3 GetDirection(Random random)
         {
             Vector3 direction;
-            float length;
+            Number length;
             do
             {
                 direction = 2 * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One;
@@ -228,7 +229,7 @@ namespace Demos
         struct TestRay
         {
             public Vector3 Origin;
-            public float MaximumT;
+            public Number MaximumT;
             public Vector3 Direction;
         }
         QuickList<QuickList<TestRay>> raySources;
@@ -238,7 +239,7 @@ namespace Demos
         struct RayHit
         {
             public Vector3 Normal;
-            public float T;
+            public Number T;
             public CollidableReference Collidable;
             public bool Hit;
         }
@@ -274,7 +275,7 @@ namespace Demos
                 CacheBlaster.Blast();
                 for (int i = 0; i < rays.Count; ++i)
                 {
-                    Results[i].T = float.MaxValue;
+                    Results[i].T = Number.MaxValue;
                     Results[i].Hit = false;
                 }
                 JobIndex = -1;
@@ -289,7 +290,7 @@ namespace Demos
                     internalWorker(0);
                 }
                 var stop = Stopwatch.GetTimestamp();
-                Timings.Add((stop - start) / (double)Stopwatch.Frequency);
+                Timings.Add((stop - start) / (Number)Stopwatch.Frequency);
             }
         }
 
@@ -359,13 +360,13 @@ namespace Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, CollidableReference collidable, int childIndex)
+            public void OnRayHit(in RayData ray, ref Number maximumT, Number t, Vector3 normal, CollidableReference collidable, int childIndex)
             {
                 maximumT = t;
                 ref var hit = ref Hits[ray.Id];
                 if (t < hit.T)
                 {
-                    if (hit.T == float.MaxValue)
+                    if (hit.T == Number.MaxValue)
                         ++*IntersectionCount;
                     hit.Normal = normal;
                     hit.T = t;
@@ -380,7 +381,7 @@ namespace Demos
         bool shouldUseMultithreading = true;
         int raySourceIndex;
         int frameCount;
-        float rotation;
+        Number rotation;
         void CopyAndRotate(ref QuickList<TestRay> source)
         {
             testRays.Count = source.Count;
@@ -396,7 +397,7 @@ namespace Demos
             }
         }
 
-        public unsafe override void Update(Window window, Camera camera, Input input, float dt)
+        public unsafe override void Update(Window window, Camera camera, Input input, Number dt)
         {
             base.Update(window, camera, input, dt);
 
@@ -432,7 +433,7 @@ namespace Demos
                 frameCount = 0;
             if (shouldRotate)
             {
-                rotation += (MathF.PI * 1e-2f * (TimestepDuration)) % (2 * MathF.PI);
+                rotation += (MathF.PI * Constants.C1em2 * (TimestepDuration)) % (2 * MathF.PI);
             }
             if (shouldCycle)
             {
@@ -500,23 +501,23 @@ namespace Demos
             }
         }
 
-        void WriteResults(string name, double time, double baseline, float y, TextBatcher batcher, TextBuilder text, Font font)
+        void WriteResults(string name, Number time, Number baseline, Number y, TextBatcher batcher, TextBuilder text, Font font)
         {
             batcher.Write(
                 text.Clear().Append(name).Append(":"),
                 new Vector2(32, y), 16, new Vector3(1), font);
             batcher.Write(
-                text.Clear().Append(time * 1e6, 2),
+                text.Clear().Append((float)time * 1e6, 2),
                 new Vector2(128, y), 16, new Vector3(1), font);
             batcher.Write(
-                text.Clear().Append(testRays.Count / time, 0),
+                text.Clear().Append(testRays.Count / (float)time, 0),
                 new Vector2(224, y), 16, new Vector3(1), font);
             batcher.Write(
-                text.Clear().Append(baseline / time, 2),
+                text.Clear().Append((float)(baseline / time), 2),
                 new Vector2(350, y), 16, new Vector3(1), font);
         }
 
-        void WriteControl(string name, TextBuilder control, float y, TextBatcher batcher, Font font)
+        void WriteControl(string name, TextBuilder control, Number y, TextBatcher batcher, Font font)
         {
             batcher.Write(control,
                 new Vector2(176, y), 16, new Vector3(1), font);
@@ -530,7 +531,7 @@ namespace Demos
             var batchedPackedNormalColor = Helpers.PackColor(new Vector3(1f, 1f, 0));
             var batchedPackedBackgroundColor = Helpers.PackColor(new Vector3());
 
-            DrawRays(ref algorithms[0].Results, renderer, new Vector3(0.25f, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3());
+            DrawRays(ref algorithms[0].Results, renderer, new Vector3(Constants.C0p25, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 1, 0), new Vector3());
 
             text.Clear().Append("Active ray source index: ").Append(raySourceIndex);
             if (shouldCycle)

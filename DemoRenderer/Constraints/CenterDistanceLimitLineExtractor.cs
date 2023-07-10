@@ -1,9 +1,8 @@
-﻿using BepuUtilities.Collections;
-using BepuUtilities.Memory;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Constraints;
-using System.Numerics;
 using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
 
 namespace DemoRenderer.Constraints
 {
@@ -19,25 +18,25 @@ namespace DemoRenderer.Constraints
             ref var poseB = ref bodies.Sets[setIndex].DynamicsState[bodyIndices[1]].Motion.Pose;
             var minimumDistance = GatherScatter.GetFirst(ref prestepBundle.MinimumDistance);
             var maximumDistance = GatherScatter.GetFirst(ref prestepBundle.MaximumDistance);
-            var color = new Vector3(0.2f, 0.2f, 1f) * tint;
+            var color = new Vector3(Constants.C0p2, Constants.C0p2, Constants.C1) * tint;
             var packedColor = Helpers.PackColor(color);
-            var backgroundColor = new Vector3(0f, 0f, 1f) * tint;
+            var backgroundColor = new Vector3(Constants.C0, Constants.C0, Constants.C1) * tint;
             lines.AllocateUnsafely() = new LineInstance(poseA.Position, poseA.Position, packedColor, 0);
             lines.AllocateUnsafely() = new LineInstance(poseB.Position, poseB.Position, packedColor, 0);
             var offset = poseB.Position - poseA.Position;
             var length = offset.Length();
-            var direction = length < 1e-9f ? new Vector3(1, 0, 0) : offset / length;
+            var direction = length < Constants.C1em9 ? new Vector3(1, 0, 0) : offset / length;
             var errorColor = new Vector3(1, 0, 0) * tint;
             var packedErrorColor = Helpers.PackColor(errorColor);
-            var packedFarColor = Helpers.PackColor(color * 0.5f);
-            var packedNearColor = Helpers.PackColor(color * 0.25f);
+            var packedFarColor = Helpers.PackColor(color * Constants.C0p5);
+            var packedNearColor = Helpers.PackColor(color * Constants.C0p25);
             var minimumPoint = poseA.Position + direction * minimumDistance;
             if (length >= minimumDistance && length <= maximumDistance)
             {
                 //Create a darker bar to signify the minimum limit.
                 lines.AllocateUnsafely() = new LineInstance(poseA.Position, minimumPoint, packedNearColor, 0);
                 lines.AllocateUnsafely() = new LineInstance(minimumPoint, poseB.Position, packedFarColor, 0);
-                lines.AllocateUnsafely() = new LineInstance(new Vector3(float.MinValue), new Vector3(float.MinValue), 0, 0);
+                lines.AllocateUnsafely() = new LineInstance(new Vector3(Number.MinValue), new Vector3(Number.MinValue), 0, 0);
 
             }
             else if (length < minimumDistance)
@@ -45,7 +44,7 @@ namespace DemoRenderer.Constraints
                 //Too close; draw an error line extending beyond the connecting line.
                 lines.AllocateUnsafely() = new LineInstance(poseA.Position, poseB.Position, packedNearColor, 0);
                 lines.AllocateUnsafely() = new LineInstance(poseB.Position, poseA.Position + direction * minimumDistance, packedErrorColor, 0);
-                lines.AllocateUnsafely() = new LineInstance(new Vector3(float.MinValue), new Vector3(float.MinValue), 0, 0);
+                lines.AllocateUnsafely() = new LineInstance(new Vector3(Number.MinValue), new Vector3(Number.MinValue), 0, 0);
             }
             else
             {

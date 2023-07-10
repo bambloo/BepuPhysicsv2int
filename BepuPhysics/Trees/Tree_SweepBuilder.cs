@@ -4,7 +4,7 @@ using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Trees
@@ -18,15 +18,15 @@ namespace BepuPhysics.Trees
             public int* IndexMapX;
             public int* IndexMapY;
             public int* IndexMapZ;
-            public float* CentroidsX;
-            public float* CentroidsY;
-            public float* CentroidsZ;
+            public Number* CentroidsX;
+            public Number* CentroidsY;
+            public Number* CentroidsZ;
             public BoundingBox* Merged;
         }
 
         unsafe struct IndexMapComparer : IComparerRef<int>
         {
-            public float* Centroids;
+            public Number* Centroids;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public int Compare(ref int a, ref int b)
@@ -38,8 +38,8 @@ namespace BepuPhysics.Trees
         }
 
 
-        readonly unsafe void FindPartitionForAxis(BoundingBox* boundingBoxes, BoundingBox* aMerged, float* centroids, int* indexMap, int count,
-            out int splitIndex, out float cost, out BoundingBox a, out BoundingBox b, out int leafCountA, out int leafCountB)
+        readonly unsafe void FindPartitionForAxis(BoundingBox* boundingBoxes, BoundingBox* aMerged, Number* centroids, int* indexMap, int count,
+            out int splitIndex, out Number cost, out BoundingBox a, out BoundingBox b, out int leafCountA, out int leafCountB)
         {
             Debug.Assert(count > 1);
             //TODO: Note that sorting at every level isn't necessary. Like in one of the much older spatial splitting implementations we did, you can just sort once, and thereafter
@@ -67,8 +67,8 @@ namespace BepuPhysics.Trees
             }
 
             //Sweep from high to low.
-            var bMerged = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
-            cost = float.MaxValue;
+            var bMerged = new BoundingBox { Min = new Vector3(Number.MaxValue), Max = new Vector3(Number.MinValue) };
+            cost = Number.MaxValue;
             splitIndex = 0;
             a = bMerged;
             b = bMerged;
@@ -85,10 +85,10 @@ namespace BepuPhysics.Trees
                 //This penalty is weak enough that it should effectively never come into play except in pathological cases, like all bounding boxes overlapping.
                 //Second, we include an extremely small (the smallest normal floating point number) baseline to the evaluated bounds metric.
                 //This ensures that even a set of perfectly overlapping zero bounds will use a midpoint split rather than a skewed split.
-                const float normalEpsilon = 1.1754943508e-38f;
-                var aCost = i * (1f + i * 0.001f) * (normalEpsilon + ComputeBoundsMetric(ref aMerged[aIndex]));
+                Number normalEpsilon = Number.NormalEpsilon;
+                var aCost = i * (Constants.C1 + i * Constants.C0p001) * (normalEpsilon + ComputeBoundsMetric(ref aMerged[aIndex]));
                 var bCount = count - i;
-                var bCost = bCount * (1f + bCount * 0.001f) * (normalEpsilon + ComputeBoundsMetric(ref bMerged));
+                var bCost = bCount * (Constants.C1 + bCount * Constants.C0p001) * (normalEpsilon + ComputeBoundsMetric(ref bMerged));
 
                 var totalCost = aCost + bCost;
                 if (totalCost < cost)
@@ -120,11 +120,11 @@ namespace BepuPhysics.Trees
             }
 
             FindPartitionForAxis(leaves.Bounds, leaves.Merged, leaves.CentroidsX, leaves.IndexMapX, count,
-                out int xSplitIndex, out float xCost, out BoundingBox xA, out BoundingBox xB, out int xLeafCountA, out int xLeafCountB);
+                out int xSplitIndex, out Number xCost, out BoundingBox xA, out BoundingBox xB, out int xLeafCountA, out int xLeafCountB);
             FindPartitionForAxis(leaves.Bounds, leaves.Merged, leaves.CentroidsY, leaves.IndexMapY, count,
-                out int ySplitIndex, out float yCost, out BoundingBox yA, out BoundingBox yB, out int yLeafCountA, out int yLeafCountB);
+                out int ySplitIndex, out Number yCost, out BoundingBox yA, out BoundingBox yB, out int yLeafCountA, out int yLeafCountB);
             FindPartitionForAxis(leaves.Bounds, leaves.Merged, leaves.CentroidsZ, leaves.IndexMapZ, count,
-                out int zSplitIndex, out float zCost, out BoundingBox zA, out BoundingBox zB, out int zLeafCountA, out int zLeafCountB);
+                out int zSplitIndex, out Number zCost, out BoundingBox zA, out BoundingBox zB, out int zLeafCountA, out int zLeafCountB);
 
             int* bestIndexMap;
             if (xCost <= yCost && xCost <= zCost)
@@ -266,9 +266,9 @@ namespace BepuPhysics.Trees
             pool.TakeAtLeast<int>(leafBounds.Length, out var indexMapX);
             pool.TakeAtLeast<int>(leafBounds.Length, out var indexMapY);
             pool.TakeAtLeast<int>(leafBounds.Length, out var indexMapZ);
-            pool.TakeAtLeast<float>(leafBounds.Length, out var centroidsX);
-            pool.TakeAtLeast<float>(leafBounds.Length, out var centroidsY);
-            pool.TakeAtLeast<float>(leafBounds.Length, out var centroidsZ);
+            pool.TakeAtLeast<Number>(leafBounds.Length, out var centroidsX);
+            pool.TakeAtLeast<Number>(leafBounds.Length, out var centroidsY);
+            pool.TakeAtLeast<Number>(leafBounds.Length, out var centroidsZ);
             pool.TakeAtLeast<BoundingBox>(leafBounds.Length, out var merged);
             SweepResources leaves;
             leaves.Bounds = leafBounds.Memory;

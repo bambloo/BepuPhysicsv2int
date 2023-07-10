@@ -1,8 +1,8 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection
@@ -31,15 +31,15 @@ namespace BepuPhysics.CollisionDetection
 
         protected abstract unsafe bool PreorderedTypeSweep(
             void* shapeDataA, in RigidPose localPoseA, Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, in RigidPose localPoseB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
-            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal);
+            void* shapeDataB, in RigidPose localPoseB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, Number maximumT,
+            Number minimumProgression, Number convergenceThreshold, int maximumIterationCount,
+            out Number t0, out Number t1, out Vector3 hitLocation, out Vector3 hitNormal);
 
         public unsafe bool Sweep(
             void* shapeDataA, int shapeTypeA, in RigidPose localPoseA, Quaternion orientationA, in BodyVelocity velocityA,
-            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, float maximumT,
-            float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+            void* shapeDataB, int shapeTypeB, in RigidPose localPoseB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB, Number maximumT,
+            Number minimumProgression, Number convergenceThreshold, int maximumIterationCount,
+            out Number t0, out Number t1, out Vector3 hitLocation, out Vector3 hitNormal)
         {
             Debug.Assert(
                 (shapeTypeA == ShapeTypeIndexA && shapeTypeB == ShapeTypeIndexB) ||
@@ -68,15 +68,15 @@ namespace BepuPhysics.CollisionDetection
         protected abstract unsafe bool PreorderedTypeSweep<TSweepFilter>(
             void* shapeDataA, Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB,
-            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+            Number maximumT, Number minimumProgression, Number convergenceThreshold, int maximumIterationCount,
+            bool flipRequired, ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out Number t0, out Number t1, out Vector3 hitLocation, out Vector3 hitNormal)
             where TSweepFilter : ISweepFilter;
 
         public unsafe bool Sweep<TSweepFilter>(
             void* shapeDataA, int shapeTypeA, Quaternion orientationA, in BodyVelocity velocityA,
             void* shapeDataB, int shapeTypeB, Vector3 offsetB, Quaternion orientationB, in BodyVelocity velocityB,
-            float maximumT, float minimumProgression, float convergenceThreshold, int maximumIterationCount,
-            ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out float t0, out float t1, out Vector3 hitLocation, out Vector3 hitNormal)
+            Number maximumT, Number minimumProgression, Number convergenceThreshold, int maximumIterationCount,
+            ref TSweepFilter filter, Shapes shapes, SweepTaskRegistry sweepTasks, BufferPool pool, out Number t0, out Number t1, out Vector3 hitLocation, out Vector3 hitNormal)
             where TSweepFilter : ISweepFilter
         {
             Debug.Assert((shapeTypeA == ShapeTypeIndexA && shapeTypeB == ShapeTypeIndexB) || (shapeTypeA == ShapeTypeIndexB && shapeTypeB == ShapeTypeIndexA),

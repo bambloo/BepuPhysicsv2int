@@ -1,12 +1,14 @@
-﻿using System;
+﻿
 using System.Diagnostics;
-using System.Numerics;
+
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 
 namespace Demos.Demos.Tanks
 {
@@ -71,7 +73,7 @@ namespace Demos.Demos.Tanks
         /// <summary>
         /// Speed of projectiles fired by the tank.
         /// </summary>
-        float ProjectileSpeed;
+        Number ProjectileSpeed;
         /// <summary>
         /// Inertia of projectiles fired by the tank.
         /// </summary>
@@ -85,7 +87,7 @@ namespace Demos.Demos.Tanks
         TwistServo BarrelServoDescription;
         TwistServo TurretServoDescription;
 
-        public void SetSpeed(Simulation simulation, Buffer<ConstraintHandle> motors, float speed, float maximumForce)
+        public void SetSpeed(Simulation simulation, Buffer<ConstraintHandle> motors, Number speed, Number maximumForce)
         {
             //This sets all properties of a motor at once; it's possible to create a custom description that only assigns a subset of properties if you find this to be somehow expensive.
             var motorDescription = new AngularAxisMotor
@@ -108,7 +110,7 @@ namespace Demos.Demos.Tanks
         /// <param name="simulation">Simulation containing the tank.</param>
         /// <param name="aimDirection">Direction to aim in.</param>
         /// <returns>Swivel and pitch angles to point in the given direction.</returns>
-        public readonly (float targetSwivelAngle, float targetPitchAngle) ComputeTurretAngles(Simulation simulation, Vector3 aimDirection)
+        public readonly (Number targetSwivelAngle, Number targetPitchAngle) ComputeTurretAngles(Simulation simulation, Vector3 aimDirection)
         {
             //Decompose the aim direction into target angles for the turret and barrel servos.
             //First, we need to compute the frame of reference and transform the aim direction into the tank's local space.
@@ -132,7 +134,7 @@ namespace Demos.Demos.Tanks
         /// <param name="simulation">Simulation containing the tank.</param>
         /// <param name="targetSwivelAngle">Target swivel angle of the turret.</param>
         /// <param name="targetPitchAngle">Target pitch angle of the barrel.</param>
-        public void SetAim(Simulation simulation, float targetSwivelAngle, float targetPitchAngle)
+        public void SetAim(Simulation simulation, Number targetSwivelAngle, Number targetPitchAngle)
         {
             var turretDescription = TurretServoDescription;
             turretDescription.TargetAngle = targetSwivelAngle;
@@ -167,7 +169,7 @@ namespace Demos.Demos.Tanks
             QuaternionEx.Transform(BarrelLocalDirection, barrelPose.Orientation, out var barrelDirection);
             var projectileHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(projectileSpawn, barrelDirection * ProjectileSpeed + barrel.Velocity.Linear, ProjectileInertia,
                 //The projectile moves pretty fast, so we'll use continuous collision detection.
-                new(ProjectileShape, 0.1f, ContinuousDetection.Continuous(1e-3f, 1e-3f)), 0.01f));
+                new(ProjectileShape, 0.1f, ContinuousDetection.Continuous(1e-3f, 1e-3f)), Constants.C0p01));
             ref var projectileProperties = ref bodyProperties.Allocate(projectileHandle);
             projectileProperties.Friction = 1f;
             //Prevent the projectile from colliding with the firing tank.
@@ -182,7 +184,7 @@ namespace Demos.Demos.Tanks
         }
 
         static BodyHandle CreateWheel(Simulation simulation, CollidableProperty<TankDemoBodyProperties> properties, in RigidPose tankPose, in RigidPose bodyLocalPose,
-            TypedIndex wheelShape, BodyInertia wheelInertia, float wheelFriction, BodyHandle bodyHandle, ref SubgroupCollisionFilter bodyFilter, Vector3 bodyToWheelSuspension, float suspensionLength,
+            TypedIndex wheelShape, BodyInertia wheelInertia, Number wheelFriction, BodyHandle bodyHandle, ref SubgroupCollisionFilter bodyFilter, Vector3 bodyToWheelSuspension, Number suspensionLength,
             in SpringSettings suspensionSettings, Quaternion localWheelOrientation,
             ref QuickList<BodyHandle> wheelHandles, ref QuickList<ConstraintHandle> constraints, ref QuickList<ConstraintHandle> motors)
         {
@@ -191,7 +193,7 @@ namespace Demos.Demos.Tanks
             RigidPose.Transform(bodyToWheelSuspension + suspensionDirection * suspensionLength, tankPose, out wheelPose.Position);
             QuaternionEx.ConcatenateWithoutOverlap(localWheelOrientation, tankPose.Orientation, out wheelPose.Orientation);
 
-            var wheelHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(wheelPose, wheelInertia, wheelShape, 0.01f));
+            var wheelHandle = simulation.Bodies.Add(BodyDescription.CreateDynamic(wheelPose, wheelInertia, wheelShape, Constants.C0p01));
             wheelHandles.AllocateUnsafely() = wheelHandle;
 
             //We need a LinearAxisServo to act as the suspension spring, pushing the wheel down.
@@ -244,7 +246,7 @@ namespace Demos.Demos.Tanks
         static ref SubgroupCollisionFilter CreatePart(Simulation simulation, in TankPartDescription part, RigidPose pose, CollidableProperty<TankDemoBodyProperties> properties, out BodyHandle handle)
         {
             RigidPose.MultiplyWithoutOverlap(part.Pose, pose, out var bodyPose);
-            handle = simulation.Bodies.Add(BodyDescription.CreateDynamic(bodyPose, part.Inertia, part.Shape, 0.01f));
+            handle = simulation.Bodies.Add(BodyDescription.CreateDynamic(bodyPose, part.Inertia, part.Shape, Constants.C0p01));
             ref var partProperties = ref properties.Allocate(handle);
             partProperties = new TankDemoBodyProperties { Friction = part.Friction, TankPart = true };
             return ref partProperties.Filter;
@@ -369,7 +371,7 @@ namespace Demos.Demos.Tanks
                     //Connect wheels in a tread to each other to distribute the drive forces.
                     //The motor will always just target 0 velocity. The wheel orientations will be allowed to drift from each other.
                     //(If you didn't want to allow drift, you could use an AngularServo or TwistServo. AngularServo constrains all 3 degrees of freedom, but for these purposes, that'd be fine.)
-                    var motorDescription = new AngularAxisMotor { LocalAxisA = new Vector3(0, 1, 0), Settings = new MotorSettings(float.MaxValue, 1e-4f) };
+                    var motorDescription = new AngularAxisMotor { LocalAxisA = new Vector3(0, 1, 0), Settings = new MotorSettings(Number.MaxValue, 1e-4f) };
                     constraints.AllocateUnsafely() = simulation.Solver.Add(previousLeftWheelHandle, leftWheelHandle, motorDescription);
                     constraints.AllocateUnsafely() = simulation.Solver.Add(previousRightWheelHandle, rightWheelHandle, motorDescription);
                 }

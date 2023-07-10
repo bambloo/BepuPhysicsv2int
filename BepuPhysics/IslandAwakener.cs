@@ -2,14 +2,13 @@
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {
@@ -571,7 +570,7 @@ namespace BepuPhysics
                     //It's difficult to be more conservative ahead of time; we don't know which existing partial bundles will be able to accept the new constraints.
                     //Fallback batches should tend to be rarely used and relatively small, and the extra memory won't be touched, so this isn't a major concern.
                     if (batchIndex == solver.FallbackBatchThreshold)
-                        countForType *= Vector<float>.Count;
+                        countForType *= Vector<Number>.Count;
                     if (countForType > 0)
                     {
                         var typeProcessor = solver.TypeProcessors[typeId];

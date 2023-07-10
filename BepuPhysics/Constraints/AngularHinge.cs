@@ -1,9 +1,8 @@
-﻿using BepuPhysics.CollisionDetection;
-using BepuUtilities;
+﻿using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
@@ -89,12 +88,12 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Subtract(hingeAxisB, toRemoveY, out var hingeAxisBOnPlaneY);
             Vector3Wide.Length(hingeAxisBOnPlaneX, out var xLength);
             Vector3Wide.Length(hingeAxisBOnPlaneY, out var yLength);
-            var scaleX = Vector<float>.One / xLength;
-            var scaleY = Vector<float>.One / yLength;
+            var scaleX = Vector<Number>.One / xLength;
+            var scaleY = Vector<Number>.One / yLength;
             Vector3Wide.Scale(hingeAxisBOnPlaneX, scaleX, out hingeAxisBOnPlaneX);
             Vector3Wide.Scale(hingeAxisBOnPlaneY, scaleY, out hingeAxisBOnPlaneY);
             //If the axis is parallel with the normal of the plane, just arbitrarily pick 0 angle.
-            var epsilon = new Vector<float>(1e-7f);
+            var epsilon = new Vector<Number>(Constants.C1em7);
             var useFallbackX = Vector.LessThan(xLength, epsilon);
             var useFallbackY = Vector.LessThan(yLength, epsilon);
             Vector3Wide.ConditionalSelect(useFallbackX, hingeAxisA, hingeAxisBOnPlaneX, out hingeAxisBOnPlaneX);
@@ -107,8 +106,8 @@ namespace BepuPhysics.Constraints
             errorAngles.Y = MathHelper.Acos(hbyha);
             Vector3Wide.Dot(hingeAxisBOnPlaneX, jacobianA.Y, out var hbxay);
             Vector3Wide.Dot(hingeAxisBOnPlaneY, jacobianA.X, out var hbyax);
-            errorAngles.X = Vector.ConditionalSelect(Vector.LessThan(hbxay, Vector<float>.Zero), errorAngles.X, -errorAngles.X);
-            errorAngles.Y = Vector.ConditionalSelect(Vector.LessThan(hbyax, Vector<float>.Zero), -errorAngles.Y, errorAngles.Y);
+            errorAngles.X = Vector.ConditionalSelect(Vector.LessThan(hbxay, Vector<Number>.Zero), errorAngles.X, -errorAngles.X);
+            errorAngles.Y = Vector.ConditionalSelect(Vector.LessThan(hbyax, Vector<Number>.Zero), -errorAngles.Y, errorAngles.Y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -139,7 +138,7 @@ namespace BepuPhysics.Constraints
             ApplyImpulse(impulseToVelocityA, negatedImpulseToVelocityB, accumulatedImpulses, ref wsvA.Angular, ref wsvB.Angular);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref AngularHingePrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, Number dt, Number inverseDt, ref AngularHingePrestepData prestep, ref Vector2Wide accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Note that we build the tangents in local space first to avoid inconsistencies.
             ComputeJacobians(prestep.LocalHingeAxisA, orientationA, out var hingeAxisA, out var jacobianA);
@@ -155,7 +154,7 @@ namespace BepuPhysics.Constraints
             //Focusing on the hingeAxisOnPlaneX jacobian:
             //C' = (dot(hingeAxisBOnPlaneX, hingeAxisA) * d/dt(dot(hingeAxisBOnPlaneX, constraintAxisAY)) - 
             //      d/dt(dot(hingeAxisBOnPlaneX, hingeAxisA)) * dot(hingeAxisBOnPlaneX, constraintAxisAY)) * denom
-            //where denom = 1f / (dot(hingeAxisBOnPlaneX, hingeAxisA)^2 + dot(hingeAxisBOnPlaneX, constraintAxisAY)^2)
+            //where denom = Constants.C1 / (dot(hingeAxisBOnPlaneX, hingeAxisA)^2 + dot(hingeAxisBOnPlaneX, constraintAxisAY)^2)
             //C' = (dot(hingeAxisBOnPlaneX, hingeAxisA) * (dot(d/dt(hingeAxisBOnPlaneX), constraintAxisAY) + dot(hingeAxisBOnPlaneX, d/dt(constraintAxisAY))) - 
             //     (dot(d/dt(hingeAxisBOnPlaneX), hingeAxisA) + dot(hingeAxisBOnPlaneX, d/dt(hingeAxisA))) * dot(hingeAxisBOnPlaneX, constraintAxisAY)) * denom
             //C' = (dot(hingeAxisBOnPlaneX, hingeAxisA) * (dot(wB x hingeAxisBOnPlaneX, constraintAxisAY) + dot(hingeAxisBOnPlaneX, wA x constraintAxisAY)) - 
@@ -220,7 +219,7 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularHingePrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref AngularHingePrestepData prestepData) { }
     }
 
     public class AngularHingeTypeProcessor : TwoBodyTypeProcessor<AngularHingePrestepData, Vector2Wide, AngularHingeFunctions, AccessOnlyAngular, AccessOnlyAngularWithoutPose, AccessOnlyAngular, AccessOnlyAngular>

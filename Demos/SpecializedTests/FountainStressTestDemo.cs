@@ -1,15 +1,17 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics;
+using BepuPhysics.Collidables;
+using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
 using DemoRenderer;
 using DemoUtilities;
-using BepuPhysics;
-using BepuPhysics.Collidables;
 using System;
-using System.Numerics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
 using System.Diagnostics;
-using DemoContentLoader;
-using BepuPhysics.Constraints;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.SpecializedTests
 {
@@ -21,7 +23,7 @@ namespace Demos.SpecializedTests
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-15f, 20, -15f);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
             //Using minimum sized allocations forces as many resizes as possible.
             //Note the low solverFallbackBatchThreshold- we want the fallback batches to get tested thoroughly.
@@ -49,14 +51,14 @@ namespace Demos.SpecializedTests
                 }, new Vector3(2, 1, 2), BufferPool);
             var staticShapeIndex = Simulation.Shapes.Add(staticShape);
             const int staticGridWidthInInstances = 128;
-            const float staticSpacing = 8;
+            Number staticSpacing = 8;
             for (int i = 0; i < staticGridWidthInInstances; ++i)
             {
                 for (int j = 0; j < staticGridWidthInInstances; ++j)
                 {
                     var staticDescription = new StaticDescription(new Vector3(
                             -staticGridWidthInInstances * staticSpacing * 0.5f + i * staticSpacing,
-                            -4 + 4 * (float)Math.Cos(i * 0.3) + 4 * (float)Math.Cos(j * 0.3),
+                            -4 + 4 * (Number)Math.Cos(i * 0.3) + 4 * (Number)Math.Cos(j * 0.3),
                             -staticGridWidthInInstances * staticSpacing * 0.5f + j * staticSpacing),
                             staticShapeIndex);
                     Simulation.Statics.Add(staticDescription);
@@ -74,9 +76,9 @@ namespace Demos.SpecializedTests
             {
                 var angle = anglePerKinematic * i;
                 var description = BodyDescription.CreateKinematic(new Vector3(
-                            startingRadius * (float)Math.Cos(angle),
+                            startingRadius * (Number)Math.Cos(angle),
                             0,
-                            startingRadius * (float)Math.Sin(angle)),
+                            startingRadius * (Number)Math.Sin(angle)),
                             kinematicShapeIndex,
                             new BodyActivityDescription(0, 4));
                 kinematicHandles[i] = Simulation.Bodies.Add(description);
@@ -87,8 +89,8 @@ namespace Demos.SpecializedTests
             random = new Random(5);
         }
 
-        double time;
-        double t;
+        Number time;
+        Number t;
         BodyHandle[] kinematicHandles;
 
         void AddConvexShape<TConvex>(in TConvex convex, out TypedIndex shapeIndex, out BodyInertia inertia) where TConvex : unmanaged, IConvexShape
@@ -149,7 +151,7 @@ namespace Demos.SpecializedTests
                     }
                     RigidPose localPose;
                     localPose.Position = new Vector3(2, 2, 2) * (0.5f * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One);
-                    float orientationLengthSquared;
+                    Number orientationLengthSquared;
                     do
                     {
                         localPose.Orientation = new Quaternion(random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle());
@@ -259,7 +261,7 @@ namespace Demos.SpecializedTests
                 }
             }
 
-            description = BodyDescription.CreateDynamic(pose, velocity, inertia, shapeIndex, 0.1f);
+            description = BodyDescription.CreateDynamic(pose, velocity, inertia, shapeIndex, Constants.C0p1);
             switch (random.Next(3))
             {
                 case 0: description.Collidable = new CollidableDescription(shapeIndex, 0.2f); break;
@@ -268,7 +270,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             var timestepDuration = 1f / 60f;
             time += timestepDuration;
@@ -280,7 +282,7 @@ namespace Demos.SpecializedTests
                 progressionMultiplier = 0;
             t += timestepDuration * progressionMultiplier;
 
-            var baseAngle = (float)(t * 0.015);
+            var baseAngle = (Number)(t * 0.015);
             var anglePerKinematic = MathHelper.TwoPi / kinematicHandles.Length;
             var maxDisplacement = 50 * timestepDuration;
             var inverseDt = 1f / timestepDuration;
@@ -291,11 +293,11 @@ namespace Demos.SpecializedTests
                 ref var set = ref Simulation.Bodies.Sets[bodyLocation.SetIndex];
                 var angle = anglePerKinematic * i;
                 var positionAngle = baseAngle + angle;
-                var radius = 128 + 32 * (float)Math.Cos(3 * (angle + t * (1f / 3f))) + 32 * (float)Math.Cos(t * (1f / 3f));
+                var radius = 128 + 32 * (Number)Math.Cos(3 * (angle + t * (1f / Constants.C3))) + 32 * (Number)Math.Cos(t * (1f / Constants.C3));
                 var targetLocation = new Vector3(
-                    radius * (float)Math.Cos(positionAngle),
-                    16 + 16 * (float)Math.Cos(4 * (angle + t * 0.5)),
-                    radius * (float)Math.Sin(positionAngle));
+                    radius * (Number)Math.Cos(positionAngle),
+                    16 + 16 * (Number)Math.Cos(4 * (angle + t * 0.5)),
+                    radius * (Number)Math.Sin(positionAngle));
 
                 var correction = targetLocation - set.DynamicsState[bodyLocation.Index].Motion.Pose.Position;
                 var distance = correction.Length();
@@ -348,7 +350,7 @@ namespace Demos.SpecializedTests
             }
 
             //Add some of the missing static bodies back into the simulation.
-            var staticAddCount = removedStatics.Count * (staticRemovalsPerFrame / (float)missingStaticsAsymptote);
+            var staticAddCount = removedStatics.Count * (staticRemovalsPerFrame / (Number)missingStaticsAsymptote);
             for (int i = 0; i < staticAddCount; ++i)
             {
                 Debug.Assert(removedStatics.Count > 0);
@@ -365,7 +367,7 @@ namespace Demos.SpecializedTests
                 dynamicHandles.Enqueue(Simulation.Bodies.Add(bodyDescription), BufferPool);
             }
             int targetAsymptote = 65536;
-            var removalCount = (int)(dynamicHandles.Count * (newShapeCount / (float)targetAsymptote));
+            var removalCount = (int)(dynamicHandles.Count * (newShapeCount / (Number)targetAsymptote));
             for (int i = 0; i < removalCount; ++i)
             {
                 if (dynamicHandles.TryDequeue(out var handle))

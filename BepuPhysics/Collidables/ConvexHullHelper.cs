@@ -1,16 +1,13 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
-using System.IO;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace BepuPhysics.Collidables
 {
@@ -87,9 +84,9 @@ namespace BepuPhysics.Collidables
     {
         static void FindExtremeFace(
             in Vector3Wide basisX, in Vector3Wide basisY, in Vector3Wide basisOrigin, in EdgeEndpoints sourceEdgeEndpoints, ref Buffer<Vector3Wide> pointBundles, in Vector<int> indexOffsets, Buffer<int> allowVertices, int pointCount,
-            ref Buffer<Vector<float>> projectedOnX, ref Buffer<Vector<float>> projectedOnY, in Vector<float> planeEpsilon, ref QuickList<int> vertexIndices, out Vector3 faceNormal)
+            ref Buffer<Vector<Number>> projectedOnX, ref Buffer<Vector<Number>> projectedOnY, in Vector<Number> planeEpsilon, ref QuickList<int> vertexIndices, out Vector3 faceNormal)
         {
-            Debug.Assert(projectedOnX.Length >= pointBundles.Length && projectedOnY.Length >= pointBundles.Length && vertexIndices.Count == 0 && vertexIndices.Span.Length >= pointBundles.Length * Vector<float>.Count);
+            Debug.Assert(projectedOnX.Length >= pointBundles.Length && projectedOnY.Length >= pointBundles.Length && vertexIndices.Count == 0 && vertexIndices.Span.Length >= pointBundles.Length * Vector<Number>.Count);
             //Find the candidate-basisOrigin which has the smallest angle with basisY when projected onto the plane spanned by basisX and basisY.
             //angle = atan(y / x)
             //tanAngle = y / x
@@ -105,7 +102,7 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Dot(basisX, toCandidate, out x);
             //If x is negative, that means some numerical issue has resulted in a point beyond the bounding plane that generated this face request.
             //We'll treat it as if it's on the plane. (The reason we bother with this clamp is the sign assumption built into our angle comparison, detailed above.)
-            x = Vector.Max(Vector<float>.Zero, x);
+            x = Vector.Max(Vector<Number>.Zero, x);
             Vector3Wide.Dot(basisY, toCandidate, out y);
             var bestY = y;
             var bestX = x;
@@ -120,8 +117,8 @@ namespace BepuPhysics.Collidables
                     Vector.OnesComplement(allowVertexBundles[0]),
                     Vector.BitwiseAnd(Vector.LessThanOrEqual(bestX, planeEpsilon), Vector.LessThanOrEqual(bestY, planeEpsilon))),
                 Vector.BitwiseOr(Vector.Equals(indexOffsets, edgeIndexA), Vector.Equals(indexOffsets, edgeIndexB)));
-            bestX = Vector.ConditionalSelect(ignoreSlot, Vector<float>.One, bestX);
-            bestY = Vector.ConditionalSelect(ignoreSlot, new Vector<float>(float.MinValue), bestY);
+            bestX = Vector.ConditionalSelect(ignoreSlot, Vector<Number>.One, bestX);
+            bestY = Vector.ConditionalSelect(ignoreSlot, new Vector<Number>(Number.MinValue), bestY);
             var bestIndices = indexOffsets;
             for (int i = 1; i < pointBundles.Length; ++i)
             {
@@ -129,7 +126,7 @@ namespace BepuPhysics.Collidables
                 x = ref projectedOnX[i];
                 y = ref projectedOnY[i];
                 Vector3Wide.Dot(basisX, toCandidate, out x);
-                x = Vector.Max(Vector<float>.Zero, x); //Same as earlier- protect against numerical error finding points beyond the bounding plane.
+                x = Vector.Max(Vector<Number>.Zero, x); //Same as earlier- protect against numerical error finding points beyond the bounding plane.
                 Vector3Wide.Dot(basisY, toCandidate, out y);
 
                 var candidateIndices = indexOffsets + new Vector<int>(i << BundleIndexing.VectorShift);
@@ -147,7 +144,7 @@ namespace BepuPhysics.Collidables
             var bestYNarrow = bestY[0];
             var bestXNarrow = bestX[0];
             var bestIndexNarrow = bestIndices[0];
-            for (int i = 1; i < Vector<float>.Count; ++i)
+            for (int i = 1; i < Vector<Number>.Count; ++i)
             {
                 var candidateNumerator = bestY[i];
                 var candidateDenominator = bestX[i];
@@ -191,7 +188,7 @@ namespace BepuPhysics.Collidables
                 //var error = dot2 - dot;
                 //if (Vector.GreaterThanAny(Vector.Abs(error), planeEpsilon))
                 //{
-                //    for (int j = 0; j < Vector<float>.Count; ++j)
+                //    for (int j = 0; j < Vector<Number>.Count; ++j)
                 //    {
                 //        if (MathF.Abs(error[j]) > planeEpsilon[j])
                 //        {
@@ -222,13 +219,13 @@ namespace BepuPhysics.Collidables
         }
 
 
-        static int FindNextIndexForFaceHull(Vector2 start, Vector2 previousEdgeDirection, float planeEpsilon, ref QuickList<Vector2> facePoints)
+        static int FindNextIndexForFaceHull(Vector2 start, Vector2 previousEdgeDirection, Number planeEpsilon, ref QuickList<Vector2> facePoints)
         {
             //Use a AOS version since the number of points on a given face will tend to be very small in most cases.
             //Same idea as the 3d version- find the next edge which is closest to the previous edge. Not going to worry about collinear points here for now.
             var bestIndex = -1;
-            float best = -float.MaxValue;
-            float bestDistanceSquared = 0;
+            Number best = -Number.MaxValue;
+            Number bestDistanceSquared = 0;
             var startToCandidate = facePoints[0] - start;
             var xDirection = new Vector2(previousEdgeDirection.Y, -previousEdgeDirection.X);
             var candidateX = Vector2.Dot(startToCandidate, xDirection);
@@ -240,7 +237,7 @@ namespace BepuPhysics.Collidables
                 best = candidateY / candidateX;
                 bestIndex = 0;
                 bestDistanceSquared = candidateX * candidateX + candidateY * candidateY;
-                var inverseBestDistance = 1f / MathF.Sqrt(bestDistanceSquared);
+                var inverseBestDistance = Constants.C1 / MathF.Sqrt(bestDistanceSquared);
                 currentEdgeDirectionX = candidateX * inverseBestDistance;
                 currentEdgeDirectionY = candidateY * inverseBestDistance;
             }
@@ -277,7 +274,7 @@ namespace BepuPhysics.Collidables
                 }
                 best = candidateY / candidateX;
                 bestDistanceSquared = candidateX * candidateX + candidateY * candidateY;
-                var inverseBestDistance = 1f / MathF.Sqrt(bestDistanceSquared);
+                var inverseBestDistance = Constants.C1 / MathF.Sqrt(bestDistanceSquared);
                 currentEdgeDirectionX = candidateX * inverseBestDistance;
                 currentEdgeDirectionY = candidateY * inverseBestDistance;
                 bestIndex = i;
@@ -286,7 +283,7 @@ namespace BepuPhysics.Collidables
             return bestIndex;
         }
 
-        static void ReduceFace(ref QuickList<int> faceVertexIndices, Vector3 faceNormal, Span<Vector3> points, float planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<int> allowVertex, ref QuickList<int> reducedIndices)
+        static void ReduceFace(ref QuickList<int> faceVertexIndices, Vector3 faceNormal, Span<Vector3> points, Number planeEpsilon, ref QuickList<Vector2> facePoints, ref Buffer<int> allowVertex, ref QuickList<int> reducedIndices)
         {
             Debug.Assert(facePoints.Count == 0 && reducedIndices.Count == 0 && facePoints.Span.Length >= faceVertexIndices.Count && reducedIndices.Span.Length >= faceVertexIndices.Count);
             for (int i = faceVertexIndices.Count - 1; i >= 0; --i)
@@ -316,15 +313,15 @@ namespace BepuPhysics.Collidables
                     var ab = b - a;
                     var ac = c - a;
                     var uncalibratedNormal = Vector3.Cross(ab, ac);
-                    if (uncalibratedNormal.LengthSquared() < 1e-14f)
+                    if (uncalibratedNormal.LengthSquared() < Constants.C1em14)
                     {
                         //The face is degenerate.
-                        if (ab.LengthSquared() > 1e-14f)
+                        if (ab.LengthSquared() > Constants.C1em14)
                         {
                             allowVertex[reducedIndices[2]] = 0;
                             reducedIndices.FastRemoveAt(2);
                         }
-                        else if (ac.LengthSquared() > 1e-14f)
+                        else if (ac.LengthSquared() > Constants.C1em14)
                         {
                             allowVertex[reducedIndices[1]] = 0;
                             reducedIndices.FastRemoveAt(1);
@@ -354,7 +351,7 @@ namespace BepuPhysics.Collidables
                 centroid += facePoint;
             }
             centroid /= faceVertexIndices.Count;
-            var greatestDistanceSquared = -1f;
+            Number greatestDistanceSquared = Constants.Cm1;
             var initialIndex = 0;
             for (int i = 0; i < faceVertexIndices.Count; ++i)
             {
@@ -367,7 +364,7 @@ namespace BepuPhysics.Collidables
                 }
             }
 
-            if (greatestDistanceSquared < 1e-14f)
+            if (greatestDistanceSquared < Constants.C1em14)
             {
                 //The face is degenerate.
                 for (int i = 0; i < faceVertexIndices.Count; ++i)
@@ -376,7 +373,7 @@ namespace BepuPhysics.Collidables
                 }
                 return;
             }
-            var greatestDistance = (float)Math.Sqrt(greatestDistanceSquared);
+            var greatestDistance = (Number)Math.Sqrt(greatestDistanceSquared);
             var initialOffsetDirection = (facePoints[initialIndex] - centroid) / greatestDistance;
             var previousEdgeDirection = new Vector2(initialOffsetDirection.Y, -initialOffsetDirection.X);
             reducedIndices.AllocateUnsafely() = faceVertexIndices[initialIndex];
@@ -672,7 +669,7 @@ namespace BepuPhysics.Collidables
             centroid /= points.Length;
             //Fill in the last few slots with the centroid.
             //We avoid doing a bunch of special case work on the last partial bundle by just assuming it has a few extra redundant internal points. 
-            var bundleSlots = pointBundles.Length * Vector<float>.Count;
+            var bundleSlots = pointBundles.Length * Vector<Number>.Count;
             for (int i = points.Length; i < bundleSlots; ++i)
             {
                 BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
@@ -709,7 +706,7 @@ namespace BepuPhysics.Collidables
             //We pick to basis directions along which to measure. For the second point, we choose a perpendicular direction arbitrarily.
             var initialToCentroid = centroid - initialVertex;
             var initialDistance = initialToCentroid.Length();
-            if (initialDistance < 1e-7f)
+            if (initialDistance < Constants.C1em7)
             {
                 //The point set lacks any volume or area.
                 pool.Take(1, out hullData.OriginalVertexMapping);
@@ -722,12 +719,12 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Broadcast(initialToCentroid / initialDistance, out var initialBasisX);
             Helpers.FindPerpendicular(initialBasisX, out var initialBasisY); //(broadcasted before FindPerpendicular just because we didn't have a non-bundle version)
             Vector3Wide.Broadcast(initialVertex, out var initialVertexBundle);
-            pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnX);
-            pool.Take<Vector<float>>(pointBundles.Length, out var projectedOnY);
-            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * 1e-6f;
-            var normalCoplanarityEpsilon = 1f - 1e-6f;
-            var planeEpsilon = new Vector<float>(planeEpsilonNarrow);
-            var rawFaceVertexIndices = new QuickList<int>(pointBundles.Length * Vector<float>.Count, pool);
+            pool.Take<Vector<Number>>(pointBundles.Length, out var projectedOnX);
+            pool.Take<Vector<Number>>(pointBundles.Length, out var projectedOnY);
+            var planeEpsilonNarrow = MathF.Sqrt(bestDistanceSquared) * Constants.C1em6;
+            var normalCoplanarityEpsilon = Constants.C1 - Constants.C1em6;
+            var planeEpsilon = new Vector<Number>(planeEpsilonNarrow);
+            var rawFaceVertexIndices = new QuickList<int>(pointBundles.Length * Vector<Number>.Count, pool);
             var initialSourceEdge = new EdgeEndpoints { A = initialIndex, B = initialIndex };
 
             //Points found to not be on the face hull are ignored by future executions.
@@ -1071,7 +1068,7 @@ namespace BepuPhysics.Collidables
             var pointBundleCount = BundleIndexing.GetBundleCount(hullData.OriginalVertexMapping.Length);
             pool.Take(pointBundleCount, out hullShape.Points);
 
-            float volume = 0;
+            Number volume = 0;
             center = default;
             for (int faceIndex = 0; faceIndex < hullData.FaceStartIndices.Length; ++faceIndex)
             {
@@ -1093,7 +1090,7 @@ namespace BepuPhysics.Collidables
             for (int bundleIndex = 0; bundleIndex < hullShape.Points.Length; ++bundleIndex)
             {
                 ref var bundle = ref hullShape.Points[bundleIndex];
-                for (int innerIndex = 0; innerIndex < Vector<float>.Count; ++innerIndex)
+                for (int innerIndex = 0; innerIndex < Vector<Number>.Count; ++innerIndex)
                 {
                     var index = (bundleIndex << BundleIndexing.VectorShift) + innerIndex;
                     //We duplicate the last vertices in the hull. It has no impact on performance; the vertex bundles are executed all or nothing.
@@ -1139,7 +1136,7 @@ namespace BepuPhysics.Collidables
                     previousOffset = offset;
                 }
                 var length = faceNormal.Length();
-                Debug.Assert(length > 1e-10f, "Convex hull procedure should not output degenerate faces.");
+                Debug.Assert(length > Constants.C1em10, "Convex hull procedure should not output degenerate faces.");
                 faceNormal /= length;
                 BundleIndexing.GetBundleIndices(i, out var boundingPlaneBundleIndex, out var boundingPlaneInnerIndex);
                 ref var boundingBundle = ref hullShape.BoundingPlanes[boundingPlaneBundleIndex];
@@ -1149,13 +1146,13 @@ namespace BepuPhysics.Collidables
             }
 
             //Clear any trailing bounding plane data to keep it from contributing.
-            var boundingPlaneCapacity = hullShape.BoundingPlanes.Length * Vector<float>.Count;
+            var boundingPlaneCapacity = hullShape.BoundingPlanes.Length * Vector<Number>.Count;
             for (int i = hullShape.FaceToVertexIndicesStart.Length; i < boundingPlaneCapacity; ++i)
             {
                 BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
                 ref var offsetInstance = ref GatherScatter.GetOffsetInstance(ref hullShape.BoundingPlanes[bundleIndex], innerIndex);
                 Vector3Wide.WriteFirst(default, ref offsetInstance.Normal);
-                GatherScatter.GetFirst(ref offsetInstance.Offset) = float.MinValue;
+                GatherScatter.GetFirst(ref offsetInstance.Offset) = Number.MinValue;
             }
         }
 
@@ -1227,13 +1224,13 @@ namespace BepuPhysics.Collidables
             }
 
             //Clear any trailing bounding plane data to keep it from contributing.
-            var boundingPlaneCapacity = targetBoundingPlanes.Length * Vector<float>.Count;
+            var boundingPlaneCapacity = targetBoundingPlanes.Length * Vector<Number>.Count;
             for (int i = source.FaceToVertexIndicesStart.Length; i < boundingPlaneCapacity; ++i)
             {
                 BundleIndexing.GetBundleIndices(i, out var bundleIndex, out var innerIndex);
                 ref var offsetInstance = ref GatherScatter.GetOffsetInstance(ref targetBoundingPlanes[bundleIndex], innerIndex);
                 Vector3Wide.WriteFirst(default, ref offsetInstance.Normal);
-                GatherScatter.GetFirst(ref offsetInstance.Offset) = float.MinValue;
+                GatherScatter.GetFirst(ref offsetInstance.Offset) = Number.MinValue;
             }
         }
 

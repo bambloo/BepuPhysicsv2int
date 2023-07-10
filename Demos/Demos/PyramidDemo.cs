@@ -2,14 +2,12 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
 
 namespace Demos.Demos
 {
@@ -21,7 +19,7 @@ namespace Demos.Demos
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-30, 8, -110);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             camera.Pitch = 0;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
@@ -41,7 +39,7 @@ namespace Demos.Demos
                             (-columnCount * 0.5f + columnIndex) * boxShape.Width,
                             (rowIndex + 0.5f) * boxShape.Height,
                             (pyramidIndex - pyramidCount * 0.5f) * (boxShape.Length + 4)),
-                            boxInertia, boxIndex, 0.01f));
+                            boxInertia, boxIndex, Constants.C0p01));
                     }
                 }
             }
@@ -51,7 +49,7 @@ namespace Demos.Demos
 
         //We'll randomize the size of bullets.
         Random random = new(5);
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             if (input != null && input.WasPushed(OpenTK.Input.Key.Z))
             {

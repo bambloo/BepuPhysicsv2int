@@ -2,34 +2,37 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
-using BepuPhysics.Constraints.Contact;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+
 using System.Runtime.CompilerServices;
 
 namespace Demos.Demos
 {
+    using CellList = QuickList<Cell>;
     //(You might notice that this demo is really large, uses some older idioms, and is a little out of place. I just pulled most of this stuff out of my older GPU deformable physics project.)
     using CellSet = QuickSet<Cell, CellComparer>;
-    using CellList = QuickList<Cell>;
+    using Math = BepuUtilities.Utils.Math;
+    using MathF = BepuUtilities.Utils.MathF;
+
     public static class BoxTriangleCollider
     {
-        private const float IntersectionEpsilon = 1e-4f;
+        private static readonly Number IntersectionEpsilon = 1e-4f;
         private static bool OverlapsAlongAxis(ref Vector3 axis, ref Vector3 halfExtents, ref Vector3 a, ref Vector3 b, ref Vector3 c)
         {
             var da = Vector3.Dot(a, axis);
             var db = Vector3.Dot(b, axis);
             var dc = Vector3.Dot(c, axis);
 
-            float min, max;
+            Number min, max;
             if (da < db && da < dc)
             {
                 min = da;
@@ -128,7 +131,7 @@ namespace Demos.Demos
             else
                 boxExtremePoint.Z = -halfExtents.Z;
 
-            float extremePointDot = Vector3.Dot(boxExtremePoint, normal);
+            Number extremePointDot = Vector3.Dot(boxExtremePoint, normal);
             if (extremePointDot + IntersectionEpsilon < d)
             {
                 //No collision.
@@ -184,7 +187,7 @@ namespace Demos.Demos
 
     internal static class TriangleRasterizer
     {
-        public static void RasterizeTriangle(ref Vector3 a, ref Vector3 b, ref Vector3 c, float cellSize, ref Vector3 gridOrigin, BufferPool pool, ref QuickSet<Cell, CellComparer> cells)
+        public static void RasterizeTriangle(ref Vector3 a, ref Vector3 b, ref Vector3 c, Number cellSize, ref Vector3 gridOrigin, BufferPool pool, ref QuickSet<Cell, CellComparer> cells)
         {
             var gridA = a - gridOrigin;
             var gridB = b - gridOrigin;
@@ -201,7 +204,7 @@ namespace Demos.Demos
             //Discretize the bounding box.
             //All indices are positive, so we can just truncate.
             int startX, endX, startY, endY, startZ, endZ;
-            float inverseCellSize = 1f / cellSize;
+            Number inverseCellSize = 1f / cellSize;
             startX = (int)Math.Floor(min.X * inverseCellSize);
             endX = (int)Math.Floor(max.X * inverseCellSize);
             startY = (int)Math.Floor(min.Y * inverseCellSize);
@@ -368,11 +371,11 @@ namespace Demos.Demos
 
 
 
-        public static void Tetrahedralize(Span<TriangleContent> triangles, float cellSize, BufferPool pool,
+        public static void Tetrahedralize(Span<TriangleContent> triangles, Number cellSize, BufferPool pool,
             out Buffer<Vector3> vertices, out CellSet vertexSpatialIndices, out Buffer<CellVertexIndices> cellVertexIndices, out Buffer<TetrahedronVertices> tetrahedraVertexIndices)
         {
             //Compute the size of the 3d grid by scanning all vertices.
-            Vector3 min = new(float.MaxValue), max = new(float.MinValue);
+            Vector3 min = new(Number.MaxValue), max = new(Number.MinValue);
             for (int i = 0; i < triangles.Length; ++i)
             {
                 ref var triangle = ref triangles[i];
@@ -392,7 +395,10 @@ namespace Demos.Demos
             {
                 ref var triangle = ref triangles[i];
                 //Rasterize each triangle onto the grid.
-                TriangleRasterizer.RasterizeTriangle(ref triangle.A, ref triangle.B, ref triangle.C, cellSize, ref min, pool, ref cells);
+                Vector3 A = triangle.A;
+                Vector3 B = triangle.B;
+                Vector3 C = triangle.C;
+                TriangleRasterizer.RasterizeTriangle(ref A, ref B, ref C, cellSize, ref min, pool, ref cells);
 
             }
 
@@ -401,7 +407,7 @@ namespace Demos.Demos
 
             VoxelizationBounds bounds;
             Vector3 size = max - min;
-            float inverseCellSize = 1f / cellSize;
+            Number inverseCellSize = 1f / cellSize;
             bounds.X = (int)(Math.Ceiling(inverseCellSize * size.X));
             bounds.Y = (int)(Math.Ceiling(inverseCellSize * size.Y));
             bounds.Z = (int)(Math.Ceiling(inverseCellSize * size.Z));
@@ -558,7 +564,7 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
         {
             if (a.Mobility == CollidableMobility.Dynamic && b.Mobility == CollidableMobility.Dynamic)
             {
@@ -667,7 +673,7 @@ namespace Demos.Demos
             return 6;
         }
 
-        internal unsafe static void CreateDeformable(Simulation simulation, Vector3 position, Quaternion orientation, float density, float cellSize, in SpringSettings weldSpringiness, in SpringSettings volumeSpringiness, int instanceId, CollidableProperty<DeformableCollisionFilter> filters,
+        internal unsafe static void CreateDeformable(Simulation simulation, Vector3 position, Quaternion orientation, Number density, Number cellSize, in SpringSettings weldSpringiness, in SpringSettings volumeSpringiness, int instanceId, CollidableProperty<DeformableCollisionFilter> filters,
             ref Buffer<Vector3> vertices, ref CellSet vertexSpatialIndices, ref Buffer<CellVertexIndices> cellVertexIndices, ref Buffer<TetrahedronVertices> tetrahedraVertexIndices)
         {
             var pool = simulation.BufferPool;
@@ -686,7 +692,7 @@ namespace Demos.Demos
             {
                 vertexHandles[i] = simulation.Bodies.Add(BodyDescription.CreateDynamic((position + QuaternionEx.Transform(vertices[i], orientation), orientation), vertexInertia,
                     //Bodies don't have to have collidables. Take advantage of this for all the internal vertices.
-                    vertexEdgeCounts[i] == edgeCountForInternalVertex ? new TypedIndex() : vertexShapeIndex, 0.01f));
+                    vertexEdgeCounts[i] == edgeCountForInternalVertex ? new TypedIndex() : vertexShapeIndex, Constants.C0p01));
                 ref var vertexSpatialIndex = ref vertexSpatialIndices[i];
                 filters.Allocate(vertexHandles[i]) = new DeformableCollisionFilter(vertexSpatialIndex.X, vertexSpatialIndex.Y, vertexSpatialIndex.Z, instanceId);
             }
@@ -725,10 +731,10 @@ namespace Demos.Demos
             camera.Pitch = MathHelper.Pi * 0.15f;
 
             var filters = new CollidableProperty<DeformableCollisionFilter>();
-            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks(filters, new PairMaterialProperties(1f, 2f, new SpringSettings(30, 1))), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(8, 1));
+            Simulation = Simulation.Create(BufferPool, new DeformableCallbacks(filters, new PairMaterialProperties(1f, Constants.C0p3, new SpringSettings(30, 1))), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0), 0, 0), new SolveDescription(8, 1));
 
             var meshContent = content.Load<MeshContent>("Content\\newt.obj");
-            float cellSize = 0.1f;
+            Number cellSize = 0.1f;
             DumbTetrahedralizer.Tetrahedralize(meshContent.Triangles, cellSize, BufferPool,
                 out var vertices, out var vertexSpatialIndices, out var cellVertexIndices, out var tetrahedraVertexIndices);
             var weldSpringiness = new SpringSettings(30f, 1f);

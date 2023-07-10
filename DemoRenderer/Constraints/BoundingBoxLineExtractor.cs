@@ -1,13 +1,9 @@
-﻿using System;
+﻿using BepuPhysics;
+using BepuPhysics.Trees;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using BepuPhysics;
-using System.Numerics;
-using System.Threading.Tasks;
-using System.Threading;
-using BepuUtilities;
-using BepuPhysics.CollisionDetection;
-using BepuPhysics.Trees;
+using BepuUtilities.Numerics;
+using System;
 using System.Runtime.CompilerServices;
 
 namespace DemoRenderer.Constraints
@@ -58,7 +54,7 @@ namespace DemoRenderer.Constraints
             var backgroundColor = new Vector3(0, 0, 0);
             if (!job.CoversActiveCollidables)
             {
-                var inactiveTint = new Vector3(0.3f, 0.3f, 0.7f);
+                var inactiveTint = new Vector3(Constants.C0p3, Constants.C0p3, Constants.C0p7);
                 color *= inactiveTint;
                 backgroundColor *= inactiveTint;
             }

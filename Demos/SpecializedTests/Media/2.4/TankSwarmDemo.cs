@@ -1,17 +1,21 @@
-﻿using System;
-using System.Numerics;
+﻿
+
 using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using Demos.Demos.Tanks;
 using DemoUtilities;
 using OpenTK.Input;
+using System;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.SpecializedTests.Media
 {
@@ -28,7 +32,7 @@ namespace Demos.SpecializedTests.Media
         struct Explosion
         {
             public Vector3 Position;
-            public float Scale;
+            public Number Scale;
             public Vector3 Color;
             public int Age;
         }
@@ -74,13 +78,13 @@ namespace Demos.SpecializedTests.Media
             {
                 Body = TankPartDescription.Create(10, new Box(4f, 1, 5), RigidPose.Identity, 0.5f, Simulation.Shapes),
                 Turret = TankPartDescription.Create(1, new Box(1.5f, 0.7f, 2f), new Vector3(0, 0.85f, 0.4f), 0.5f, Simulation.Shapes),
-                Barrel = TankPartDescription.Create(0.5f, new Box(0.2f, 0.2f, 3f), new Vector3(0, 0.85f, 0.4f - 1f - 1.5f), 0.5f, Simulation.Shapes),
-                TurretAnchor = new Vector3(0f, 0.5f, 0.4f),
+                Barrel = TankPartDescription.Create(0.5f, new Box(0.2f, 0.2f, Constants.C3), new Vector3(0, 0.85f, 0.4f - 1f - 1.5f), 0.5f, Simulation.Shapes),
+                TurretAnchor = new Vector3(Constants.C0, 0.5f, 0.4f),
                 BarrelAnchor = new Vector3(0, 0.5f + 0.35f, 0.4f - 1f),
                 TurretBasis = Quaternion.Identity,
-                TurretServo = new ServoSettings(1f, 0f, 40f),
+                TurretServo = new ServoSettings(1f, Constants.C0, 40f),
                 TurretSpring = new SpringSettings(10f, 1f),
-                BarrelServo = new ServoSettings(1f, 0f, 40f),
+                BarrelServo = new ServoSettings(1f, Constants.C0, 40f),
                 BarrelSpring = new SpringSettings(10f, 1f),
 
                 ProjectileShape = Simulation.Shapes.Add(projectileShape),
@@ -88,8 +92,8 @@ namespace Demos.SpecializedTests.Media
                 BarrelLocalProjectileSpawn = new Vector3(0, 0, -1.5f),
                 ProjectileInertia = projectileInertia,
 
-                LeftTreadOffset = new Vector3(-1.9f, 0f, 0),
-                RightTreadOffset = new Vector3(1.9f, 0f, 0),
+                LeftTreadOffset = new Vector3(-1.9f, Constants.C0, 0),
+                RightTreadOffset = new Vector3(1.9f, Constants.C0, 0),
                 SuspensionLength = 1f,
                 SuspensionSettings = new SpringSettings(2.5f, 1.5f),
                 WheelShape = wheelShapeIndex,
@@ -104,8 +108,8 @@ namespace Demos.SpecializedTests.Media
 
 
             const int planeWidth = 257;
-            const float terrainScale = 3;
-            const float inverseTerrainScale = 1f / terrainScale;
+            Number terrainScale = 3;
+            Number inverseTerrainScale = 1f / terrainScale;
             var terrainPosition = new Vector2(1 - planeWidth, 1 - planeWidth) * terrainScale * 0.5f;
             random = new Random(5);
 
@@ -154,7 +158,7 @@ namespace Demos.SpecializedTests.Media
             Console.WriteLine($"body count: {Simulation.Bodies.ActiveSet.Count}");
         }
 
-        float GetHeightForPosition(float x, float y, int planeWidth, float inverseTerrainScale, in Vector2 terrainPosition)
+        Number GetHeightForPosition(Number x, Number y, int planeWidth, Number inverseTerrainScale, in Vector2 terrainPosition)
         {
             var normalizedX = (x - terrainPosition.X) * inverseTerrainScale;
             var normalizedY = (y - terrainPosition.Y) * inverseTerrainScale;
@@ -168,8 +172,8 @@ namespace Demos.SpecializedTests.Media
             var offsetX = planeWidth * 0.5f - normalizedX;
             var offsetY = planeWidth * 0.5f - normalizedY;
             var distanceToCenterSquared = offsetX * offsetX + offsetY * offsetY;
-            const float centerCircleSize = 30f;
-            const float fadeoutBoundary = 50f;
+            Number centerCircleSize = 30f;
+            Number fadeoutBoundary = 50f;
             var outsideWeight = MathF.Min(1f, MathF.Max(0, distanceToCenterSquared - centerCircleSize * centerCircleSize) / (fadeoutBoundary * fadeoutBoundary - centerCircleSize * centerCircleSize));
             var edgeRamp = 25f / (5 * distanceToEdge + 1);
             return outsideWeight * (octave0 + octave1 + octave2 + octave3 + octave4 + edgeRamp);
@@ -179,14 +183,14 @@ namespace Demos.SpecializedTests.Media
         long frameIndex;
         long lastPlayerShotFrameIndex;
         int projectileCount;
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             if (input.WasPushed(ToggleTank))
                 playerControlActive = !playerControlActive;
             if (playerControlActive)
             {
-                float leftTargetSpeedFraction = 0;
-                float rightTargetSpeedFraction = 0;
+                Number leftTargetSpeedFraction = 0;
+                Number rightTargetSpeedFraction = 0;
                 var left = input.IsDown(Left);
                 var right = input.IsDown(Right);
                 var forward = input.IsDown(Forward);
@@ -311,7 +315,7 @@ namespace Demos.SpecializedTests.Media
         }
 
 
-        void RenderControl(ref Vector2 position, float textHeight, string controlName, string controlValue, TextBuilder text, TextBatcher textBatcher, Font font)
+        void RenderControl(ref Vector2 position, Number textHeight, string controlName, string controlValue, TextBuilder text, TextBatcher textBatcher, Font font)
         {
             text.Clear().Append(controlName).Append(": ").Append(controlValue);
             textBatcher.Write(text, position, textHeight, new Vector3(1), font);
@@ -327,7 +331,7 @@ namespace Demos.SpecializedTests.Media
                 QuaternionEx.TransformUnitZ(tankBody.Pose.Orientation, out var tankBackward);
                 var backwardDirection = camera.Backward;
                 backwardDirection.Y = MathF.Max(backwardDirection.Y, -0.2f);
-                camera.Position = tankBody.Pose.Position + tankUp * 3f + tankBackward * 0.4f + backwardDirection * 8;
+                camera.Position = tankBody.Pose.Position + tankUp * Constants.C3 + tankBackward * 0.4f + backwardDirection * 8;
             }
 
             //Draw explosions and remove old ones.

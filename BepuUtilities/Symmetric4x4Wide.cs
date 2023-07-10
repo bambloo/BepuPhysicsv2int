@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -8,16 +8,16 @@ namespace BepuUtilities
 {
     public struct Symmetric4x4Wide
     {
-        public Vector<float> XX;
-        public Vector<float> YX;
-        public Vector<float> YY;
-        public Vector<float> ZX;
-        public Vector<float> ZY;
-        public Vector<float> ZZ;
-        public Vector<float> WX;
-        public Vector<float> WY;
-        public Vector<float> WZ;
-        public Vector<float> WW;
+        public Vector<Number> XX;
+        public Vector<Number> YX;
+        public Vector<Number> YY;
+        public Vector<Number> ZX;
+        public Vector<Number> ZY;
+        public Vector<Number> ZZ;
+        public Vector<Number> WX;
+        public Vector<Number> WY;
+        public Vector<Number> WZ;
+        public Vector<Number> WW;
 
         /// <summary>
         /// Returns a reference to the upper left 3x3 block of the matrix.
@@ -27,7 +27,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref Symmetric3x3Wide GetUpperLeft3x3Block(ref Symmetric4x4Wide m)
         {
-            return ref Unsafe.As<Vector<float>, Symmetric3x3Wide>(ref m.XX);
+            return ref Unsafe.As<Vector<Number>, Symmetric3x3Wide>(ref m.XX);
         }
         /// <summary>
         /// Returns a reference to the upper right 3x1 (or lower left 1x3) block of the matrix. 
@@ -37,7 +37,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref Vector3Wide GetUpperRight3x1Block(ref Symmetric4x4Wide m)
         {
-            return ref Unsafe.As<Vector<float>, Vector3Wide>(ref m.WX);
+            return ref Unsafe.As<Vector<Number>, Vector3Wide>(ref m.WX);
         }
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace BepuUtilities
         /// <param name="scale">Scale to apply to the components of m.</param>
         /// <param name="result">Result of scaling each component of m by scale.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Symmetric4x4Wide m, in Vector<float> scale, out Symmetric4x4Wide result)
+        public static void Scale(in Symmetric4x4Wide m, in Vector<Number> scale, out Symmetric4x4Wide result)
         {
             result.XX = m.XX * scale;
             result.YX = m.YX * scale;
@@ -77,7 +77,7 @@ namespace BepuUtilities
             var c1 = m.ZX * m.WZ - m.WX * m.ZZ;
             //c0 = s5
 
-            var inverseDeterminant = Vector<float>.One / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * s5);
+            var inverseDeterminant = Vector<Number>.One / (s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * s5);
 
             result.XX = (m.YY * c5 - m.ZY * c4 + m.WY * c3) * inverseDeterminant;
 

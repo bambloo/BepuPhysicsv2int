@@ -1,17 +1,13 @@
-﻿using BepuUtilities;
+﻿using BepuPhysics;
+using BepuPhysics.Collidables;
+using BepuPhysics.CollisionDetection;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
 using DemoRenderer;
 using DemoUtilities;
-using BepuPhysics;
-using BepuPhysics.Collidables;
 using System;
-using System.Numerics;
 using System.Diagnostics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
-using System.Runtime.CompilerServices;
-using DemoContentLoader;
-using BepuPhysics.Constraints;
-using BepuPhysics.CollisionDetection;
 
 namespace Demos.SpecializedTests
 {
@@ -29,7 +25,7 @@ namespace Demos.SpecializedTests
             {
             }
 
-            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
             {
                 return false;
             }
@@ -60,7 +56,7 @@ namespace Demos.SpecializedTests
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20f, 13, -20f);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             camera.Pitch = MathHelper.Pi * 0.1f;
             Simulation = Simulation.Create(BufferPool, new NoNarrowphaseTestingCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0, 0)), new SolveDescription(1, 1));
 
@@ -71,7 +67,7 @@ namespace Demos.SpecializedTests
             const int height = 128;
             const int length = 128;
             var spacing = new Vector3(1.01f);
-            float randomization = 0.9f;
+            Number randomization = 0.9f;
             var randomizationSpan = (spacing - new Vector3(1)) * randomization;
             var randomizationBase = randomizationSpan * -0.5f;
             var random = new Random(5);
@@ -88,7 +84,7 @@ namespace Demos.SpecializedTests
                         var hash = i + j + k;
                         if (hash % 2 == 0)
                         {
-                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(location, sphereInertia, shapeIndex, -1));
+                            Simulation.Bodies.Add(BodyDescription.CreateDynamic(location, sphereInertia, shapeIndex, Constants.Cm1));
                         }
                         else
                         {
@@ -112,7 +108,7 @@ namespace Demos.SpecializedTests
         TimingsRingBuffer refineTimes;
         TimingsRingBuffer testTimes;
         long frameCount;
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             var rotationAngle = frameCount * 1e-3f;
             var rotation = Matrix3x3.CreateFromAxisAngle(Vector3.UnitY, rotationAngle);
@@ -128,8 +124,8 @@ namespace Demos.SpecializedTests
             //Simulation.BroadPhase.ActiveTree.CacheOptimize(0);
             //Simulation.BroadPhase.StaticTree.CacheOptimize(0);
             base.Update(window, camera, input, dt);
-            refineTimes.Add(Simulation.Profiler[Simulation.BroadPhase]);
-            testTimes.Add(Simulation.Profiler[Simulation.BroadPhaseOverlapFinder]);
+            refineTimes.Add((float)Simulation.Profiler[Simulation.BroadPhase]);
+            testTimes.Add((float)Simulation.Profiler[Simulation.BroadPhaseOverlapFinder]);
 
 
             if (frameCount++ % sampleCount == 0)

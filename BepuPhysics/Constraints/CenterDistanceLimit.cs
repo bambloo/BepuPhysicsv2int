@@ -1,9 +1,8 @@
-﻿using BepuPhysics.CollisionDetection;
-using BepuUtilities;
+﻿using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
@@ -17,18 +16,18 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// Minimum distance between the body centers.
         /// </summary>
-        public float MinimumDistance;
+        public Number MinimumDistance;
         /// <summary>
         /// Maximum distance between the body centers.
         /// </summary>
-        public float MaximumDistance;
+        public Number MaximumDistance;
         /// <summary>
         /// Spring frequency and damping parameters.
         /// </summary>
         public SpringSettings SpringSettings;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public CenterDistanceLimit(float minimumDistance, float maximumDistance, in SpringSettings springSettings)
+        public CenterDistanceLimit(Number minimumDistance, Number maximumDistance, in SpringSettings springSettings)
         {
             MinimumDistance = minimumDistance;
             MaximumDistance = maximumDistance;
@@ -71,25 +70,25 @@ namespace BepuPhysics.Constraints
 
     public struct CenterDistanceLimitPrestepData
     {
-        public Vector<float> MinimumDistance;
-        public Vector<float> MaximumDistance;
+        public Vector<Number> MinimumDistance;
+        public Vector<Number> MaximumDistance;
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct CenterDistanceLimitFunctions : ITwoBodyConstraintFunctions<CenterDistanceLimitPrestepData, Vector<float>>
+    public struct CenterDistanceLimitFunctions : ITwoBodyConstraintFunctions<CenterDistanceLimitPrestepData, Vector<Number>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void ComputeJacobian(Vector<float> minimumDistance, Vector<float> maximumDistance, in Vector3Wide positionA, in Vector3Wide positionB, out Vector3Wide jacobianA, out Vector<float> distance, out Vector<int> useMinimum)
+        static void ComputeJacobian(Vector<Number> minimumDistance, Vector<Number> maximumDistance, in Vector3Wide positionA, in Vector3Wide positionB, out Vector3Wide jacobianA, out Vector<Number> distance, out Vector<int> useMinimum)
         {
             //Note that we need the actual length in both warmstart and solve in the limit version of the constraint; since the min/max bound determines jacobian sign.
             var ab = positionB - positionA;
             distance = ab.Length();
             var inverseDistance = MathHelper.FastReciprocal(distance);
-            var useFallback = Vector.LessThan(distance, new Vector<float>(1e-5f));
+            var useFallback = Vector.LessThan(distance, new Vector<Number>(Constants.C1em5));
             Vector3Wide.Scale(ab, inverseDistance, out jacobianA);
-            jacobianA.X = Vector.ConditionalSelect(useFallback, Vector<float>.One, jacobianA.X);
-            jacobianA.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, jacobianA.Y);
-            jacobianA.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, jacobianA.Z);
+            jacobianA.X = Vector.ConditionalSelect(useFallback, Vector<Number>.One, jacobianA.X);
+            jacobianA.Y = Vector.ConditionalSelect(useFallback, Vector<Number>.Zero, jacobianA.Y);
+            jacobianA.Z = Vector.ConditionalSelect(useFallback, Vector<Number>.Zero, jacobianA.Z);
 
             //If the current distance is closer to the minimum, calibrate for the minimum. Otherwise, calibrate for the maximum.
             useMinimum = Vector.LessThan(Vector.Abs(distance - minimumDistance), Vector.Abs(distance - maximumDistance));
@@ -97,14 +96,14 @@ namespace BepuPhysics.Constraints
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            ref CenterDistanceLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+            ref CenterDistanceLimitPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(prestep.MinimumDistance, prestep.MaximumDistance, positionA, positionB, out var jacobianA, out _, out _);
             CenterDistanceConstraintFunctions.ApplyImpulse(jacobianA, inertiaA.InverseMass, inertiaB.InverseMass, accumulatedImpulses, ref wsvA, ref wsvB);
         }
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt,
-            ref CenterDistanceLimitPrestepData prestep, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, Number dt, Number inverseDt,
+            ref CenterDistanceLimitPrestepData prestep, ref Vector<Number> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobian(prestep.MinimumDistance, prestep.MaximumDistance, positionA, positionB, out var jacobianA, out var distance, out var useMinimum);
 
@@ -124,7 +123,7 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref CenterDistanceLimitPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref CenterDistanceLimitPrestepData prestepData) { }
 
     }
 
@@ -132,7 +131,7 @@ namespace BepuPhysics.Constraints
     /// <summary>
     /// Handles the solve iterations of a bunch of distance servos.
     /// </summary>
-    public class CenterDistanceLimitTypeProcessor : TwoBodyTypeProcessor<CenterDistanceLimitPrestepData, Vector<float>, CenterDistanceLimitFunctions, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear>
+    public class CenterDistanceLimitTypeProcessor : TwoBodyTypeProcessor<CenterDistanceLimitPrestepData, Vector<Number>, CenterDistanceLimitFunctions, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear>
     {
         public const int BatchTypeId = 55;
     }

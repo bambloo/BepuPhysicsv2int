@@ -1,22 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
-using BepuUtilities;
-using DemoContentLoader;
-using DemoRenderer;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
+using DemoRenderer;
+using System;
+using System.Runtime.CompilerServices;
 
 namespace Demos.SpecializedTests
 {
     public unsafe struct IndexReportingNarrowPhaseCallbacks : INarrowPhaseCallbacks
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
         {
             return true;
         }
@@ -72,7 +70,7 @@ namespace Demos.SpecializedTests
             camera.Position = new Vector3(0, 4, -6);
             camera.Yaw = MathHelper.Pi;
 
-            Simulation = Simulation.Create(BufferPool, new IndexReportingNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, 0f, 0)), new SolveDescription(8, 1));
+            Simulation = Simulation.Create(BufferPool, new IndexReportingNarrowPhaseCallbacks(), new DemoPoseIntegratorCallbacks(new Vector3(0, Constants.C0, 0)), new SolveDescription(8, 1));
 
             var builder = new CompoundBuilder(BufferPool, Simulation.Shapes, 4);
             builder.Add(new Sphere(0.5f), new Vector3(-1, 0, 0), 1);
@@ -82,8 +80,8 @@ namespace Demos.SpecializedTests
 
             var compoundShapeIndex = Simulation.Shapes.Add(new Compound(children));
 
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 2, 0), inertia, compoundShapeIndex, 0.01f));
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 4, 0), inertia, compoundShapeIndex, 0.01f));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 2, 0), inertia, compoundShapeIndex, Constants.C0p01));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 4, 0), inertia, compoundShapeIndex, Constants.C0p01));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(), Simulation.Shapes.Add(new Box(100, 1, 100))));
         }

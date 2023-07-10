@@ -3,7 +3,7 @@ using BepuUtilities;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
@@ -17,7 +17,7 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// 6 times the target volume of the tetrahedra. Computed from (ab x ac) * ad; this may be negative depending on the winding of the tetrahedron.
         /// </summary>
-        public float TargetScaledVolume;
+        public Number TargetScaledVolume;
         /// <summary>
         /// Spring frequency and damping parameters.
         /// </summary>
@@ -55,7 +55,7 @@ namespace BepuPhysics.Constraints
             ConstraintChecker.AssertValid(SpringSettings, nameof(VolumeConstraint));
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var target = ref GetOffsetInstance(ref Buffer<VolumeConstraintPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            Unsafe.As<Vector<float>, float>(ref target.TargetScaledVolume) = TargetScaledVolume;
+            Unsafe.As<Vector<Number>, Number>(ref target.TargetScaledVolume) = TargetScaledVolume;
             SpringSettingsWide.WriteFirst(SpringSettings, ref target.SpringSettings);
         }
 
@@ -63,23 +63,23 @@ namespace BepuPhysics.Constraints
         {
             Debug.Assert(ConstraintTypeId == batch.TypeId, "The type batch passed to the description must match the description's expected type.");
             ref var source = ref GetOffsetInstance(ref Buffer<VolumeConstraintPrestepData>.Get(ref batch.PrestepData, bundleIndex), innerIndex);
-            description.TargetScaledVolume = Unsafe.As<Vector<float>, float>(ref source.TargetScaledVolume);
+            description.TargetScaledVolume = Unsafe.As<Vector<Number>, Number>(ref source.TargetScaledVolume);
             SpringSettingsWide.ReadFirst(source.SpringSettings, out description.SpringSettings);
         }
     }
 
     public struct VolumeConstraintPrestepData
     {
-        public Vector<float> TargetScaledVolume;
+        public Vector<Number> TargetScaledVolume;
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct VolumeConstraintFunctions : IFourBodyConstraintFunctions<VolumeConstraintPrestepData, Vector<float>>
+    public struct VolumeConstraintFunctions : IFourBodyConstraintFunctions<VolumeConstraintPrestepData, Vector<Number>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void ApplyImpulse(
-            in Vector<float> inverseMassA, in Vector<float> inverseMassB, in Vector<float> inverseMassC, in Vector<float> inverseMassD,
-            in Vector3Wide negatedJacobianA, in Vector3Wide jacobianB, in Vector3Wide jacobianC, in Vector3Wide jacobianD, in Vector<float> impulse,
+            in Vector<Number> inverseMassA, in Vector<Number> inverseMassB, in Vector<Number> inverseMassC, in Vector<Number> inverseMassD,
+            in Vector3Wide negatedJacobianA, in Vector3Wide jacobianB, in Vector3Wide jacobianC, in Vector3Wide jacobianD, in Vector<Number> impulse,
             ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB, ref BodyVelocityWide velocityC, ref BodyVelocityWide velocityD)
         {
             Vector3Wide.Scale(negatedJacobianA, inverseMassA * impulse, out var negativeVelocityChangeA);
@@ -106,14 +106,14 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Add(jacobianB, jacobianC, out negatedJA);
             Vector3Wide.Add(jacobianD, negatedJA, out negatedJA);
         }
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, ref VolumeConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD)
+        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, ref VolumeConstraintPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD)
         {
             ComputeJacobian(positionA, positionB, positionC, positionD, out var ad, out var negatedJA, out var jacobianB, out var jacobianC, out var jacobianD);
             //Vector3Wide.Dot(jacobianD, ad, out var unscaledVolume);
             ApplyImpulse(inertiaA.InverseMass, inertiaB.InverseMass, inertiaC.InverseMass, inertiaD.InverseMass, negatedJA, jacobianB, jacobianC, jacobianD, accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC, ref wsvD);
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, float dt, float inverseDt, ref VolumeConstraintPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, in Vector3Wide positionD, in QuaternionWide orientationD, in BodyInertiaWide inertiaD, Number dt, Number inverseDt, ref VolumeConstraintPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC, ref BodyVelocityWide wsvD)
         {
             //Volume of parallelepiped with vertices a, b, c, d is:
             //(ab x ac) * ad
@@ -147,7 +147,7 @@ namespace BepuPhysics.Constraints
             //Scaling the volume by a constant factor will not match the growth rate of the jacobian contributions.
             //We're going to ignore this until proven to be a noticeable problem because Vector<T> does not expose exp or pow and this is cheap. 
             //Could still implement it, but it's not super high value.
-            var epsilon = 5e-4f * prestep.TargetScaledVolume;
+            var epsilon = Constants.C5em4 * prestep.TargetScaledVolume;
             contributionA = Vector.Max(epsilon, contributionA);
             contributionB = Vector.Max(epsilon, contributionB);
             contributionC = Vector.Max(epsilon, contributionC);
@@ -175,14 +175,14 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, in BodyVelocityWide wsvC, in BodyVelocityWide wsvD, ref VolumeConstraintPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, in BodyVelocityWide wsvC, in BodyVelocityWide wsvD, ref VolumeConstraintPrestepData prestepData) { }
     }
 
 
     /// <summary>
     /// Handles the solve iterations of a bunch of volume constraints.
     /// </summary>
-    public class VolumeConstraintTypeProcessor : FourBodyTypeProcessor<VolumeConstraintPrestepData, Vector<float>, VolumeConstraintFunctions, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear>
+    public class VolumeConstraintTypeProcessor : FourBodyTypeProcessor<VolumeConstraintPrestepData, Vector<Number>, VolumeConstraintFunctions, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear, AccessOnlyLinear>
     {
         public const int BatchTypeId = 32;
     }

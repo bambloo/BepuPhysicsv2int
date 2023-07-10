@@ -1,20 +1,23 @@
-﻿using System;
-using System.Numerics;
-using BepuUtilities;
+﻿
+
 using BepuPhysics;
-using DemoContentLoader;
-using DemoRenderer;
 using BepuPhysics.Collidables;
-using DemoUtilities;
-using DemoRenderer.UI;
 using BepuPhysics.CollisionDetection;
+using BepuPhysics.Constraints;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System.Runtime.CompilerServices;
-using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
+using DemoRenderer;
+using DemoRenderer.UI;
+using DemoUtilities;
+using System;
 using System.Diagnostics;
-using System.Threading;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Threading;
+using Math = BepuUtilities.Utils.Math;
 
 namespace Demos.Demos
 {
@@ -57,7 +60,7 @@ namespace Demos.Demos
         /// <param name="contactIndex">Index of the new contact in the contact manifold.</param>
         /// <param name="workerIndex">Index of the worker thread that fired this event.</param>
         void OnContactAdded<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold,
-            Vector3 contactOffset, Vector3 contactNormal, float depth, int featureId, int contactIndex, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
+            Vector3 contactOffset, Vector3 contactNormal, Number depth, int featureId, int contactIndex, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
         {
         }
 
@@ -345,7 +348,7 @@ namespace Demos.Demos
         /// <summary>
         /// Callback attached to the simulation's ITimestepper which executes just prior to collision detection to take a snapshot of activity states to determine which pairs we should expect updates in.
         /// </summary>
-        void SetFreshnessForCurrentActivityStatus(float dt, IThreadDispatcher threadDispatcher)
+        void SetFreshnessForCurrentActivityStatus(Number dt, IThreadDispatcher threadDispatcher)
         {
             //Every single pair tracked by the contact events has a 'freshness' flag. If the final flush sees a pair that is stale, it'll remove it
             //and any necessary events to represent the end of that pair are reported.
@@ -512,8 +515,8 @@ namespace Demos.Demos
             public int Count => 0;
             public bool Convex => true;
             //This type never has any contacts, so there's no need for any property grabbers.
-            public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId) { throw new NotImplementedException(); }
-            public ref float GetDepth(ref EmptyManifold manifold, int contactIndex) { throw new NotImplementedException(); }
+            public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out Number depth, out int featureId) { throw new NotImplementedException(); }
+            public ref Number GetDepth(ref EmptyManifold manifold, int contactIndex) { throw new NotImplementedException(); }
             public int GetFeatureId(int contactIndex) { throw new NotImplementedException(); }
             public ref int GetFeatureId(ref EmptyManifold manifold, int contactIndex) { throw new NotImplementedException(); }
             public ref Vector3 GetNormal(ref EmptyManifold manifold, int contactIndex) { throw new NotImplementedException(); }
@@ -608,7 +611,7 @@ namespace Demos.Demos
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
         {
             return true;
         }
@@ -623,7 +626,7 @@ namespace Demos.Demos
         public unsafe bool ConfigureContactManifold<TManifold>(int workerIndex, CollidablePair pair, ref TManifold manifold, out PairMaterialProperties pairMaterial) where TManifold : unmanaged, IContactManifold<TManifold>
         {
             pairMaterial.FrictionCoefficient = 1f;
-            pairMaterial.MaximumRecoveryVelocity = 2f;
+            pairMaterial.MaximumRecoveryVelocity = Constants.C0p3;
             pairMaterial.SpringSettings = new SpringSettings(30, 1);
             events.HandleManifold(workerIndex, pair, ref manifold);
             return true;
@@ -654,7 +657,7 @@ namespace Demos.Demos
         struct ContactResponseParticle
         {
             public Vector3 Position;
-            public float Age;
+            public Number Age;
             public Vector3 Normal;
         }
 
@@ -672,7 +675,7 @@ namespace Demos.Demos
             }
 
             public void OnContactAdded<TManifold>(CollidableReference eventSource, CollidablePair pair, ref TManifold contactManifold,
-                Vector3 contactOffset, Vector3 contactNormal, float depth, int featureId, int contactIndex, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
+                Vector3 contactOffset, Vector3 contactNormal, Number depth, int featureId, int contactIndex, int workerIndex) where TManifold : unmanaged, IContactManifold<TManifold>
             {
                 //Simply ignore any particles beyond the allocated space.
                 var index = Interlocked.Increment(ref Particles.Count) - 1;
@@ -713,7 +716,7 @@ namespace Demos.Demos
             var listenedBody1 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0, 5, 0), 1, Simulation.Shapes, new Box(1, 2, 3)));
             events.Register(Simulation.Bodies[listenedBody1].CollidableReference, eventHandler);
 
-            var listenedBody2 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0.5f, 10, 0), 1, Simulation.Shapes, new Capsule(0.25f, 0.7f)));
+            var listenedBody2 = Simulation.Bodies.Add(BodyDescription.CreateConvexDynamic(new Vector3(0.5f, 10, 0), 1, Simulation.Shapes, new Capsule(Constants.C0p25, 0.7f)));
             events.Register(Simulation.Bodies[listenedBody2].CollidableReference, eventHandler);
 
 
@@ -721,7 +724,7 @@ namespace Demos.Demos
             Simulation.Statics.Add(new StaticDescription(new Vector3(0, 3, 15), Simulation.Shapes.Add(new Box(30, 5, 1))));
         }
 
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             base.Update(window, camera, input, dt);
             //Can't forget to flush the events!

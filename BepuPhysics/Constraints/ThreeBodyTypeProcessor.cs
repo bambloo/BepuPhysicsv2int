@@ -3,7 +3,7 @@ using BepuUtilities.Collections;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Constraints
@@ -33,14 +33,14 @@ namespace BepuPhysics.Constraints
         void Solve(
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA,
             in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB,
-            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, float dt, float inverseDt,
+            in Vector3Wide positionC, in QuaternionWide orientationC, in BodyInertiaWide inertiaC, Number dt, Number inverseDt,
             ref TPrestepData prestep, ref TAccumulatedImpulse accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref BodyVelocityWide wsvC);
 
         /// <summary>
         /// Gets whether this constraint type requires incremental updates for each substep taken beyond the first.
         /// </summary>
         bool RequiresIncrementalSubstepUpdates { get; }
-        void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, in BodyVelocityWide wsvC, ref TPrestepData prestepData);
+        void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, in BodyVelocityWide wsvC, ref TPrestepData prestepData);
     }
 
     /// <summary>
@@ -101,7 +101,7 @@ namespace BepuPhysics.Constraints
        
         public unsafe override void WarmStart<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(
             ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies, ref TIntegratorCallbacks integratorCallbacks,
-            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
+            Number dt, Number inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<ThreeBodyReferences>();
@@ -121,7 +121,7 @@ namespace BepuPhysics.Constraints
                     out var positionC, out var orientationC, out var wsvC, out var inertiaC);
 
                 //if (typeof(TAllowPoseIntegration) == typeof(AllowPoseIntegration))
-                //    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, positionB, orientationB, inertiaB, wsvB, positionC, orientationC, inertiaC, wsvC, new Vector<float>(dt), accumulatedImpulses, ref prestep);
+                //    function.UpdateForNewPose(positionA, orientationA, inertiaA, wsvA, positionB, orientationB, inertiaB, wsvB, positionC, orientationC, inertiaC, wsvC, new Vector<Number>(dt), accumulatedImpulses, ref prestep);
 
                 function.WarmStart(positionA, orientationA, inertiaA, positionB, orientationB, inertiaB, positionC, orientationC, inertiaC, ref prestep, ref accumulatedImpulses, ref wsvA, ref wsvB, ref wsvC);
 
@@ -143,7 +143,7 @@ namespace BepuPhysics.Constraints
             }
         }
 
-        public unsafe override void Solve(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void Solve(ref TypeBatch typeBatch, Bodies bodies, Number dt, Number inverseDt, int startBundle, int exclusiveEndBundle)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<ThreeBodyReferences>();
@@ -168,12 +168,12 @@ namespace BepuPhysics.Constraints
         }
 
         public override bool RequiresIncrementalSubstepUpdates => default(TConstraintFunctions).RequiresIncrementalSubstepUpdates;
-        public unsafe override void IncrementallyUpdateForSubstep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle)
+        public unsafe override void IncrementallyUpdateForSubstep(ref TypeBatch typeBatch, Bodies bodies, Number dt, Number inverseDt, int startBundle, int exclusiveEndBundle)
         {
             var prestepBundles = typeBatch.PrestepData.As<TPrestepData>();
             var bodyReferencesBundles = typeBatch.BodyReferences.As<ThreeBodyReferences>();
             var function = default(TConstraintFunctions);
-            var dtWide = new Vector<float>(dt);
+            var dtWide = new Vector<Number>(dt);
             for (int i = startBundle; i < exclusiveEndBundle; ++i)
             {
                 ref var prestep = ref prestepBundles[i];

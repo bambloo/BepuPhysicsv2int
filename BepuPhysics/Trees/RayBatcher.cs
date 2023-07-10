@@ -1,11 +1,10 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Trees
 {
@@ -22,11 +21,11 @@ namespace BepuPhysics.Trees
     public struct TreeRay
     {
         public Vector3 OriginOverDirection;
-        public float MaximumT;
+        public Number MaximumT;
         public Vector3 InverseDirection;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFrom(Vector3 origin, Vector3 direction, float maximumT, out TreeRay treeRay)
+        public static void CreateFrom(Vector3 origin, Vector3 direction, Number maximumT, out TreeRay treeRay)
         {
             //Note that this division has two odd properties:
             //1) If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
@@ -34,13 +33,13 @@ namespace BepuPhysics.Trees
             //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
             //2) To compensate for the clamp and abs, we reintroduce the sign in the numerator.
             //TODO: There is a small chance that a gather/scatter vectorized implementation would be a win. Pretty questionable, though.
-            treeRay.InverseDirection = new Vector3(direction.X < 0 ? -1 : 1, direction.Y < 0 ? -1 : 1, direction.Z < 0 ? -1 : 1) / Vector3.Max(new Vector3(1e-15f), Vector3.Abs(direction));
+            treeRay.InverseDirection = new Vector3(direction.X < 0 ? -1 : 1, direction.Y < 0 ? -1 : 1, direction.Z < 0 ? -1 : 1) / Vector3.Max(new Vector3(Constants.C1em15), Vector3.Abs(direction));
             treeRay.MaximumT = maximumT;
             treeRay.OriginOverDirection = origin * treeRay.InverseDirection;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFrom(Vector3 origin, Vector3 direction, float maximumT, int id, out RayData rayData, out TreeRay treeRay)
+        public static void CreateFrom(Vector3 origin, Vector3 direction, Number maximumT, int id, out RayData rayData, out TreeRay treeRay)
         {
             rayData.Origin = origin;
             rayData.Id = id;
@@ -53,7 +52,7 @@ namespace BepuPhysics.Trees
     {
         int RayCount { get; }
         ref readonly RayData GetRay(int rayIndex);
-        void GetRay(int rayIndex, out RayData* ray, out float* maximumT);
+        void GetRay(int rayIndex, out RayData* ray, out Number* maximumT);
     }
 
 
@@ -90,7 +89,7 @@ namespace BepuPhysics.Trees
         /// <param name="maximumT">Pointer to the maximum length of the ray in units of the ray's length.
         /// Decreasing this value will prevent the traversal from visiting more distant nodes later in the traversal.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetRay(int rayIndex, out RayData* ray, out float* maximumT)
+        public void GetRay(int rayIndex, out RayData* ray, out Number* maximumT)
         {
             Debug.Assert(rayIndex >= 0 && rayIndex < rayCount, "The ray index must be within 0 and RayCount - 1.");
             var remappedIndex = rayPointers[rayIndex];
@@ -113,7 +112,7 @@ namespace BepuPhysics.Trees
 
     public interface IRayLeafTester
     {
-        unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT);
+        unsafe void TestLeaf(int leafIndex, RayData* rayData, Number* maximumT);
     }
     public interface IBatchedRayLeafTester : IRayLeafTester
     {
@@ -208,7 +207,7 @@ namespace BepuPhysics.Trees
         struct TreeRayWide
         {
             public Vector3Wide OriginOverDirection;
-            public Vector<float> MaximumT;
+            public Vector<Number> MaximumT;
             public Vector3Wide InverseDirection;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -243,7 +242,7 @@ namespace BepuPhysics.Trees
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        static void Intersect(ref TreeRayWide ray, ref Vector3Wide min, ref Vector3Wide max, out Vector<float> tMin, out Vector<int> intersected)
+        static void Intersect(ref TreeRayWide ray, ref Vector3Wide min, ref Vector3Wide max, out Vector<Number> tMin, out Vector<int> intersected)
         {
             //TODO: This is a good spot for FMA if/when we swap over to platform intrinsics.
             var tX0 = min.X * ray.InverseDirection.X - ray.OriginOverDirection.X;
@@ -261,7 +260,7 @@ namespace BepuPhysics.Trees
             var tMinZ = Vector.Min(tZ0, tZ1);
             var tMaxZ = Vector.Max(tZ0, tZ1);
 
-            tMin = Vector.Max(Vector.Max(Vector<float>.Zero, tMinX), Vector.Max(tMinY, tMinZ));
+            tMin = Vector.Max(Vector.Max(Vector<Number>.Zero, tMinX), Vector.Max(tMinY, tMinZ));
             var tMax = Vector.Min(Vector.Min(ray.MaximumT, tMaxX), Vector.Min(tMaxY, tMaxZ));
             intersected = Vector.LessThanOrEqual(tMin, tMax);
         }
@@ -337,11 +336,11 @@ namespace BepuPhysics.Trees
             BroadcastNode(ref node, out var wideNode);
             Unsafe.SkipInit(out TreeRayWide rayBundle);
 
-            for (int bundleStartIndex = 0; bundleStartIndex < raySource.RayCount; bundleStartIndex += Vector<float>.Count)
+            for (int bundleStartIndex = 0; bundleStartIndex < raySource.RayCount; bundleStartIndex += Vector<Number>.Count)
             {
                 var count = raySource.RayCount - bundleStartIndex;
-                if (count > Vector<float>.Count)
-                    count = Vector<float>.Count;
+                if (count > Vector<Number>.Count)
+                    count = Vector<Number>.Count;
 
                 for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                 {
@@ -455,13 +454,13 @@ namespace BepuPhysics.Trees
                 int a0Start = stackPointerA0;
                 ref var node = ref tree.Nodes[0];
                 BroadcastNode(ref node, out var nodeWide);
-                for (int bundleStartIndex = 0; bundleStartIndex < batchRayCount; bundleStartIndex += Vector<float>.Count)
+                for (int bundleStartIndex = 0; bundleStartIndex < batchRayCount; bundleStartIndex += Vector<Number>.Count)
                 {
                     var bundleStart = batchRays.Memory + bundleStartIndex;
 
                     var count = batchRayCount - bundleStartIndex;
-                    if (count > Vector<float>.Count)
-                        count = Vector<float>.Count;
+                    if (count > Vector<Number>.Count)
+                        count = Vector<Number>.Count;
                     for (int innerIndex = 0; innerIndex < count; ++innerIndex)
                     {
                         TreeRayWide.GatherIntoFirstSlot(ref bundleStart[innerIndex], ref GatherScatter.GetOffsetInstance(ref rayBundle, innerIndex));
@@ -540,7 +539,7 @@ namespace BepuPhysics.Trees
         /// <param name="id">Identifier value for the ray. Leaf tests will have access to the id.</param>
         /// <returns>True if the batcher is full and requires a call to ResetRays before adding any more rays, false otherwise.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool Add(ref Vector3 origin, ref Vector3 direction, float maximumT, int id = 0)
+        public bool Add(ref Vector3 origin, ref Vector3 direction, Number maximumT, int id = 0)
         {
             Debug.Assert(batchRayCount >= 0 && batchRayCount < rayCapacity,
                 "The accumulated rays must not exceed the maximum count per traversal; make sure ResetRays was called following a call to Add that returned true.");

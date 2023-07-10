@@ -1,17 +1,15 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
-using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.InteropServices;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.Demos.Dancers
 {
@@ -31,8 +29,8 @@ namespace Demos.Demos.Dancers
         {
             public Vector3 Start;
             public Vector3 Direction;
-            public float Length;
-            public float Radius;
+            public Number Length;
+            public Number Radius;
         }
         static TestCapsule CreateTestCapsule(Simulation simulation, BodyHandle handle)
         {
@@ -48,7 +46,7 @@ namespace Demos.Demos.Dancers
             return toReturn;
 
         }
-        unsafe static void CreateBodyGrid(DancerBodyHandles bodyHandles, Int3 axisSizeInBodies, Vector3 gridMinimum, Vector3 gridMaximum, float bodyRadius, float massPerBody,
+        unsafe static void CreateBodyGrid(DancerBodyHandles bodyHandles, Int3 axisSizeInBodies, Vector3 gridMinimum, Vector3 gridMaximum, Number bodyRadius, Number massPerBody,
             int instanceId, Simulation simulation, CollidableProperty<DeformableCollisionFilter> filters)
         {
             var shape = new Sphere(bodyRadius);
@@ -56,7 +54,7 @@ namespace Demos.Demos.Dancers
             //Note that, unlike the DancerDemo where cloth nodes cannot rotate, the deformable sub-bodies can rotate.
             //That's because this demo is going to connect bodies together using Weld constraints, which control all six degrees of freedom.
             //You could also use a CenterDistanceConstraint/Limit with VolumeConstraints to maintain shape, but a bunch of Weld constraints is a little simpler.
-            var description = BodyDescription.CreateDynamic(QuaternionEx.Identity, shape.ComputeInertia(massPerBody), shapeIndex, 0.01f);
+            var description = BodyDescription.CreateDynamic(QuaternionEx.Identity, shape.ComputeInertia(massPerBody), shapeIndex, Constants.C0p01);
             BodyHandle[,,] handles = new BodyHandle[axisSizeInBodies.X, axisSizeInBodies.Y, axisSizeInBodies.Z];
             BodyHandle[,,] nearestHandles = new BodyHandle[axisSizeInBodies.X, axisSizeInBodies.Y, axisSizeInBodies.Z];
             var gridSpan = gridMaximum - gridMinimum;
@@ -78,7 +76,7 @@ namespace Demos.Demos.Dancers
                     for (int z = 0; z < axisSizeInBodies.Z; ++z)
                     {
                         var position = gridMinimum + gridSpacing * new Vector3(x, y, z);
-                        float minimumDistance = float.MaxValue;
+                        Number minimumDistance = Number.MaxValue;
                         int minimumIndex = 0;
                         for (int i = 0; i < testCapsules.Length; ++i)
                         {
@@ -188,12 +186,12 @@ namespace Demos.Demos.Dancers
         }
 
 
-        static void CreateFatSuit(Simulation simulation, CollidableProperty<DeformableCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, int dancerGridWidth, float levelOfDetail)
+        static void CreateFatSuit(Simulation simulation, CollidableProperty<DeformableCollisionFilter> filters, DancerBodyHandles bodyHandles, int dancerIndex, int dancerGridWidth, Number levelOfDetail)
         {
             //The demo uses lower resolution grids on dancers further away from the main dancer.
             //This is a sorta-example of level of detail. In a 'real' use case, you'd probably want to transition between levels of detail dynamically as the camera moved around.
             //That's a little trickier, but doable. Going low to high, for example, requires creating bodies at interpolated positions between existing bodies, while going to a lower level of detail removes them.
-            levelOfDetail = MathF.Max(0f, MathF.Min(0.8f, levelOfDetail));
+            levelOfDetail = MathF.Max(Constants.C0, MathF.Min(0.8f, levelOfDetail));
             var suitSize = new Vector3(1, 1f, 1);
             var fullDetailAxisBodyCounts = new Int3 { X = 23, Y = 23, Z = 23 };
             var scale = MathF.Pow(2, levelOfDetail);
@@ -206,7 +204,7 @@ namespace Demos.Demos.Dancers
             var topOfChestPosition = new Vector3(0, topOfChestHeight, 0) + DemoDancers.GetOffsetForDancer(dancerIndex, dancerGridWidth);
             var suitMinimum = topOfChestPosition - suitSize * new Vector3(0.5f, 1f, 0.5f);
             var suitMaximum = suitMinimum + suitSize;
-            CreateBodyGrid(bodyHandles, axisBodyCounts, suitMinimum, suitMaximum, bodyRadius, 0.01f, dancerIndex, simulation, filters);
+            CreateBodyGrid(bodyHandles, axisBodyCounts, suitMinimum, suitMaximum, bodyRadius, Constants.C0p01, dancerIndex, simulation, filters);
         }
 
 
@@ -223,7 +221,7 @@ namespace Demos.Demos.Dancers
             dancers = new DemoDancers().Initialize<DeformableCallbacks, DeformableCollisionFilter>(8, 8, Simulation, collisionFilters, ThreadDispatcher, BufferPool, new SolveDescription(1, 1), CreateFatSuit, new DeformableCollisionFilter(0, 0, 0, -1));
 
         }
-        public unsafe override void Update(Window window, Camera camera, Input input, float dt)
+        public unsafe override void Update(Window window, Camera camera, Input input, Number dt)
         {
             dancers.UpdateTargets(Simulation);
             base.Update(window, camera, input, dt);
@@ -241,8 +239,8 @@ namespace Demos.Demos.Dancers
             renderer.TextBatcher.Write(text.Clear().Append("Dancer count: ").Append(dancers.Handles.Length), new Vector2(16, resolution.Y - 80), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Total deformable body count: ").Append(dancers.BodyCount), new Vector2(16, resolution.Y - 64), 16, Vector3.One, font);
             renderer.TextBatcher.Write(text.Clear().Append("Total deformable constraint count: ").Append(dancers.ConstraintCount), new Vector2(16, resolution.Y - 48), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("Total dancer execution time (ms): ").Append(dancers.ExecutionTime * 1000, 2), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
-            renderer.TextBatcher.Write(text.Clear().Append("Amortized execution time per dancer (us): ").Append(dancers.ExecutionTime * 1e6 / dancers.Handles.Length, 1), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Total dancer execution time (ms): ").Append((float)dancers.ExecutionTime * 1000, 2), new Vector2(16, resolution.Y - 32), 16, Vector3.One, font);
+            renderer.TextBatcher.Write(text.Clear().Append("Amortized execution time per dancer (us): ").Append((float)dancers.ExecutionTime * 1e6 / dancers.Handles.Length, 1), new Vector2(16, resolution.Y - 16), 16, Vector3.One, font);
 
             base.Render(renderer, camera, input, text, font);
         }

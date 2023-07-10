@@ -1,7 +1,7 @@
-﻿//using System;
+﻿//
 //using System.Collections.Generic;
 //using System.Diagnostics;
-//using System.Numerics;
+//
 //using System.Runtime.CompilerServices;
 //using System.Text;
 //using BepuPhysics;
@@ -50,11 +50,11 @@
 
 //                Vector3Wide.Normalize(localOffsetB, out var initialNormal);
 //                //Vector3Wide.Broadcast(new Vector3(0.9673051f, 0.07194486f, -0.2431969f), out var initialNormal);
-//                //var initialDepth = new Vector<float>(0.007193089f);
+//                //var initialDepth = new Vector<Number>(0.007193089f);
 
-//                var convergenceThreshold = new Vector<float>(4e-7f);
+//                var convergenceThreshold = new Vector<Number>(4e-7f);
 
-//                var minimumDepthThreshold = new Vector<float>(-0.1f);
+//                var minimumDepthThreshold = new Vector<Number>(-0.1f);
 
 //                //var simplex = new DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>.SimplexWithWitness();
 //                //Vector3Wide.Broadcast(new Vector3(-0.05699956f, -0.4314917f, 0.445577f), out simplex.A.Support);
@@ -62,7 +62,7 @@
 //                //simplex.A.Exists = new Vector<int>(-1);
 
 //                //Vector3Wide.Broadcast(new Vector3(0.3148193f, -0.4314917f, 0.2980957f), out simplex.B.Support);
-//                //Vector3Wide.Broadcast(new Vector3(0f, -0.09f, 0f), out simplex.B.SupportOnA);
+//                //Vector3Wide.Broadcast(new Vector3(Constants.C0, -0.09f, Constants.C0), out simplex.B.SupportOnA);
 //                //simplex.B.Exists = new Vector<int>(-1);
 
 //                //Vector3Wide.Broadcast(new Vector3(-1.175686f, 3.316494f, 0.7135266f), out simplex.C.Support);
@@ -77,7 +77,7 @@
 //                Vector3Wide.ReadSlot(ref localOffsetB, 0, out poseB.Position);
 //                shapeLines = MinkowskiShapeVisualizer.CreateLines<Cylinder, CylinderWide, CylinderSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>(
 //                    shapeA, shapeB, poseA, poseB, 65536,
-//                    0.01f, new Vector3(0.4f, 0.4f, 0),
+//                    Constants.C0p01, new Vector3(0.4f, 0.4f, 0),
 //                    0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
 
 //                var aWide = default(CylinderWide);
@@ -133,11 +133,11 @@
 
 //            //    //Vector3Wide.Normalize(localOffsetB, out var initialNormal);
 //            //    Vector3Wide.Broadcast(new Vector3(1f, 0, 0), out var initialNormal);
-//            //    var initialDepth = new Vector<float>(2.674457f);
+//            //    var initialDepth = new Vector<Number>(2.674457f);
 
-//            //    var convergenceThreshold = new Vector<float>(1e-5f * 4.187582f);
+//            //    var convergenceThreshold = new Vector<Number>(1e-5f * 4.187582f);
 
-//            //    var minimumDepthThreshold = new Vector<float>(-1f);
+//            //    var minimumDepthThreshold = new Vector<Number>(-1f);
 
 //            //    basePosition = default;
 //            //    var poseA = RigidPose.Identity;
@@ -147,11 +147,11 @@
 //            //    Vector3Wide.ReadSlot(ref localOffsetB, 0, out poseB.Position);
 //            //    shapeLines = MinkowskiShapeVisualizer.CreateLines<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Triangle, TriangleWide, PretransformedTriangleSupportFinder>(
 //            //        shapeA, shapeB, poseA, poseB, 65536,
-//            //        0.01f, new Vector3(0.4f, 0.4f, 0),
+//            //        Constants.C0p01, new Vector3(0.4f, 0.4f, 0),
 //            //        0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
 
 //            //    var aWide = default(ConvexHullWide);
-//            //    var memoryLength = Unsafe.SizeOf<ConvexHull>() * Vector<float>.Count;
+//            //    var memoryLength = Unsafe.SizeOf<ConvexHull>() * Vector<Number>.Count;
 //            //    var memory = stackalloc byte[memoryLength];
 //            //    aWide.Initialize(new Buffer<byte>(memory, memoryLength));
 //            //    var bWide = default(TriangleWide);
@@ -224,11 +224,11 @@
 //            //    basePosition = default;
 //            //    //shapeLines = MinkowskiShapeVisualizer.CreateLines<Capsule, CapsuleWide, CapsuleSupportFinder, ConvexHull, ConvexHullWide, ConvexHullSupportFinder>(
 //            //    //    shapeA, shapeB, poseA, poseB, 65536,
-//            //    //    0.01f, new Vector3(0.4f, 0.4f, 0),
+//            //    //    Constants.C0p01, new Vector3(0.4f, 0.4f, 0),
 //            //    //    0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
 //            //    shapeLines = MinkowskiShapeVisualizer.CreateLines<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Capsule, CapsuleWide, CapsuleSupportFinder>(
 //            //        shapeB, shapeA, poseB, poseA, 65536,
-//            //        0.01f, new Vector3(0.4f, 0.4f, 0),
+//            //        Constants.C0p01, new Vector3(0.4f, 0.4f, 0),
 //            //        0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
 
 //            //    var aWide = default(CapsuleWide);
@@ -249,7 +249,7 @@
 //            //    Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
 //            //    steps = new List<DepthRefinerStep>();
 //            //    DepthRefiner<Capsule, CapsuleWide, CapsuleSupportFinder, ConvexHull, ConvexHullWide, ConvexHullSupportFinder>.FindMinimumDepth(
-//            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinderA, ref supportFinderB, initialNormalWide, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
+//            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinderA, ref supportFinderB, initialNormalWide, new Vector<int>(), new Vector<Number>(1e-6f), new Vector<Number>(-500),
 //            //        out var depthWide1, out var localNormalWide1, steps, 50);
 
 //            //    steps.Clear();
@@ -260,7 +260,7 @@
 //            //    Matrix3x3Wide.Broadcast(localOrientationA, out var localOrientationAWide);
 //            //    Vector3Wide.Broadcast(Vector3.Normalize(localOffsetA), out var initialNormalWide2);
 //            //    DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, Capsule, CapsuleWide, CapsuleSupportFinder>.FindMinimumDepth(
-//            //        bWide, aWide, localOffsetAWide, localOrientationAWide, ref supportFinderB, ref supportFinderA, initialNormalWide2, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
+//            //        bWide, aWide, localOffsetAWide, localOrientationAWide, ref supportFinderB, ref supportFinderA, initialNormalWide2, new Vector<int>(), new Vector<Number>(1e-6f), new Vector<Number>(-500),
 //            //        out var depthWide2, out var localNormalWide2, steps, 50);
 
 //            //    poseA.Position.Z -= 2;
@@ -302,7 +302,7 @@
 //            //    basePosition = default;
 //            //    shapeLines = MinkowskiShapeVisualizer.CreateLines<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>(
 //            //        shapeA, shapeB, poseA, poseB, 65536,
-//            //        0.01f, new Vector3(0.4f, 0.4f, 0),
+//            //        Constants.C0p01, new Vector3(0.4f, 0.4f, 0),
 //            //        0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
 
 //            //    var aWide = default(CylinderWide);
@@ -320,22 +320,22 @@
 //            //    Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
 //            //    steps = new List<DepthRefinerStep>();
 //            //    DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-//            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
+//            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<Number>(1e-6f), new Vector<Number>(-500),
 //            //        out var depthWide, out var localNormalWide, steps, 50);
 
 //            //    const int iterationCount = 100000;
-//            //    double minTime = double.MaxValue;
+//            //    Number minTime = Number.MaxValue;
 //            //    for (int j = 0; j < 10; ++j)
 //            //    {
 //            //        var start = Stopwatch.GetTimestamp();
 //            //        for (int i = 0; i < iterationCount; ++i)
 //            //        {
 //            //            DepthRefiner<Cylinder, CylinderWide, CylinderSupportFinder, Cylinder, CylinderWide, CylinderSupportFinder>.FindMinimumDepth(
-//            //                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
+//            //                    aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<Number>(1e-6f), new Vector<Number>(-500),
 //            //                    out var depthWide2, out var localNormalWide2, null, 50);
 //            //        }
 //            //        var stop = Stopwatch.GetTimestamp();
-//            //        var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
+//            //        var span = (stop - start) * 1e9f / (iterationCount * (Number)Stopwatch.Frequency);
 //            //        Console.WriteLine($"Time {j} (ns): {span}");
 //            //        minTime = Math.Min(span, minTime);
 //            //    }
@@ -352,7 +352,7 @@
 //            //    basePosition = default;
 //            //    shapeLines = MinkowskiShapeVisualizer.CreateLines<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>(
 //            //        shapeA, shapeB, poseA, poseB, 65536,
-//            //        0.01f, new Vector3(0.4f, 0.4f, 0),
+//            //        Constants.C0p01, new Vector3(0.4f, 0.4f, 0),
 //            //        0.1f, new Vector3(0, 1, 0), default, basePosition, BufferPool);
 
 //            //    var aWide = default(BoxWide);
@@ -370,22 +370,22 @@
 //            //    Vector3Wide.Broadcast(initialNormal, out var initialNormalWide);
 //            //    steps = new List<DepthRefinerStep>();
 //            //    DepthRefiner<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
-//            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
+//            //        aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<Number>(1e-6f), new Vector<Number>(-500),
 //            //        out var depthWide, out var localNormalWide, steps, 50);
 
 //            //    const int iterationCount = 100000;
-//            //    double minTime = double.MaxValue;
+//            //    Number minTime = Number.MaxValue;
 //            //    for (int j = 0; j < 10; ++j)
 //            //    {
 //            //        var start = Stopwatch.GetTimestamp();
 //            //        for (int i = 0; i < iterationCount; ++i)
 //            //        {
 //            //            DepthRefiner<Box, BoxWide, BoxSupportFinder, Box, BoxWide, BoxSupportFinder>.FindMinimumDepth(
-//            //                aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<float>(1e-6f), new Vector<float>(-500),
+//            //                aWide, bWide, localOffsetBWide, localOrientationBWide, ref supportFinder, ref supportFinder, initialNormalWide, new Vector<int>(), new Vector<Number>(1e-6f), new Vector<Number>(-500),
 //            //                out var depthWide2, out var localNormalWide2, null, 50);
 //            //        }
 //            //        var stop = Stopwatch.GetTimestamp();
-//            //        var span = (stop - start) * 1e9f / (iterationCount * (double)Stopwatch.Frequency);
+//            //        var span = (stop - start) * 1e9f / (iterationCount * (Number)Stopwatch.Frequency);
 //            //        Console.WriteLine($"Time {j} (ns): {span}");
 //            //        minTime = Math.Min(span, minTime);
 //            //    }
@@ -395,7 +395,7 @@
 //        }
 
 //        int stepIndex;
-//        public override void Update(Window window, Camera camera, Input input, float dt)
+//        public override void Update(Window window, Camera camera, Input input, Number dt)
 //        {
 //            if (input.TypedCharacters.Contains('x'))
 //            {

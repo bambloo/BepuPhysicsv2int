@@ -1,11 +1,10 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
 using Demos.Demos.Characters;
 using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.Demos.Sponsors
 {
@@ -15,7 +14,7 @@ namespace Demos.Demos.Sponsors
         Vector2 targetLocation;
         public SponsorCharacterAI(CharacterControllers characters, in CollidableDescription characterCollidable, Vector3 initialPosition, in Vector2 targetLocation)
         {
-            bodyHandle = characters.Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f }, characterCollidable, -1f));
+            bodyHandle = characters.Simulation.Bodies.Add(BodyDescription.CreateDynamic(initialPosition, new BodyInertia { InverseMass = 1f }, characterCollidable, Constants.Cm1));
 
             ref var character = ref characters.AllocateCharacter(bodyHandle);
             character.LocalUp = new Vector3(0, 1, 0);
@@ -23,7 +22,7 @@ namespace Demos.Demos.Sponsors
             character.JumpVelocity = 4;
             character.MaximumVerticalForce = 10f;
             character.MaximumHorizontalForce = 5f;
-            character.MinimumSupportDepth = -0.01f;
+            character.MinimumSupportDepth = -Constants.C0p01;
             character.MinimumSupportContinuationDepth = -0.1f;
             character.ViewDirection = new Vector3(0, 0, -1);
             this.targetLocation = targetLocation;
@@ -52,7 +51,7 @@ namespace Demos.Demos.Sponsors
             //We want target position relative influence to be consistent regardless of newt count.
             influenceSum /= newts.Count;
             ref var character = ref characters.GetCharacterByBodyHandle(bodyHandle);
-            influenceSum -= (new Vector2(body.Pose.Position.X, body.Pose.Position.Z) - targetLocation) * 0.001f;
+            influenceSum -= (new Vector2(body.Pose.Position.X, body.Pose.Position.Z) - targetLocation) * Constants.C0p001;
             //Newts should do a good job at avoiding a division by zero here, but just in case, guard against it.
             var influenceSumLength = influenceSum.Length();
             var targetWorldVelocity = influenceSumLength > 1e-6f ? influenceSum * (6f / influenceSumLength) : new Vector2();

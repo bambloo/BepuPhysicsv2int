@@ -1,15 +1,15 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using DemoUtilities;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System;
-using System.Numerics;
-using System.Diagnostics;
-using DemoContentLoader;
-using DemoRenderer.UI;
-using DemoRenderer.Constraints;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
+using DemoRenderer;
+using DemoRenderer.Constraints;
+using DemoRenderer.UI;
+using DemoUtilities;
+using System;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.Demos
 {
@@ -18,13 +18,13 @@ namespace Demos.Demos
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-10, 0, -10);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
 
         }
 
-        void GetArcExpansion(Vector3 offset, Vector3 angularVelocity, float dt, out Vector3 minExpansion, out Vector3 maxExpansion)
+        void GetArcExpansion(Vector3 offset, Vector3 angularVelocity, Number dt, out Vector3 minExpansion, out Vector3 maxExpansion)
         {
             //minExpansion = default;
             //maxExpansion = default;
@@ -128,7 +128,7 @@ namespace Demos.Demos
             maxExpansion = maxExpansion - max;
         }
 
-        void GetEstimatedExpansion(Vector3 localPoseA, Vector3 angularVelocityA, Vector3 offsetB, Vector3 angularVelocityB, float dt, out Vector3 minExpansion, out Vector3 maxExpansion)
+        void GetEstimatedExpansion(Vector3 localPoseA, Vector3 angularVelocityA, Vector3 offsetB, Vector3 angularVelocityB, Number dt, out Vector3 minExpansion, out Vector3 maxExpansion)
         {
             GetArcExpansion(localPoseA, angularVelocityA, dt, out var minExpansionA, out var maxExpansionA);
             GetArcExpansion(-offsetB, -angularVelocityB, dt, out var minExpansionB, out var maxExpansionB);
@@ -136,7 +136,7 @@ namespace Demos.Demos
             maxExpansion = maxExpansionA + maxExpansionB;
         }
 
-        Vector3 GetRandomVector(float width, Random random)
+        Vector3 GetRandomVector(Number width, Random random)
         {
             return new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * width - new Vector3(width * 0.5f);
         }
@@ -154,7 +154,7 @@ namespace Demos.Demos
                 var velocityB = new BodyVelocity(GetRandomVector(2, random), GetRandomVector(1, random));
                 var offsetB = GetRandomVector(2, random);
                 var localPoseA = new RigidPose(GetRandomVector(2, random), Quaternion.Identity);
-                float dt = 10f;
+                Number dt = 10f;
 
                 const int pathPointCount = 512;
                 var localPathPoints = new Vector3[pathPointCount];
@@ -172,8 +172,8 @@ namespace Demos.Demos
                 var referenceSweep = localPathPoints[pathPointCount - 1] - localPathPoints[0];
                 var sweepMin = Vector3.Min(localPathPoints[pathPointCount - 1], localPathPoints[0]);
                 var sweepMax = Vector3.Max(localPathPoints[pathPointCount - 1], localPathPoints[0]);
-                Vector3 referenceMin = new Vector3(float.MaxValue);
-                Vector3 referenceMax = new Vector3(float.MinValue);
+                Vector3 referenceMin = new Vector3(Number.MaxValue);
+                Vector3 referenceMax = new Vector3(Number.MinValue);
                 for (int i = 0; i < pathPointCount; ++i)
                 {
                     referenceMin = Vector3.Min(referenceMin, localPathPoints[i]);
@@ -203,7 +203,7 @@ namespace Demos.Demos
                 BoundingBoxLineExtractor.WriteBoundsLines(basePosition + referenceMin, basePosition + referenceMax, new Vector3(0, 1, 0), new Vector3(), ref renderer.Lines.Allocate(12));
                 BoundingBoxLineExtractor.WriteBoundsLines(basePosition + sweepMin, basePosition + sweepMax, new Vector3(0, 0, 1), new Vector3(), ref renderer.Lines.Allocate(12));
                 var expansionOffset = new Vector3(0, 0, 65);
-                BoundingBoxLineExtractor.WriteBoundsLines(basePosition + expansionOffset + new Vector3(-0.01f), basePosition + expansionOffset + new Vector3(0.01f), new Vector3(0, 0, 0), new Vector3(), ref renderer.Lines.Allocate(12));
+                BoundingBoxLineExtractor.WriteBoundsLines(basePosition + expansionOffset + new Vector3(-Constants.C0p01), basePosition + expansionOffset + new Vector3(Constants.C0p01), new Vector3(0, 0, 0), new Vector3(), ref renderer.Lines.Allocate(12));
                 BoundingBoxLineExtractor.WriteBoundsLines(basePosition + expansionOffset + referenceMinExpansion, basePosition + expansionOffset + referenceMaxExpansion, new Vector3(1, 0, 1), new Vector3(), ref renderer.Lines.Allocate(12));
 
                 BoundingBoxLineExtractor.WriteBoundsLines(basePosition + naiveMin, basePosition + naiveMax, new Vector3(1, 1, 1), new Vector3(), ref renderer.Lines.Allocate(12));
@@ -213,7 +213,7 @@ namespace Demos.Demos
                 //{
                 //    QuaternionWide.Broadcast(Quaternion.Identity, out var wideOrientation);
                 //    Vector3Wide.Broadcast(new Vector3(1, 1, 1), out var wideVelocity);
-                //    var halfDt = new Vector<float>(0.5f);
+                //    var halfDt = new Vector<Number>(0.5f);
                 //    const int testCount = 1024;
                 //    var resultsSweep = stackalloc Vector3[testCount];
                 //    var resultsMin = stackalloc Vector3[testCount];

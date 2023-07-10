@@ -1,22 +1,22 @@
 ﻿using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
 {
     /// <summary>
-    /// Two dimensional vector with <see cref="Vector{T}.Count"/> (with generic type argument of <see cref="float"/>) SIMD lanes.
+    /// Two dimensional vector with <see cref="Vector{T}.Count"/> (with generic type argument of <see cref="Number"/>) SIMD lanes.
     /// </summary>
     public struct Vector2Wide
     {
         /// <summary>
         /// First component of the vector.
         /// </summary>
-        public Vector<float> X;
+        public Vector<Number> X;
         /// <summary>
         /// Second component of the vector.
         /// </summary>
-        public Vector<float> Y;
+        public Vector<Number> Y;
 
         /// <summary>
         /// Performs a componentwise add between two vectors.
@@ -51,7 +51,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to add to every component of the vector.</param>
         /// <returns>Vector with components equal to the input vector added to the input scalar.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector2Wide operator +(Vector2Wide v, Vector<float> s)
+        public static Vector2Wide operator +(Vector2Wide v, Vector<Number> s)
         {
             Vector2Wide result;
             result.X = v.X + s;
@@ -65,7 +65,7 @@ namespace BepuUtilities
         /// <param name="s">Scalar to add to every component of the vector.</param>
         /// <returns>Vector with components equal to the input vector added to the input scalar.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector2Wide operator +(Vector<float> s, Vector2Wide v)
+        public static Vector2Wide operator +(Vector<Number> s, Vector2Wide v)
         {
             Vector2Wide result;
             result.X = v.X + s;
@@ -81,20 +81,20 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Dot(in Vector2Wide a, in Vector2Wide b, out Vector<float> result)
+        public static void Dot(in Vector2Wide a, in Vector2Wide b, out Vector<Number> result)
         {
             result = a.X * b.X + a.Y * b.Y;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Vector2Wide vector, in Vector<float> scalar, out Vector2Wide result)
+        public static void Scale(in Vector2Wide vector, in Vector<Number> scalar, out Vector2Wide result)
         {
             result.X = vector.X * scalar;
             result.Y = vector.Y * scalar;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector2Wide operator *(Vector2Wide vector, Vector<float> scalar)
+        public static Vector2Wide operator *(Vector2Wide vector, Vector<Number> scalar)
         {
             Vector2Wide result;
             result.X = vector.X * scalar;
@@ -102,7 +102,7 @@ namespace BepuUtilities
             return result;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Vector2Wide operator *(Vector<float> scalar, Vector2Wide vector)
+        public static Vector2Wide operator *(Vector<Number> scalar, Vector2Wide vector)
         {
             Vector2Wide result;
             result.X = vector.X * scalar;
@@ -139,19 +139,19 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LengthSquared(in Vector2Wide v, out Vector<float> lengthSquared)
+        public static void LengthSquared(in Vector2Wide v, out Vector<Number> lengthSquared)
         {
             lengthSquared = v.X * v.X + v.Y * v.Y;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Length(in Vector2Wide v, out Vector<float> length)
+        public static void Length(in Vector2Wide v, out Vector<Number> length)
         {
             length = Vector.SquareRoot(v.X * v.X + v.Y * v.Y);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void PerpDot(in Vector2Wide a, in Vector2Wide b, out Vector<float> result)
+        public static void PerpDot(in Vector2Wide a, in Vector2Wide b, out Vector<Number> result)
         {
             result = a.Y * b.X - a.X * b.Y;
         }
@@ -159,8 +159,8 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Broadcast(in Vector2 source, out Vector2Wide broadcasted)
         {
-            broadcasted.X = new Vector<float>(source.X);
-            broadcasted.Y = new Vector<float>(source.Y);
+            broadcasted.X = new Vector<Number>(source.X);
+            broadcasted.Y = new Vector<Number>(source.Y);
         }
 
         /// <summary>

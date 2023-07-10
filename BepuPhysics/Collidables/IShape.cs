@@ -1,11 +1,8 @@
-﻿using BepuPhysics.CollisionDetection;
-using BepuPhysics.CollisionDetection.CollisionTasks;
+﻿using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuPhysics.Trees;
 using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 
 namespace BepuPhysics.Collidables
 {
@@ -61,7 +58,7 @@ namespace BepuPhysics.Collidables
         /// Velocities are used to expand the bounding box so that likely future collisions will be detected.
         /// Linear velocity expands the bounding box in a direct and simple way, but angular expansion requires more information about the shape. 
         /// Imagine a long and thin capsule versus a sphere: high angular velocity may require significant expansion on the capsule, but spheres are rotationally invariant.</remarks>
-        void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion);
+        void ComputeAngularExpansionData(out Number maximumRadius, out Number maximumAngularExpansion);
 
         /// <summary>
         /// Computes the inertia for a body given a mass.
@@ -70,7 +67,7 @@ namespace BepuPhysics.Collidables
         /// <returns>Inertia for the body.</returns>
         /// <remarks>Note that the <see cref="BodyInertia"/> returned by this stores the inverse mass and inverse inertia tensor. 
         /// This is because the most high frequency use of body inertia most naturally uses the inverse.</remarks>
-        BodyInertia ComputeInertia(float mass);
+        BodyInertia ComputeInertia(Number mass);
 
         /// <summary>
         /// Tests a ray against the shape.
@@ -81,7 +78,7 @@ namespace BepuPhysics.Collidables
         /// <param name="t">Distance along the ray direction to the hit point, if any, in units of the ray direction's length. In other words, hitLocation = origin + direction * t.</param>
         /// <param name="normal">Normal of the impact surface, if any.</param>
         /// <returns>True if the ray intersected the shape, false otherwise.</returns>
-        bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal);
+        bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out Number t, out Vector3 normal);
     }
 
     /// <summary>
@@ -120,7 +117,7 @@ namespace BepuPhysics.Collidables
         /// <param name="maximumT">Maximum distance along the ray, in units of the ray direction's length, that the ray will test.</param>
         /// <param name="shapeBatches">Shape batches to look up child shapes in if necessary.</param>
         /// <param name="hitHandler">Callbacks called when the ray interacts with a test candidate.</param>
-        void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref Number maximumT, Shapes shapeBatches, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
         /// <summary>
         /// Tests multiple rays against the shape.
@@ -171,7 +168,7 @@ namespace BepuPhysics.Collidables
         /// <param name="ray">Ray to test against the shape.</param>
         /// <param name="maximumT">Maximum distance along the ray, in units of the ray direction's length, that the ray will test.</param>
         /// <param name="hitHandler">Callbacks called when the ray interacts with a test candidate.</param>
-        void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
+        void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref Number maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler;
 
         /// <summary>
         /// Tests multiple rays against the shape.
@@ -259,7 +256,7 @@ namespace BepuPhysics.Collidables
         /// <param name="maximumAngularExpansion">Computed maximum bounds expansion that can be caused by angular motion.</param>
         /// <param name="min">Minimum bounds of the shapes.</param>
         /// <param name="max">Maximum bounds of the shapes.</param>
-        void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max);
+        void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<Number> maximumRadius, out Vector<Number> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max);
         /// <summary>
         /// Gets the lower bound on the number of rays to execute in a wide fashion. Ray bundles with fewer rays will fall back to the single ray code path.
         /// </summary>
@@ -273,7 +270,7 @@ namespace BepuPhysics.Collidables
         /// <param name="intersected">Mask representing hit state in each lane. -1 means the ray in that lane hit, 0 means a miss.</param>
         /// <param name="t">Distance along the ray direction to the hit point, if any, in units of the ray direction's length. In other words, hitLocation = origin + direction * t.</param>
         /// <param name="normal">Normal of the impact surface, if any.</param>
-        void RayTest(ref RigidPoseWide poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal);
+        void RayTest(ref RigidPoseWide poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<Number> t, out Vector3Wide normal);
     }
 
 }

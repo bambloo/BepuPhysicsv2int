@@ -1,9 +1,9 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
-using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
@@ -13,11 +13,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             public Vector3 Vertex;
             public Vector3 EdgePlaneNormal;
-            public float MaximumContainmentDot;
+            public Number MaximumContainmentDot;
         }
         public int BatchSize => 16;
 
-        public unsafe void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public unsafe void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             Unsafe.SkipInit(out manifold);
             Matrix3x3Wide.CreateFromQuaternion(orientationA, out var rA);
@@ -27,11 +27,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, rB, out var localOffsetB);
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
             Vector3Wide.Length(localOffsetA, out var centerDistance);
-            Vector3Wide.Scale(localOffsetA, Vector<float>.One / centerDistance, out var initialNormal);
-            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<float>(1e-8f));
-            initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.X);
-            initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<float>.One, initialNormal.Y);
-            initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<float>.Zero, initialNormal.Z);
+            Vector3Wide.Scale(localOffsetA, Vector<Number>.One / centerDistance, out var initialNormal);
+            var useInitialFallback = Vector.LessThan(centerDistance, new Vector<Number>(Constants.C1em8));
+            initialNormal.X = Vector.ConditionalSelect(useInitialFallback, Vector<Number>.Zero, initialNormal.X);
+            initialNormal.Y = Vector.ConditionalSelect(useInitialFallback, Vector<Number>.One, initialNormal.Y);
+            initialNormal.Z = Vector.ConditionalSelect(useInitialFallback, Vector<Number>.Zero, initialNormal.Z);
             var hullSupportFinder = default(ConvexHullSupportFinder);
             var inactiveLanes = BundleIndexing.CreateTrailingMaskForCountInBundle(pairCount);
             a.EstimateEpsilonScale(inactiveLanes, out var aEpsilonScale);
@@ -39,7 +39,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var epsilonScale = Vector.Min(aEpsilonScale, bEpsilonScale);
             var depthThreshold = -speculativeMargin;
             DepthRefiner<ConvexHull, ConvexHullWide, ConvexHullSupportFinder, ConvexHull, ConvexHullWide, ConvexHullSupportFinder>.FindMinimumDepth(
-                b, a, localOffsetA, bLocalOrientationA, ref hullSupportFinder, ref hullSupportFinder, initialNormal, inactiveLanes, 1e-5f * epsilonScale, depthThreshold,
+                b, a, localOffsetA, bLocalOrientationA, ref hullSupportFinder, ref hullSupportFinder, initialNormal, inactiveLanes, Constants.C1em5 * epsilonScale, depthThreshold,
                 out var depth, out var localNormal, out var closestOnB);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
@@ -65,7 +65,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //To find the contact manifold, we'll clip the capsule axis against the face as usual, but we're dealing with potentially
             //distinct convex hulls. Rather than vectorizing over the different hulls, we vectorize within each hull.
             Helpers.FillVectorWithLaneIndices(out var slotOffsetIndices);
-            var boundingPlaneEpsilon = 1e-3f * epsilonScale;
+            var boundingPlaneEpsilon = Constants.C1em3 * epsilonScale;
 
             for (int slotIndex = 0; slotIndex < pairCount; ++slotIndex)
             {
@@ -96,7 +96,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 for (int i = 0; i < faceVertexIndicesA.Length; ++i)
                 {
                     ref var edge = ref cachedEdges[i];
-                    edge.MaximumContainmentDot = float.MinValue;
+                    edge.MaximumContainmentDot = Number.MinValue;
                     var indexA = faceVertexIndicesA[i];
                     Vector3Wide.ReadSlot(ref aSlot.Points[indexA.BundleIndex], indexA.InnerIndex, out edge.Vertex);
                     Matrix3x3.Transform(edge.Vertex, slotBLocalOrientationA, out edge.Vertex);
@@ -123,8 +123,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     var edgeOffsetB = vertexB - previousVertexB;
                     var edgePlaneNormalB = Vector3.Cross(edgeOffsetB, slotLocalNormal);
 
-                    var latestEntry = float.MinValue;
-                    var earliestExit = float.MaxValue;
+                    var latestEntry = Number.MinValue;
+                    var earliestExit = Number.MaxValue;
                     for (int faceVertexIndexA = 0; faceVertexIndexA < faceVertexIndicesA.Length; ++faceVertexIndexA)
                     {
                         ref var edgeA = ref cachedEdges[faceVertexIndexA];
@@ -157,8 +157,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                         else if (numerator < 0)
                         {
                             //The B edge is parallel and outside the edge A, so there can be no intersection.
-                            earliestExit = float.MinValue;
-                            latestEntry = float.MaxValue;
+                            earliestExit = Number.MinValue;
+                            latestEntry = Number.MaxValue;
                         }
                     }
                     //We now have bounds on B's edge.
@@ -198,7 +198,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     previousVertexB = vertexB;
                 }
                 //We've now analyzed every edge of B. Check for vertices from A to add.
-                var inverseLocalNormalADotFaceNormalB = 1f / Vector3.Dot(slotLocalNormal, slotFaceNormalB);
+                var inverseLocalNormalADotFaceNormalB = Constants.C1 / Vector3.Dot(slotLocalNormal, slotFaceNormalB);
                 for (int i = 0; i < faceVertexIndicesA.Length && candidateCount < maximumCandidateCount; ++i)
                 {
                     ref var edge = ref cachedEdges[i];
@@ -220,17 +220,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 }
                 Matrix3x3Wide.ReadSlot(ref rB, slotIndex, out var slotOrientationB);
                 Vector3Wide.ReadSlot(ref offsetB, slotIndex, out var slotOffsetB);
-                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, 1f / Vector3.Dot(slotFaceNormalA, slotLocalNormal), cachedEdges[0].Vertex, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
+                ManifoldCandidateHelper.Reduce(candidates, candidateCount, slotFaceNormalA, Constants.C1 / Vector3.Dot(slotFaceNormalA, slotLocalNormal), cachedEdges[0].Vertex, bFaceOrigin, bFaceX, bFaceY, epsilonScale[slotIndex], depthThreshold[slotIndex], slotOrientationB, slotOffsetB, slotIndex, ref manifold);
             }
             Matrix3x3Wide.TransformWithoutOverlap(localNormal, rB, out manifold.Normal);
         }
 
-        public void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref ConvexHullWide a, ref ConvexHullWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

@@ -1,8 +1,8 @@
-﻿using BepuUtilities.Collections;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Constraints;
-using System.Numerics;
 using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
 
 namespace DemoRenderer.Constraints
 {
@@ -24,14 +24,14 @@ namespace DemoRenderer.Constraints
             QuaternionEx.Transform(localSwivelAxisA, poseA.Orientation, out var swivelAxis);
             QuaternionEx.Transform(localOffsetB, poseB.Orientation, out var offsetB);
             QuaternionEx.Transform(localHingeAxisB, poseB.Orientation, out var hingeAxis);
-            var packedAxisColor = Helpers.PackColor(new Vector3(0.2f, 0.7f, 1f) * tint);
-            var backgroundColor = new Vector3(0f, 0f, 1f) * tint;
+            var packedAxisColor = Helpers.PackColor(new Vector3(Constants.C0p2, Constants.C0p7, Constants.C1) * tint);
+            var backgroundColor = new Vector3(Constants.C0, Constants.C0, Constants.C1) * tint;
             var jointAnchorA = poseA.Position + offsetA;
             var jointAnchorB = poseB.Position + offsetB;
-            lines.AllocateUnsafely() = new LineInstance(jointAnchorA, jointAnchorA + 0.2f * swivelAxis, packedAxisColor, 0);
-            lines.AllocateUnsafely() = new LineInstance(jointAnchorB, jointAnchorB + 0.2f * hingeAxis, packedAxisColor, 0);
+            lines.AllocateUnsafely() = new LineInstance(jointAnchorA, jointAnchorA + Constants.C0p2 * swivelAxis, packedAxisColor, 0);
+            lines.AllocateUnsafely() = new LineInstance(jointAnchorB, jointAnchorB + Constants.C0p2 * hingeAxis, packedAxisColor, 0);
 
-            var packedOffsetColor = Helpers.PackColor(new Vector3(0.2f, 0.2f, 1f) * tint);
+            var packedOffsetColor = Helpers.PackColor(new Vector3(Constants.C0p2, Constants.C0p2, Constants.C1) * tint);
             lines.AllocateUnsafely() = new LineInstance(poseA.Position, jointAnchorA, packedOffsetColor, 0);
             lines.AllocateUnsafely() = new LineInstance(poseB.Position, jointAnchorB, packedOffsetColor, 0);
 

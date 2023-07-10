@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
@@ -55,7 +55,7 @@ namespace BepuUtilities
         /// <param name="scale">Scaling value to apply to the matrix's components.</param>
         /// <param name="result">Resulting matrix with scaled components.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Matrix2x2Wide m, in Vector<float> scale, out Matrix2x2Wide result)
+        public static void Scale(in Matrix2x2Wide m, in Vector<Number> scale, out Matrix2x2Wide result)
         {
             result.X.X = m.X.X * scale;
             result.X.Y = m.X.Y * scale;
@@ -99,7 +99,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void InvertWithoutOverlap(in Matrix2x2Wide m, out Matrix2x2Wide inverse)
         {
-            var determinantInverse = Vector<float>.One / (m.X.X * m.Y.Y - m.X.Y * m.Y.X);
+            var determinantInverse = Vector<Number>.One / (m.X.X * m.Y.Y - m.X.Y * m.Y.X);
             inverse.X.X = m.Y.Y * determinantInverse;
             inverse.X.Y = -m.X.Y * determinantInverse;
 

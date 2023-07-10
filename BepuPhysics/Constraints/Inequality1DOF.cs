@@ -1,6 +1,6 @@
 ﻿using BepuUtilities;
 using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -29,9 +29,9 @@ namespace BepuPhysics.Constraints
         public Vector3Wide WSVtoCSIAngularB;
 
         //Since we jump directly from world space velocity to constraint space impulse, the velocity bias needs to be precomputed into an impulse offset too.
-        public Vector<float> BiasImpulse;
+        public Vector<Number> BiasImpulse;
         //And once again, CFM becomes CFM * EffectiveMass- massively cancels out due to the derivation of CFM. (See prestep notes.)
-        public Vector<float> SoftnessImpulseScale;
+        public Vector<Number> SoftnessImpulseScale;
 
         //It also needs to project from constraint space to world space.
         //We bundle this with the inertia/mass multiplier, so rather than taking a constraint impulse to world impulse and then to world velocity change,
@@ -49,8 +49,8 @@ namespace BepuPhysics.Constraints
     {
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Prestep(ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB, ref TwoBody1DOFJacobians jacobians, ref SpringSettingsWide springSettings, ref Vector<float> maximumRecoveryVelocity,
-            ref Vector<float> positionError, float dt, float inverseDt, out Projection2Body1DOF projection)
+        public static void Prestep(ref BodyInertiaWide inertiaA, ref BodyInertiaWide inertiaB, ref TwoBody1DOFJacobians jacobians, ref SpringSettingsWide springSettings, ref Vector<Number> maximumRecoveryVelocity,
+            ref Vector<Number> positionError, Number dt, Number inverseDt, out Projection2Body1DOF projection)
         {
             //unsoftened effective mass = (J * M^-1 * JT)^-1
             //where J is a constraintDOF x bodyCount*6 sized matrix, JT is its transpose, and for two bodies M^-1 is:
@@ -273,7 +273,7 @@ namespace BepuPhysics.Constraints
             //Good news, though! There are a lot of constraints where this trick is applicable.
 
             //We'll start with the unsoftened effective mass, constructed from the contributions computed above:
-            var effectiveMass = Vector<float>.One / (linearA + linearB + angularA + angularB);
+            var effectiveMass = Vector<Number>.One / (linearA + linearB + angularA + angularB);
 
             SpringSettingsWide.ComputeSpringiness(springSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out projection.SoftnessImpulseScale);
             var softenedEffectiveMass = effectiveMass * effectiveMassCFMScale;
@@ -311,7 +311,7 @@ namespace BepuPhysics.Constraints
         /// Transforms an impulse from constraint space to world space, uses it to modify the cached world space velocities of the bodies.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(ref Projection2Body1DOF data, ref Vector<float> correctiveImpulse,
+        public static void ApplyImpulse(ref Projection2Body1DOF data, ref Vector<Number> correctiveImpulse,
             ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Applying the impulse requires transforming the constraint space impulse into a world space velocity change.
@@ -331,7 +331,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarmStart(ref Projection2Body1DOF data, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void WarmStart(ref Projection2Body1DOF data, ref Vector<Number> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //TODO: If the previous frame and current frame are associated with different time steps, the previous frame's solution won't be a good solution anymore.
             //To compensate for this, the accumulated impulse should be scaled if dt changes.
@@ -339,8 +339,8 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeCorrectiveImpulse(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Projection2Body1DOF projection, ref Vector<float> accumulatedImpulse,
-            out Vector<float> correctiveCSI)
+        public static void ComputeCorrectiveImpulse(ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB, ref Projection2Body1DOF projection, ref Vector<Number> accumulatedImpulse,
+            out Vector<Number> correctiveCSI)
         {
             //Take the world space velocity of each body into constraint space by transforming by the transpose(jacobian).
             //(The jacobian is a row vector by convention, while we treat our velocity vectors as a 12x1 row vector for the purposes of constraint space velocity calculation.
@@ -358,14 +358,14 @@ namespace BepuPhysics.Constraints
             var csi = projection.BiasImpulse - accumulatedImpulse * projection.SoftnessImpulseScale - (csiaLinear + csiaAngular + csibLinear + csibAngular);
 
             var previousAccumulated = accumulatedImpulse;
-            accumulatedImpulse = Vector.Max(Vector<float>.Zero, accumulatedImpulse + csi);
+            accumulatedImpulse = Vector.Max(Vector<Number>.Zero, accumulatedImpulse + csi);
 
             correctiveCSI = accumulatedImpulse - previousAccumulated;
 
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Solve(ref Projection2Body1DOF projection, ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public static void Solve(ref Projection2Body1DOF projection, ref Vector<Number> accumulatedImpulse, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeCorrectiveImpulse(ref wsvA, ref wsvB, ref projection, ref accumulatedImpulse, out var correctiveCSI);
             ApplyImpulse(ref projection, ref correctiveCSI, ref wsvA, ref wsvB);

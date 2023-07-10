@@ -1,8 +1,6 @@
 ﻿using BepuUtilities;
-using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace BepuPhysics.Constraints.Contact
 {
@@ -10,8 +8,8 @@ namespace BepuPhysics.Constraints.Contact
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ComputeCorrectiveImpulse(in BodyVelocityWide wsvA,
-            in Vector3Wide normal, in Vector3Wide angularA, in Vector<float> biasVelocity, in Vector<float> softnessImpulseScale, in Vector<float> effectiveMass,
-            ref Vector<float> accumulatedImpulse, out Vector<float> correctiveCSI)
+            in Vector3Wide normal, in Vector3Wide angularA, in Vector<Number> biasVelocity, in Vector<Number> softnessImpulseScale, in Vector<Number> effectiveMass,
+            ref Vector<Number> accumulatedImpulse, out Vector<Number> correctiveCSI)
         {
             //Note that we do NOT use pretransformed jacobians here; the linear jacobian sharing (normal) meant that we had the effective mass anyway.
             Vector3Wide.Dot(wsvA.Linear, normal, out var csvaLinear);
@@ -20,13 +18,13 @@ namespace BepuPhysics.Constraints.Contact
             var negatedCSI = accumulatedImpulse * softnessImpulseScale + (csvaLinear + csvaAngular - biasVelocity) * effectiveMass;
 
             var previousAccumulated = accumulatedImpulse;
-            accumulatedImpulse = Vector.Max(Vector<float>.Zero, accumulatedImpulse - negatedCSI);
+            accumulatedImpulse = Vector.Max(Vector<Number>.Zero, accumulatedImpulse - negatedCSI);
 
             correctiveCSI = accumulatedImpulse - previousAccumulated;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void UpdatePenetrationDepth(in Vector<float> dt, in Vector3Wide contactOffset, in Vector3Wide normal, in BodyVelocityWide velocity, ref Vector<float> penetrationDepth)
+        public static void UpdatePenetrationDepth(in Vector<Number> dt, in Vector3Wide contactOffset, in Vector3Wide normal, in BodyVelocityWide velocity, ref Vector<Number> penetrationDepth)
         {
             //The normal is calibrated to point from B to A. Any movement of A along N results in a decrease in depth. Any movement of B along N results in an increase in depth. 
             //But one body constraints have no B.
@@ -39,7 +37,7 @@ namespace BepuPhysics.Constraints.Contact
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyImpulse(in BodyInertiaWide inertiaA, in Vector3Wide normal, in Vector3Wide angularA, in Vector<float> correctiveImpulse, ref BodyVelocityWide wsvA)
+        public static void ApplyImpulse(in BodyInertiaWide inertiaA, in Vector3Wide normal, in Vector3Wide angularA, in Vector<Number> correctiveImpulse, ref BodyVelocityWide wsvA)
         {
             var linearVelocityChangeA = correctiveImpulse * inertiaA.InverseMass;
             Vector3Wide.Scale(normal, linearVelocityChangeA, out var correctiveVelocityALinearVelocity);
@@ -51,7 +49,7 @@ namespace BepuPhysics.Constraints.Contact
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WarmStart(in BodyInertiaWide inertiaA, in Vector3Wide normal, in Vector3Wide contactOffsetA, in Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA)
+        public static void WarmStart(in BodyInertiaWide inertiaA, in Vector3Wide normal, in Vector3Wide contactOffsetA, in Vector<Number> accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
             Vector3Wide.CrossWithoutOverlap(contactOffsetA, normal, out var angularA);
             ApplyImpulse(inertiaA, normal, angularA, accumulatedImpulse, ref wsvA);
@@ -61,8 +59,8 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Solve(
             in BodyInertiaWide inertiaA, in Vector3Wide normal, in Vector3Wide contactOffsetA,
-            in Vector<float> depth, in Vector<float> positionErrorToVelocity, in Vector<float> effectiveMassCFMScale, in Vector<float> maximumRecoveryVelocity, in Vector<float> inverseDt, in Vector<float> softnessImpulseScale,
-            ref Vector<float> accumulatedImpulse, ref BodyVelocityWide wsvA)
+            in Vector<Number> depth, in Vector<Number> positionErrorToVelocity, in Vector<Number> effectiveMassCFMScale, in Vector<Number> maximumRecoveryVelocity, in Vector<Number> inverseDt, in Vector<Number> softnessImpulseScale,
+            ref Vector<Number> accumulatedImpulse, ref BodyVelocityWide wsvA)
         {
             //The contact penetration constraint takes the form:
             //dot(positionA + offsetA, N) >= dot(positionB + offsetB, N)

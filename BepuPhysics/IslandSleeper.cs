@@ -1,14 +1,14 @@
 ﻿using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
-using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {
@@ -27,17 +27,17 @@ namespace BepuPhysics
         /// <summary>
         /// Gets or sets the multiplier applied to the active body count used to calculate the number of sleep traversals in a given timestep.
         /// </summary>
-        public float TestedFractionPerFrame { get; set; } = 0.01f;
+        public Number TestedFractionPerFrame { get; set; } = Constants.C0p01;
         /// <summary>
         /// Gets or sets the fraction of the active set to target as the number of bodies slept in a given frame.
         /// This is only a goal; the actual number of slept bodies may be more or less.
         /// </summary>
-        public float TargetSleptFraction { get; set; } = 0.005f;
+        public Number TargetSleptFraction { get; set; } = Constants.C0p005;
         /// <summary>
         /// Gets or sets the fraction of the active set to target as the number of bodies traversed for sleeping in a given frame.
         /// This is only a goal; the actual number of traversed bodies may be more or less.
         /// </summary>
-        public float TargetTraversedFraction { get; set; } = 0.01f;
+        public Number TargetTraversedFraction { get; set; } = Constants.C0p01;
 
         public IslandSleeper(Bodies bodies, Solver solver, BroadPhase broadPhase, ConstraintRemover constraintRemover, BufferPool pool)
         {
@@ -934,6 +934,7 @@ namespace BepuPhysics
 
             //Uniformly distribute targets across the active set. Each frame, the targets are pushed up by one slot.
             int spacing = bodies.ActiveSet.Count / candidateCount;
+
 
             //The schedule offset will gradually walk off into the sunset, and there's also a possibility that changes to the size of the active set (by, say, sleep)
             //will put the offset so far out that a single subtraction by the active set count would be insufficient. So instead we just wrap it to zero.

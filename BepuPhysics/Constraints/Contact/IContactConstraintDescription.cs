@@ -1,15 +1,12 @@
 ﻿using BepuPhysics.CollisionDetection;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
+using BepuUtilities.Numerics;
 
 namespace BepuPhysics.Constraints.Contact
 {
     public struct ConstraintContactData
     {
         public Vector3 OffsetA;
-        public float PenetrationDepth;
+        public Number PenetrationDepth;
     }
     public interface IConvexOneBodyContactConstraintDescription<TDescription> : IOneBodyConstraintDescription<TDescription> 
         where TDescription : unmanaged, IConvexOneBodyContactConstraintDescription<TDescription>
@@ -28,22 +25,22 @@ namespace BepuPhysics.Constraints.Contact
     {
         public Vector3 OffsetA;
         public Vector3 Normal;
-        public float PenetrationDepth;
+        public Number PenetrationDepth;
     }
     public struct NonconvexTwoBodyManifoldConstraintProperties
     {
         public Vector3 OffsetB;
         //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
-        public float FrictionCoefficient;
+        public Number FrictionCoefficient;
         public SpringSettings SpringSettings;
-        public float MaximumRecoveryVelocity;
+        public Number MaximumRecoveryVelocity;
     }
     public struct NonconvexOneBodyManifoldConstraintProperties
     {
         //Note that the positioning of the friction coefficient, spring settings, and maximum recovery velocity are used by the UnsafeManifoldViewer. Careful about moving these.
-        public float FrictionCoefficient;
+        public Number FrictionCoefficient;
         public SpringSettings SpringSettings;
-        public float MaximumRecoveryVelocity;
+        public Number MaximumRecoveryVelocity;
     }
     public interface INonconvexOneBodyContactConstraintDescription<TDescription> : IOneBodyConstraintDescription<TDescription> 
         where TDescription : unmanaged, INonconvexOneBodyContactConstraintDescription<TDescription>

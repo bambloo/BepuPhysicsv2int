@@ -1,7 +1,8 @@
-﻿using System;
-using System.Numerics;
+﻿
+
 using BepuPhysics;
 using BepuPhysics.Collidables;
+using BepuUtilities.Numerics;
 
 namespace Demos.Demos.Tanks
 {
@@ -14,22 +15,22 @@ namespace Demos.Demos.Tanks
 
         //While the Tank instance contains references to all the simulation-contained stuff, none of it actually defines how fast or strong the tank is.
         //We store that here in the controller so it can be modified on the fly.
-        public float Speed;
-        public float Force;
-        public float ZoomMultiplier;
-        public float IdleForce;
-        public float BrakeForce;
+        public Number Speed;
+        public Number Force;
+        public Number ZoomMultiplier;
+        public Number IdleForce;
+        public Number BrakeForce;
         
         //Track the previous state to force wakeups if the constraint targets have changed.
-        private float previousLeftTargetSpeed;
-        private float previousLeftForce;
-        private float previousRightTargetSpeed;
-        private float previousRightForce;
-        private float previousTurretSwivel;
-        private float previousBarrelPitch;
+        private Number previousLeftTargetSpeed;
+        private Number previousLeftForce;
+        private Number previousRightTargetSpeed;
+        private Number previousRightForce;
+        private Number previousTurretSwivel;
+        private Number previousBarrelPitch;
 
         public TankController(Tank tank,
-            float speed, float force, float zoomMultiplier, float idleForce, float brakeForce) : this()
+            Number speed, Number force, Number zoomMultiplier, Number idleForce, Number brakeForce) : this()
         {
             Tank = tank;
             Speed = speed;
@@ -49,7 +50,7 @@ namespace Demos.Demos.Tanks
         /// <param name="brakeLeft">Whether the left tread should brake.</param>
         /// <param name="brakeRight">Whether the right tread should brake.</param>
         /// <param name="aimDirection">Direction that the tank's barrel should point.</param>
-        public void UpdateMovementAndAim(Simulation simulation, float leftTargetSpeedFraction, float rightTargetSpeedFraction, bool zoom, bool brakeLeft, bool brakeRight, Vector3 aimDirection)
+        public void UpdateMovementAndAim(Simulation simulation, Number leftTargetSpeedFraction, Number rightTargetSpeedFraction, bool zoom, bool brakeLeft, bool brakeRight, Vector3 aimDirection)
         {
             var leftTargetSpeed = brakeLeft ? 0 : leftTargetSpeedFraction * Speed;
             var rightTargetSpeed = brakeRight ? 0 : rightTargetSpeedFraction * Speed;

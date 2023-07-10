@@ -1,11 +1,10 @@
 ﻿using BepuPhysics.CollisionDetection.CollisionTasks;
 using BepuPhysics.Trees;
 using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 namespace BepuPhysics.Collidables
 {
@@ -25,7 +24,7 @@ namespace BepuPhysics.Collidables
         public BufferPool Pool;
         public void* Overlaps;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void TestLeaf(int leafIndex, ref float maximumT)
+        public void TestLeaf(int leafIndex, ref Number maximumT)
         {
             Unsafe.AsRef<TOverlaps>(Overlaps).Allocate(Pool) = leafIndex;
         }
@@ -59,9 +58,9 @@ namespace BepuPhysics.Collidables
             {
                 scale = value;
                 inverseScale = new Vector3(
-                    value.X != 0 ? 1f / value.X : float.MaxValue,
-                    value.Y != 0 ? 1f / value.Y : float.MaxValue,
-                    value.Z != 0 ? 1f / value.Z : float.MaxValue);
+                    value.X != 0 ? Constants.C1 / value.X : Number.MaxValue,
+                    value.Y != 0 ? Constants.C1 / value.Y : Number.MaxValue,
+                    value.Z != 0 ? Constants.C1 / value.Z : Number.MaxValue);
             }
         }
 
@@ -213,7 +212,7 @@ namespace BepuPhysics.Collidables
         public readonly unsafe void GetPosedLocalChild(int triangleIndex, out Triangle target, out RigidPose childPose)
         {
             GetLocalChild(triangleIndex, out target);
-            childPose = (target.A + target.B + target.C) * (1f / 3f);
+            childPose = (target.A + target.B + target.C) * (Constants.C1 / Constants.C3);
             target.A -= childPose.Position;
             target.B -= childPose.Position;
             target.C -= childPose.Position;
@@ -232,8 +231,8 @@ namespace BepuPhysics.Collidables
         public readonly void ComputeBounds(Quaternion orientation, out Vector3 min, out Vector3 max)
         {
             Matrix3x3.CreateFromQuaternion(orientation, out var r);
-            min = new Vector3(float.MaxValue);
-            max = new Vector3(-float.MaxValue);
+            min = new Vector3(Number.MaxValue);
+            max = new Vector3(-Number.MaxValue);
             for (int i = 0; i < Triangles.Length; ++i)
             {
                 //This isn't an ideal bounding box calculation for a mesh. 
@@ -268,7 +267,7 @@ namespace BepuPhysics.Collidables
             public RayData OriginalRay;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void TestLeaf(int leafIndex, RayData* rayData, float* maximumT)
+            public unsafe void TestLeaf(int leafIndex, RayData* rayData, Number* maximumT)
             {
                 ref var triangle = ref Triangles[leafIndex];
                 if (Triangle.RayTest(triangle.A, triangle.B, triangle.C, rayData->Origin, rayData->Direction, out var t, out var normal) && t <= *maximumT)
@@ -289,7 +288,7 @@ namespace BepuPhysics.Collidables
         /// <param name="ray">Ray to test against the mesh.</param>
         /// <param name="maximumT">Maximum length of the ray in units of the ray direction length.</param>
         /// <param name="hitHandler">Callback to execute for every hit.</param>
-        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref float maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
+        public readonly unsafe void RayTest<TRayHitHandler>(in RigidPose pose, in RayData ray, ref Number maximumT, ref TRayHitHandler hitHandler) where TRayHitHandler : struct, IShapeRayHitHandler
         {
             HitLeafTester<TRayHitHandler> leafTester;
             leafTester.Triangles = Triangles.Memory;
@@ -356,7 +355,7 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, float maximumT, BufferPool pool, Shapes shapes, void* overlaps)
+        public readonly unsafe void FindLocalOverlaps<TOverlaps>(Vector3 min, Vector3 max, Vector3 sweep, Number maximumT, BufferPool pool, Shapes shapes, void* overlaps)
             where TOverlaps : ICollisionTaskSubpairOverlaps
         {
             var scaledMin = min * inverseScale;
@@ -429,7 +428,7 @@ namespace BepuPhysics.Collidables
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
         /// <param name="center">Center of the closed mesh.</param>
         /// <returns>Inertia tensor of the closed mesh.</returns>
-        public BodyInertia ComputeClosedInertia(float mass, out Vector3 center)
+        public BodyInertia ComputeClosedInertia(Number mass, out Vector3 center)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor, out center);
@@ -438,7 +437,7 @@ namespace BepuPhysics.Collidables
             Recenter(center);
             BodyInertia inertia;
             Symmetric3x3.Invert(recenteredInertia, out inertia.InverseInertiaTensor);
-            inertia.InverseMass = 1f / mass;
+            inertia.InverseMass = Constants.C1 / mass;
             return inertia;
         }
 
@@ -448,12 +447,12 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
         /// <returns>Inertia tensor of the closed mesh.</returns>
-        public readonly BodyInertia ComputeClosedInertia(float mass)
+        public readonly BodyInertia ComputeClosedInertia(Number mass)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor);
             BodyInertia inertia;
-            inertia.InverseMass = 1f / mass;
+            inertia.InverseMass = Constants.C1 / mass;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
             return inertia;
         }
@@ -463,7 +462,7 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="volume">Volume of the closed mesh.</param>
         /// <param name="center">Center of mass of the closed mesh.</param>
-        public readonly void ComputeClosedCenterOfMass(out float volume, out Vector3 center)
+        public readonly void ComputeClosedCenterOfMass(out Number volume, out Vector3 center)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeClosedCenterOfMass(ref triangleSource, out volume, out center);
@@ -488,7 +487,7 @@ namespace BepuPhysics.Collidables
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
         /// <param name="center">Center of the open mesh.</param>
         /// <returns>Inertia tensor of the closed mesh.</returns>
-        public BodyInertia ComputeOpenInertia(float mass, out Vector3 center)
+        public BodyInertia ComputeOpenInertia(Number mass, out Vector3 center)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeOpenInertia(ref triangleSource, mass, out var inertiaTensor, out center);
@@ -497,7 +496,7 @@ namespace BepuPhysics.Collidables
             Recenter(center);
             BodyInertia inertia;
             Symmetric3x3.Invert(recenteredInertia, out inertia.InverseInertiaTensor);
-            inertia.InverseMass = 1f / mass;
+            inertia.InverseMass = Constants.C1 / mass;
             return inertia;
         }
 
@@ -507,12 +506,12 @@ namespace BepuPhysics.Collidables
         /// </summary>
         /// <param name="mass">Mass to scale the inertia tensor with.</param>
         /// <returns>Inertia of the open mesh.</returns>
-        public readonly BodyInertia ComputeOpenInertia(float mass)
+        public readonly BodyInertia ComputeOpenInertia(Number mass)
         {
             var triangleSource = new MeshTriangleSource(this);
             MeshInertiaHelper.ComputeOpenInertia(ref triangleSource, mass, out var inertiaTensor);
             BodyInertia inertia;
-            inertia.InverseMass = 1f / mass;
+            inertia.InverseMass = Constants.C1 / mass;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
             return inertia;
         }

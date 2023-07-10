@@ -1,8 +1,7 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
-using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
@@ -13,8 +12,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         public static void TestEdge(in TriangleWide triangle, in Vector3Wide triangleNormal,
             in Vector3Wide edgeStart, in Vector3Wide edgeOffset,
-            in Vector3Wide capsuleCenter, in Vector3Wide capsuleAxis, in Vector<float> capsuleHalfLength,
-            out Vector3Wide edgeDirection, out Vector<float> ta, out Vector<float> tb, out Vector<float> bMin, out Vector<float> bMax, out Vector<float> depth, out Vector3Wide normal)
+            in Vector3Wide capsuleCenter, in Vector3Wide capsuleAxis, in Vector<Number> capsuleHalfLength,
+            out Vector3Wide edgeDirection, out Vector<Number> ta, out Vector<Number> tb, out Vector<Number> bMin, out Vector<Number> bMax, out Vector<Number> depth, out Vector3Wide normal)
         {
             //Borrowing logic from the capsule-capsule test:
             //Compute the closest points between the two line segments. No clamping to begin with.
@@ -23,13 +22,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             //ta = (da * (b - a) + (db * (a - b)) * (da * db)) / (1 - ((da * db) * (da * db))        
             //(Probably could avoid this square root by revisiting the derivation to permit non-unit length directions, but it's fairly inconsequential.)
             Vector3Wide.Length(edgeOffset, out var edgeLength);
-            Vector3Wide.Scale(edgeOffset, Vector<float>.One / edgeLength, out edgeDirection);
+            Vector3Wide.Scale(edgeOffset, Vector<Number>.One / edgeLength, out edgeDirection);
             Vector3Wide.Subtract(edgeStart, capsuleCenter, out var offsetB);
             Vector3Wide.Dot(capsuleAxis, offsetB, out var daOffsetB);
             Vector3Wide.Dot(edgeDirection, offsetB, out var dbOffsetB);
             Vector3Wide.Dot(capsuleAxis, edgeDirection, out var dadb);
             //Note potential division by zero when the axes are parallel. Arbitrarily clamp; near zero values will instead produce extreme values which get clamped to reasonable results.
-            ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<float>(1e-15f), Vector<float>.One - dadb * dadb);
+            ta = (daOffsetB - dbOffsetB * dadb) / Vector.Max(new Vector<Number>(Constants.C1em15), Vector<Number>.One - dadb * dadb);
             //tb = ta * (da * db) - db * (b - a)
             tb = ta * dadb - dbOffsetB;
 
@@ -43,8 +42,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var aMin = Vector.Min(ta0, ta1);
             var aMax = Vector.Max(ta0, ta1);
             var aOntoBOffset = capsuleHalfLength * Vector.Abs(dadb);
-            bMin = Vector.Max(Vector<float>.Zero, Vector.Min(edgeLength, -aOntoBOffset - dbOffsetB));
-            bMax = Vector.Min(edgeLength, Vector.Max(Vector<float>.Zero, aOntoBOffset - dbOffsetB));
+            bMin = Vector.Max(Vector<Number>.Zero, Vector.Min(edgeLength, -aOntoBOffset - dbOffsetB));
+            bMax = Vector.Min(edgeLength, Vector.Max(Vector<Number>.Zero, aOntoBOffset - dbOffsetB));
             ta = Vector.Min(Vector.Max(ta, aMin), aMax);
             tb = Vector.Min(Vector.Max(tb, bMin), bMax);
 
@@ -59,23 +58,23 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.CrossWithoutOverlap(capsuleAxis, edgeOffset, out var fallbackNormal);
             //Fallback calibration can use the fact that dot(fallbackNormal, capsuleCenter) >= 0, because capsuleCenter is the offset from the center of the triangle to the center of the capsule.
             Vector3Wide.Dot(fallbackNormal, capsuleCenter, out var calibrationDot);
-            Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<float>.Zero), ref fallbackNormal);
+            Vector3Wide.ConditionallyNegate(Vector.LessThan(calibrationDot, Vector<Number>.Zero), ref fallbackNormal);
             Vector3Wide.LengthSquared(fallbackNormal, out var fallbackNormalLengthSquared);
-            var useFallbackNormal = Vector.LessThan(normalLengthSquared, new Vector<float>(1e-13f));
+            var useFallbackNormal = Vector.LessThan(normalLengthSquared, new Vector<Number>(Constants.C1em13));
             Vector3Wide.ConditionalSelect(useFallbackNormal, fallbackNormal, normal, out normal);
             normalLengthSquared = Vector.ConditionalSelect(useFallbackNormal, fallbackNormalLengthSquared, normalLengthSquared);
             //Unfortunately, if the edge and axis are parallel, the cross product will ALSO be zero, so we need another fallback. We'll use the edge plane normal.
             //Unless the triangle is degenerate, this can't be zero length.
             Vector3Wide.CrossWithoutOverlap(triangleNormal, edgeOffset, out var secondFallbackNormal);
             Vector3Wide.LengthSquared(fallbackNormal, out var secondFallbackNormalLengthSquared);
-            var useSecondFallbackNormal = Vector.LessThan(normalLengthSquared, new Vector<float>(1e-13f));
+            var useSecondFallbackNormal = Vector.LessThan(normalLengthSquared, new Vector<Number>(Constants.C1em13));
             Vector3Wide.ConditionalSelect(useSecondFallbackNormal, secondFallbackNormal, normal, out normal);
             normalLengthSquared = Vector.ConditionalSelect(useSecondFallbackNormal, secondFallbackNormalLengthSquared, normalLengthSquared);
             //Note that we do not do additional normal calibration here!
             //Closest points contacts should not need it,
             //first fallback normals do their own calibration, and
             //second fallback does not need calibration by edge winding.
-            Vector3Wide.Scale(normal, Vector<float>.One / Vector.SquareRoot(normalLengthSquared), out normal);
+            Vector3Wide.Scale(normal, Vector<Number>.One / Vector.SquareRoot(normalLengthSquared), out normal);
 
             //Note that the normal between the closest points is not necessarily perpendicular to both the edge and capsule axis due to clamping, so to compute depth
             //we need to include the extent of both.
@@ -93,7 +92,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ClipAgainstEdgePlane(in Vector3Wide edgeStart, in Vector3Wide edgeOffset, in Vector3Wide faceNormal, in Vector3Wide capsuleCenter, in Vector3Wide capsuleAxis,
-            out Vector<float> entry, out Vector<float> exit)
+            out Vector<Number> entry, out Vector<Number> exit)
         {
             //t = -edgeToCapsule * (edgePlaneNormal / ||edgePlaneNormal||) / (capsuleAxis * (edgePlaneNormal / ||edgePlaneNormal||))
             Vector3Wide.CrossWithoutOverlap(faceNormal, edgeOffset, out var edgePlaneNormal);
@@ -101,17 +100,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Dot(edgeToCapsule, edgePlaneNormal, out var distance);
             Vector3Wide.Dot(capsuleAxis, edgePlaneNormal, out var velocity);
             //Note that near-zero denominators (parallel axes) result in a properly signed large finite value.
-            var velocityIsPositive = Vector.GreaterThan(velocity, Vector<float>.Zero);
-            var t = Vector.ConditionalSelect(velocityIsPositive, -distance, distance) / Vector.Max(new Vector<float>(1e-15f), Vector.Abs(velocity));
+            var velocityIsPositive = Vector.GreaterThan(velocity, Vector<Number>.Zero);
+            var t = Vector.ConditionalSelect(velocityIsPositive, -distance, distance) / Vector.Max(new Vector<Number>(Constants.C1em15), Vector.Abs(velocity));
             //The final interval is going to be max(entryAB, entryBC, entryCA) to min(exitAB, exitBC, exitCA). 
             //An intersection is considered an 'entry' if the ray direction opposes the plane normal.
-            entry = Vector.ConditionalSelect(velocityIsPositive, new Vector<float>(-float.MaxValue), t);
-            exit = Vector.ConditionalSelect(velocityIsPositive, t, new Vector<float>(float.MaxValue));
+            entry = Vector.ConditionalSelect(velocityIsPositive, new Vector<Number>(-Number.MaxValue), t);
+            exit = Vector.ConditionalSelect(velocityIsPositive, t, new Vector<Number>(Number.MaxValue));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Test(
-            ref CapsuleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin,
+            ref CapsuleWide a, ref TriangleWide b, ref Vector<Number> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex2ContactManifoldWide manifold)
         {
@@ -120,7 +119,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Matrix3x3Wide.CreateFromQuaternion(orientationB, out var rB);
             Vector3Wide.Add(b.A, b.B, out var localTriangleCenter);
             Vector3Wide.Add(b.C, localTriangleCenter, out localTriangleCenter);
-            Vector3Wide.Scale(localTriangleCenter, new Vector<float>(1f / 3f), out localTriangleCenter);
+            Vector3Wide.Scale(localTriangleCenter, new Vector<Number>(Constants.C1 / Constants.C3), out localTriangleCenter);
             //Note that we're not just using the same origin as the triangle, but using the center of the triangle as the origin of the working space.
             //This helps avoid some numerical issues.
             Matrix3x3Wide.TransformByTransposedWithoutOverlap(offsetB, rB, out var localOffsetB);
@@ -156,7 +155,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             Vector3Wide.CrossWithoutOverlap(ac, ab, out var acxab);
             Vector3Wide.Length(acxab, out var faceNormalLength);
-            Vector3Wide.Scale(acxab, Vector<float>.One / faceNormalLength, out var faceNormal);
+            Vector3Wide.Scale(acxab, Vector<Number>.One / faceNormalLength, out var faceNormal);
 
             //The depth along the face normal is unaffected by the triangle's extent- the triangle has no extent along its own normal. But the capsule does.
             Vector3Wide.Dot(faceNormal, localCapsuleAxis, out var nDotAxis);
@@ -196,7 +195,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var useEdge = Vector.LessThan(edgeDepth, faceDepth);
             Vector3Wide.ConditionalSelect(useEdge, edgeNormal, faceNormal, out var localNormal);
             Vector3Wide.Dot(localNormal, faceNormal, out var localNormalDotFaceNormal);
-            var collidingWithSolidSide = Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<float>(TriangleWide.BackfaceNormalDotRejectionThreshold));
+            var collidingWithSolidSide = Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<Number>(TriangleWide.BackfaceNormalDotRejectionThreshold));
             var activeLanes = BundleIndexing.CreateMaskForCountInBundle(pairCount);
             TriangleWide.ComputeNondegenerateTriangleMask(ab, ac, faceNormalLength, out _, out var nondegenerateMask);
             var negativeMargin = -speculativeMargin;
@@ -227,14 +226,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.CrossWithoutOverlap(edgeDirection, edgeNormal, out var planeNormal);
                 Vector3Wide.LengthSquared(planeNormal, out var planeNormalLengthSquared);
                 Vector3Wide.Dot(localCapsuleAxis, planeNormal, out var numeratorUnsquared);
-                var squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, new Vector<float>(1e-10f)), Vector<float>.Zero, numeratorUnsquared * numeratorUnsquared / planeNormalLengthSquared);
+                var squaredAngle = Vector.ConditionalSelect(Vector.LessThan(planeNormalLengthSquared, new Vector<Number>(Constants.C1em10)), Vector<Number>.Zero, numeratorUnsquared * numeratorUnsquared / planeNormalLengthSquared);
 
                 //Convert the squared angle to a lerp parameter. For squared angle from 0 to lowerThreshold, we should use the full interval (1). From lowerThreshold to upperThreshold, lerp to 0.
-                const float lowerThresholdAngle = 0.01f;
-                const float upperThresholdAngle = 0.05f;
-                const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
-                const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
-                var intervalWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (new Vector<float>(upperThreshold) - squaredAngle) * new Vector<float>(1f / (upperThreshold - lowerThreshold))));
+                Number lowerThresholdAngle = Constants.C0p01;
+                Number upperThresholdAngle = Constants.C0p05;
+                Number lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
+                Number upperThreshold = upperThresholdAngle * upperThresholdAngle;
+                var intervalWeight = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (new Vector<Number>(upperThreshold) - squaredAngle) * new Vector<Number>(Constants.C1 / (upperThreshold - lowerThreshold))));
                 //Note that we're working with tb, the edge parameter, rather than the capsule value. Triangle-related contacts must be on the triangle because of boundary smoothing.
                 var weightedTb = tb - tb * intervalWeight;
                 bMin = intervalWeight * bMin + weightedTb;
@@ -301,7 +300,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //One exception: if the capsule's center is on the backside of the triangle, no contacts should be created. We don't want contacts to 'pull' objects through-
                 //that would create frequent nasty situations in complex meshes.
                 var noEdgeContacts = Vector.Equals(contactCount, Vector<int>.Zero);
-                var allowFaceContacts = Vector.GreaterThanOrEqual(capsuleOffsetAlongNormal, Vector<float>.Zero);
+                var allowFaceContacts = Vector.GreaterThanOrEqual(capsuleOffsetAlongNormal, Vector<Number>.Zero);
                 var useFaceContacts = Vector.BitwiseAnd(noEdgeContacts, allowFaceContacts);
                 Vector3Wide.ConditionalSelect(useFaceContacts, faceCandidate0, b0, out b0);
                 Vector3Wide.ConditionalSelect(useFaceContacts, faceCandidate1, b1, out b1);
@@ -318,7 +317,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //2) The number of contacts == 1.
                 //3) The candidate is above the triangle.
                 var useCandidateForSecondContact = Vector.BitwiseAnd(intervalIsValidForSecondContact,
-                    Vector.BitwiseAnd(Vector.Equals(contactCount, Vector<int>.One), Vector.GreaterThan(secondContactDistanceAlongNormal, Vector<float>.Zero)));
+                    Vector.BitwiseAnd(Vector.Equals(contactCount, Vector<int>.One), Vector.GreaterThan(secondContactDistanceAlongNormal, Vector<Number>.Zero)));
                 Vector3Wide.ConditionalSelect(useCandidateForSecondContact, secondContactCandidate, b1, out b1);
                 contactCount = Vector.ConditionalSelect(useCandidateForSecondContact, new Vector<int>(2), contactCount);
             }
@@ -333,7 +332,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.CrossWithoutOverlap(capsuleTangent, localCapsuleAxis, out var faceNormalA);
             Vector3Wide.Dot(faceNormalA, localNormal, out var faceNormalADotLocalNormal);
             //Don't have to perform any calibration on the faceNormalA; it appears in both the numerator and denominator so the sign and magnitudes cancel.
-            var inverseFaceNormalADotLocalNormal = Vector<float>.One / faceNormalADotLocalNormal;
+            var inverseFaceNormalADotLocalNormal = Vector<Number>.One / faceNormalADotLocalNormal;
             Vector3Wide.Add(localOffsetB, b0, out var offset0);
             Vector3Wide.Add(localOffsetB, b1, out var offset1);
             Vector3Wide.Dot(offset0, faceNormalA, out var t0);
@@ -345,7 +344,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
             //If the 'velocity' above is very small, it means that the local normal and capsule axis are very nearly aligned and depths computed using it are likely numerically poor.
             //In this situation, using more than one contact is pretty pointless anyway, so collapse the manifold to only one point and use the previously computed depth.
-            var collapse = Vector.LessThan(Vector.Abs(faceNormalADotLocalNormal), new Vector<float>(1e-7f));
+            var collapse = Vector.LessThan(Vector.Abs(faceNormalADotLocalNormal), new Vector<Number>(Constants.C1em7));
             manifold.Depth0 = Vector.ConditionalSelect(collapse, a.Radius + depth, manifold.Depth0);
             //If the normal we found points away from the triangle normal, then it it's hitting the wrong side and should be ignored. (Note that we had an early out for this earlier.)
             contactCount = Vector.ConditionalSelect(collidingWithSolidSide, contactCount, Vector<int>.Zero);
@@ -370,7 +369,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             manifold.FeatureId1 = Vector.ConditionalSelect(flipFeatureIds, Vector<int>.Zero, Vector<int>.One);
 
             var faceFlag = Vector.ConditionalSelect(
-                Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<float>(MeshReduction.MinimumDotForFaceCollision)),
+                Vector.GreaterThanOrEqual(localNormalDotFaceNormal, new Vector<Number>(MeshReduction.MinimumDotForFaceCollision)),
                 new Vector<int>(MeshReduction.FaceCollisionFlag), Vector<int>.Zero);
             manifold.FeatureId0 += faceFlag;
 
@@ -381,12 +380,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
 
-        public void Test(ref CapsuleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
+        public void Test(ref CapsuleWide a, ref TriangleWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref CapsuleWide a, ref TriangleWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex2ContactManifoldWide manifold)
+        public void Test(ref CapsuleWide a, ref TriangleWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex2ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

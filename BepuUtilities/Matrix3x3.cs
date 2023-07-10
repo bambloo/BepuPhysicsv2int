@@ -1,6 +1,6 @@
-﻿using System;
-using System.Numerics;
+﻿using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuUtilities
 {
@@ -51,7 +51,7 @@ namespace BepuUtilities
         /// <param name="scale">Scale to apply to the matrix's components.</param>
         /// <param name="result">Scaled matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(Matrix3x3 matrix, float scale, out Matrix3x3 result)
+        public static void Scale(Matrix3x3 matrix, Number scale, out Matrix3x3 result)
         {
             result.X = matrix.X * scale;
             result.Y = matrix.Y * scale;
@@ -80,9 +80,9 @@ namespace BepuUtilities
             //1) Missing some helpful instructions for actual SIMD accelerated transposition. (TODO: This is no longer the case! Could improve this!)
             //2) Difficult to get SIMD types to generate competitive codegen due to lots of componentwise access.
 
-            float m12 = m->M12;
-            float m13 = m->M13;
-            float m23 = m->M23;
+            Number m12 = m->M12;
+            Number m13 = m->M13;
+            Number m23 = m->M23;
             transposed->M11 = m->M11;
             transposed->M12 = m->M21;
             transposed->M13 = m->M31;
@@ -123,7 +123,7 @@ namespace BepuUtilities
         /// </summary>
         /// <returns>The matrix's determinant.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public float Determinant()
+        public Number Determinant()
         {
             return Vector3.Dot(X, Vector3.Cross(Y, Z));
         }
@@ -141,7 +141,7 @@ namespace BepuUtilities
             var yz = Vector3.Cross(m.Y, m.Z);
             var zx = Vector3.Cross(m.Z, m.X);
             var xy = Vector3.Cross(m.X, m.Y);
-            var inverseDeterminant = 1f / Vector3.Dot(m.X, yz);
+            var inverseDeterminant = Constants.C1 / Vector3.Dot(m.X, yz);
             inverse.X = yz * inverseDeterminant;
             inverse.Y = zx * inverseDeterminant;
             inverse.Z = xy * inverseDeterminant;
@@ -162,7 +162,7 @@ namespace BepuUtilities
             var m11 = mScalar->M22 * mScalar->M33 - mScalar->M32 * mScalar->M23;
             var m21 = mScalar->M23 * mScalar->M31 - mScalar->M33 * mScalar->M21;
             var m31 = mScalar->M21 * mScalar->M32 - mScalar->M31 * mScalar->M22;
-            var determinantInverse = 1f / (m11 * mScalar->M11 + m21 * mScalar->M12 + m31 * mScalar->M13);
+            var determinantInverse = Constants.C1 / (m11 * mScalar->M11 + m21 * mScalar->M12 + m31 * mScalar->M13);
 
             var m12 = mScalar->M32 * mScalar->M13 - mScalar->M12 * mScalar->M33;
             var m22 = mScalar->M33 * mScalar->M11 - mScalar->M13 * mScalar->M31;
@@ -222,9 +222,9 @@ namespace BepuUtilities
 
         struct M
         {
-            public float M11, M12, M13;
-            public float M21, M22, M23;
-            public float M31, M32, M33;
+            public Number M11, M12, M13;
+            public Number M21, M22, M23;
+            public Number M31, M32, M33;
         }
 
 
@@ -305,18 +305,18 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CreateFromQuaternion(Quaternion quaternion, out Matrix3x3 result)
         {
-            float qX2 = quaternion.X + quaternion.X;
-            float qY2 = quaternion.Y + quaternion.Y;
-            float qZ2 = quaternion.Z + quaternion.Z;
-            float XX = qX2 * quaternion.X;
-            float YY = qY2 * quaternion.Y;
-            float ZZ = qZ2 * quaternion.Z;
-            float XY = qX2 * quaternion.Y;
-            float XZ = qX2 * quaternion.Z;
-            float XW = qX2 * quaternion.W;
-            float YZ = qY2 * quaternion.Z;
-            float YW = qY2 * quaternion.W;
-            float ZW = qZ2 * quaternion.W;
+            Number qX2 = quaternion.X + quaternion.X;
+            Number qY2 = quaternion.Y + quaternion.Y;
+            Number qZ2 = quaternion.Z + quaternion.Z;
+            Number XX = qX2 * quaternion.X;
+            Number YY = qY2 * quaternion.Y;
+            Number ZZ = qZ2 * quaternion.Z;
+            Number XY = qX2 * quaternion.Y;
+            Number XZ = qX2 * quaternion.Z;
+            Number XW = qX2 * quaternion.W;
+            Number YZ = qY2 * quaternion.Z;
+            Number YW = qY2 * quaternion.W;
+            Number ZW = qZ2 * quaternion.W;
 
             result.X = new Vector3(
                 1 - YY - ZZ,
@@ -364,18 +364,18 @@ namespace BepuUtilities
         /// <param name="angle">Angle of the rotation.</param>
         /// <param name="result">Resulting rotation matrix.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void CreateFromAxisAngle(Vector3 axis, float angle, out Matrix3x3 result)
+        public static void CreateFromAxisAngle(Vector3 axis, Number angle, out Matrix3x3 result)
         {
             //TODO: Could be better simdified.
-            float xx = axis.X * axis.X;
-            float yy = axis.Y * axis.Y;
-            float zz = axis.Z * axis.Z;
-            float xy = axis.X * axis.Y;
-            float xz = axis.X * axis.Z;
-            float yz = axis.Y * axis.Z;
+            Number xx = axis.X * axis.X;
+            Number yy = axis.Y * axis.Y;
+            Number zz = axis.Z * axis.Z;
+            Number xy = axis.X * axis.Y;
+            Number xz = axis.X * axis.Z;
+            Number yz = axis.Y * axis.Z;
 
-            float sinAngle = (float)Math.Sin(angle);
-            float oneMinusCosAngle = 1 - (float)Math.Cos(angle);
+            Number sinAngle = (Number)Math.Sin(angle);
+            Number oneMinusCosAngle = 1 - (Number)Math.Cos(angle);
 
             result.X = new Vector3(
                 1 + oneMinusCosAngle * (xx - 1),
@@ -401,7 +401,7 @@ namespace BepuUtilities
         /// <param name="angle">Angle of the rotation.</param>
         /// <returns>Resulting rotation matrix.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Matrix3x3 CreateFromAxisAngle(Vector3 axis, float angle)
+        public static Matrix3x3 CreateFromAxisAngle(Vector3 axis, Number angle)
         {
             CreateFromAxisAngle(axis, angle, out var result);
             return result;
@@ -416,15 +416,15 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void CreateCrossProduct(Vector3 v, out Matrix3x3 result)
         {
-            result.X.X = 0f;
+            result.X.X = Constants.C0;
             result.X.Y = -v.Z;
             result.X.Z = v.Y;
             result.Y.X = v.Z;
-            result.Y.Y = 0f;
+            result.Y.Y = Constants.C0;
             result.Y.Z = -v.X;
             result.Z.X = -v.Y;
             result.Z.Y = v.X;
-            result.Z.Z = 0f;
+            result.Z.Z = Constants.C0;
         }
 
         /// <summary>

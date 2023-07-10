@@ -1,10 +1,10 @@
-﻿using BepuUtilities.Collections;
+﻿using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using BepuPhysics.Constraints;
-using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using BepuUtilities;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {

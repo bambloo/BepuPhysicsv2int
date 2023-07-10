@@ -5,7 +5,7 @@ using BepuUtilities.TaskScheduling;
 using System;
 using System.ComponentModel.Design;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Xml.Linq;
@@ -348,7 +348,7 @@ public partial struct Tree
         ref var context = ref *(RefinementContext*)untypedContext;
         var pool = dispatcher.WorkerPools[workerIndex];
 
-        var taskCount = (int)float.Ceiling(context.TargetTaskBudget * (float)context.RootRefinementSize / (context.RootRefinementSize + context.TotalLeafCountInSubtrees));
+        var taskCount = (int)Number.Ceiling(context.TargetTaskBudget * (Number)context.RootRefinementSize / (context.RootRefinementSize + context.TotalLeafCountInSubtrees));
 
         //We now know which nodes are the roots of subtree refinements; the root refinement can avoid traversing through them.
         var rootRefinementSubtrees = new QuickList<NodeChild>(context.RootRefinementSize, pool);

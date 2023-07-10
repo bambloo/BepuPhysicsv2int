@@ -2,11 +2,9 @@
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Trees;
 using BepuUtilities.Memory;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics
 {
@@ -26,7 +24,7 @@ namespace BepuPhysics
         /// <param name="t">Distance along the ray to the impact in units of ray direction length. In other words, hitLocation = ray.Origin + ray.Direction * t.</param>
         /// <param name="normal">Surface normal at the hit location.</param>
         /// <param name="childIndex">Index of the hit child. For convex shapes or other types that don't have multiple children, this is always zero.</param>
-        void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex);
+        void OnRayHit(in RayData ray, ref Number maximumT, Number t, Vector3 normal, int childIndex);
     }
 
     /// <summary>
@@ -56,7 +54,7 @@ namespace BepuPhysics
         /// <param name="normal">Surface normal at the hit location.</param>
         /// <param name="collidable">Collidable hit by the ray.</param>
         /// <param name="childIndex">Index of the hit child. For convex shapes or other types that don't have multiple children, this is always zero.</param>
-        void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, CollidableReference collidable, int childIndex);
+        void OnRayHit(in RayData ray, ref Number maximumT, Number t, Vector3 normal, CollidableReference collidable, int childIndex);
     }
 
     /// <summary>
@@ -85,13 +83,13 @@ namespace BepuPhysics
         /// <param name="hitLocation">Location of the first hit detected by the sweep.</param>
         /// <param name="hitNormal">Surface normal at the hit location.</param>
         /// <param name="collidable">Collidable hit by the traversal.</param>
-        void OnHit(ref float maximumT, float t, Vector3 hitLocation, Vector3 hitNormal, CollidableReference collidable);
+        void OnHit(ref Number maximumT, Number t, Vector3 hitLocation, Vector3 hitNormal, CollidableReference collidable);
         /// <summary>
         /// Called when a sweep test detects a hit at T = 0, meaning that no location or normal can be computed.
         /// </summary>
         /// <param name="maximumT">Reference to maximumT passed to the traversal.</param>
         /// <param name="collidable">Collidable hit by the traversal.</param>
-        void OnHitAtZeroT(ref float maximumT, CollidableReference collidable);
+        void OnHitAtZeroT(ref Number maximumT, CollidableReference collidable);
     }
 
     partial class Simulation
@@ -109,7 +107,7 @@ namespace BepuPhysics
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnRayHit(in RayData ray, ref float maximumT, float t, Vector3 normal, int childIndex)
+            public void OnRayHit(in RayData ray, ref Number maximumT, Number t, Vector3 normal, int childIndex)
             {
                 HitHandler.OnRayHit(ray, ref maximumT, t, normal, Collidable, childIndex);
             }
@@ -140,7 +138,7 @@ namespace BepuPhysics
             public ShapeRayHitHandler<TRayHitHandler> ShapeHitHandler;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void RayTest(CollidableReference collidable, RayData* rayData, float* maximumT)
+            public unsafe void RayTest(CollidableReference collidable, RayData* rayData, Number* maximumT)
             {
                 if (ShapeHitHandler.HitHandler.AllowTest(collidable))
                 {
@@ -160,7 +158,7 @@ namespace BepuPhysics
         /// <param name="maximumT">Maximum length of the ray traversal in units of the direction's length.</param>
         /// <param name="hitHandler">callbacks to execute on ray-object intersections.</param>
         /// <param name="id">User specified id of the ray.</param>
-        public unsafe void RayCast<THitHandler>(Vector3 origin, Vector3 direction, float maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
+        public unsafe void RayCast<THitHandler>(Vector3 origin, Vector3 direction, Number maximumT, ref THitHandler hitHandler, int id = 0) where THitHandler : IRayHitHandler
         {
             RayHitDispatcher<THitHandler> dispatcher;
             dispatcher.ShapeHitHandler.HitHandler = hitHandler;
@@ -181,8 +179,8 @@ namespace BepuPhysics
             public BodyVelocity Velocity;
             public TSweepHitHandler HitHandler;
             public CollidableReference CollidableBeingTested;
-            public float MinimumProgression;
-            public float ConvergenceThreshold;
+            public Number MinimumProgression;
+            public Number ConvergenceThreshold;
             public int MaximumIterationCount;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -193,7 +191,7 @@ namespace BepuPhysics
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public unsafe void Test(CollidableReference reference, ref float maximumT)
+            public unsafe void Test(CollidableReference reference, ref Number maximumT)
             {
                 if (HitHandler.AllowTest(reference))
                 {
@@ -260,8 +258,8 @@ namespace BepuPhysics
         /// <param name="minimumProgression">Minimum amount of progress in terms of t parameter that any iterative sweep tests should make for each sample.</param>
         /// <param name="convergenceThreshold">Threshold in terms of t parameter under which iterative sweep tests are permitted to exit in collision.</param>
         /// <param name="maximumIterationCount">Maximum number of iterations to use in iterative sweep tests.</param>
-        public unsafe void Sweep<TShape, TSweepHitHandler>(TShape shape, in RigidPose pose, in BodyVelocity velocity, float maximumT, BufferPool pool, ref TSweepHitHandler hitHandler,
-            float minimumProgression, float convergenceThreshold, int maximumIterationCount)
+        public unsafe void Sweep<TShape, TSweepHitHandler>(TShape shape, in RigidPose pose, in BodyVelocity velocity, Number maximumT, BufferPool pool, ref TSweepHitHandler hitHandler,
+            Number minimumProgression, Number convergenceThreshold, int maximumIterationCount)
             where TShape : unmanaged, IConvexShape where TSweepHitHandler : ISweepHitHandler
         {
             //Build a bounding box.
@@ -301,19 +299,19 @@ namespace BepuPhysics
         /// <param name="pool">Pool to allocate any temporary resources in during execution.</param>
         /// <param name="hitHandler">Callbacks executed when a sweep impacts an object in the scene.</param>
         /// <remarks>Simulation objects are treated as stationary during the sweep.</remarks>
-        public unsafe void Sweep<TShape, TSweepHitHandler>(in TShape shape, in RigidPose pose, in BodyVelocity velocity, float maximumT, BufferPool pool, ref TSweepHitHandler hitHandler)
+        public unsafe void Sweep<TShape, TSweepHitHandler>(in TShape shape, in RigidPose pose, in BodyVelocity velocity, Number maximumT, BufferPool pool, ref TSweepHitHandler hitHandler)
             where TShape : unmanaged, IConvexShape where TSweepHitHandler : ISweepHitHandler
         {
             //Estimate some reasonable termination conditions for iterative sweeps based on the input shape size.
             shape.ComputeAngularExpansionData(out var maximumRadius, out var maximumAngularExpansion);
             var minimumRadius = maximumRadius - maximumAngularExpansion;
-            var sizeEstimate = Math.Max(minimumRadius, maximumRadius * 0.25f);
+            var sizeEstimate = Math.Max(minimumRadius, maximumRadius * Constants.C0p25);
             //By default, lean towards precision. This may often trip the maximum iteration count, but that's okay. Performance sensitive users can tune it down with the other overload.
             //It would be far more disconcerting for new users to use a 'fast' default tuning and get visibly incorrect results.
-            var minimumProgressionDistance = .1f * sizeEstimate;
-            var convergenceThresholdDistance = 1e-5f * sizeEstimate;
+            var minimumProgressionDistance = Constants.C0p1 * sizeEstimate;
+            var convergenceThresholdDistance = Constants.C1em5 * sizeEstimate;
             var tangentVelocity = Math.Min(velocity.Angular.Length() * maximumRadius, maximumAngularExpansion / maximumT);
-            var inverseVelocity = 1f / (velocity.Linear.Length() + tangentVelocity);
+            var inverseVelocity = Constants.C1 / (velocity.Linear.Length() + tangentVelocity);
             var minimumProgressionT = minimumProgressionDistance * inverseVelocity;
             var convergenceThresholdT = convergenceThresholdDistance * inverseVelocity;
             var maximumIterationCount = 25;

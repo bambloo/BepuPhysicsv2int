@@ -2,12 +2,14 @@
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
-using System;
-using System.Numerics;
+
+
 using System.Runtime.CompilerServices;
 
 namespace Demos.Demos
@@ -23,8 +25,8 @@ namespace Demos.Demos
         public struct SimpleMaterial
         {
             public SpringSettings SpringSettings;
-            public float FrictionCoefficient;
-            public float MaximumRecoveryVelocity;
+            public Number FrictionCoefficient;
+            public Number MaximumRecoveryVelocity;
         }
         public unsafe struct FrictionCallbacks : INarrowPhaseCallbacks
         {
@@ -44,7 +46,7 @@ namespace Demos.Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
             {
                 //While the engine won't even try creating pairs between statics at all, it will ask about kinematic-kinematic pairs.
                 //Those pairs cannot emit constraints since both involved bodies have infinite inertia. Since most of the demos don't need
@@ -92,10 +94,10 @@ namespace Demos.Demos
 
             //Note that the box description includes a significant sideways velocity to make the box go weee.
             var shape = new Box(1, 1, 1);
-            var boxDescription = BodyDescription.CreateDynamic(RigidPose.Identity, new Vector3(20, 0, 0), shape.ComputeInertia(1), Simulation.Shapes.Add(shape), 1e-2f);
+            var boxDescription = BodyDescription.CreateDynamic(RigidPose.Identity, new Vector3(20, 0, 0), shape.ComputeInertia(1), Simulation.Shapes.Add(shape), Constants.C1em2);
 
             int boxCount = 100;
-            float maximumFriction = 3;
+            Number maximumFriction = 3;
             for (int i = 0; i < 100; ++i)
             {
                 //Drop the boxes in a line with varying friction.

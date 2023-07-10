@@ -1,9 +1,9 @@
-﻿using System;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using BepuUtilities.Memory;
+﻿using BepuPhysics.CollisionDetection;
 using BepuUtilities;
-using BepuPhysics.CollisionDetection;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Collidables
 {
@@ -50,14 +50,14 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        public readonly void ComputeAngularExpansionData(out Number maximumRadius, out Number maximumAngularExpansion)
         {
-            maximumRadius = (float)Math.Sqrt(MathHelper.Max(A.LengthSquared(), MathHelper.Max(B.LengthSquared(), C.LengthSquared())));
+            maximumRadius = (Number)Math.Sqrt(MathHelper.Max(A.LengthSquared(), MathHelper.Max(B.LengthSquared(), C.LengthSquared())));
             maximumAngularExpansion = maximumRadius;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool RayTest(Vector3 a, Vector3 b, Vector3 c, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
+        public static bool RayTest(Vector3 a, Vector3 b, Vector3 c, Vector3 origin, Vector3 direction, out Number t, out Vector3 normal)
         {
             //Note that this assumes clockwise-in-right-hand winding. Rays coming from the opposite direction pass through; triangles are one sided.
             var ab = b - a;
@@ -91,11 +91,11 @@ namespace BepuPhysics.Collidables
                 return false;
             }
             t /= dn;
-            normal /= (float)Math.Sqrt(Vector3.Dot(normal, normal));
+            normal /= (Number)Math.Sqrt(Vector3.Dot(normal, normal));
             return true;
         }
 
-        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out Number t, out Vector3 normal)
         {
             var offset = origin - pose.Position;
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
@@ -109,12 +109,12 @@ namespace BepuPhysics.Collidables
             return false;
         }
 
-        public readonly BodyInertia ComputeInertia(float mass)
+        public readonly BodyInertia ComputeInertia(Number mass)
         {
             MeshInertiaHelper.ComputeTriangleContribution(A, B, C, mass, out var inertiaTensor);
             BodyInertia inertia;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
-            inertia.InverseMass = 1f / mass;
+            inertia.InverseMass = Constants.C1 / mass;
             return inertia;
         }
 
@@ -167,24 +167,24 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Minimum dot product between the detected local normal and the face normal of a triangle necessary to create contacts.
         /// </summary>
-        public const float BackfaceNormalDotRejectionThreshold = -1e-2f;
+        public static readonly Number BackfaceNormalDotRejectionThreshold = Constants.Cm1em2;
         /// <summary>
         /// Epsilon to apply to testing triangles for degeneracy (which will be scaled by a pair-determined epsilon scale). Degenerate triangles do not have well defined normals and should not contribute 
         /// </summary>
-        public const float DegenerateTriangleEpsilon = 1e-6f;
+        public static readonly Number DegenerateTriangleEpsilon = Constants.Cm1em6;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeTriangleEpsilonScale(in Vector<float> abLengthSquared, in Vector<float> caLengthSquared, out Vector<float> epsilonScale)
+        public static void ComputeTriangleEpsilonScale(in Vector<Number> abLengthSquared, in Vector<Number> caLengthSquared, out Vector<Number> epsilonScale)
         {
             epsilonScale = Vector.SquareRoot(Vector.Max(abLengthSquared, caLengthSquared));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeDegenerateTriangleEpsilon(in Vector<float> abLengthSquared, in Vector<float> caLengthSquared, out Vector<float> epsilonScale, out Vector<float> epsilon)
+        public static void ComputeDegenerateTriangleEpsilon(in Vector<Number> abLengthSquared, in Vector<Number> caLengthSquared, out Vector<Number> epsilonScale, out Vector<Number> epsilon)
         {
             ComputeTriangleEpsilonScale(abLengthSquared, caLengthSquared, out epsilonScale);
-            epsilon = new Vector<float>(DegenerateTriangleEpsilon) * epsilonScale;
+            epsilon = new Vector<Number>(DegenerateTriangleEpsilon) * epsilonScale;
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeNondegenerateTriangleMask(in Vector3Wide ab, in Vector3Wide ca, in Vector<float> triangleNormalLength, out Vector<float> epsilonScale, out Vector<int> nondegenerateMask)
+        public static void ComputeNondegenerateTriangleMask(in Vector3Wide ab, in Vector3Wide ca, in Vector<Number> triangleNormalLength, out Vector<Number> epsilonScale, out Vector<int> nondegenerateMask)
         {
             Vector3Wide.LengthSquared(ab, out var abLengthSquared);
             Vector3Wide.LengthSquared(ca, out var caLengthSquared);
@@ -192,7 +192,7 @@ namespace BepuPhysics.Collidables
             nondegenerateMask = Vector.GreaterThan(triangleNormalLength, epsilon);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeNondegenerateTriangleMask(in Vector<float> abLengthSquared, in Vector<float> caLengthSquared, in Vector<float> triangleNormalLength, out Vector<float> epsilonScale, out Vector<int> nondegenerateMask)
+        public static void ComputeNondegenerateTriangleMask(in Vector<Number> abLengthSquared, in Vector<Number> caLengthSquared, in Vector<Number> triangleNormalLength, out Vector<Number> epsilonScale, out Vector<int> nondegenerateMask)
         {
             ComputeDegenerateTriangleEpsilon(abLengthSquared, caLengthSquared, out epsilonScale, out var epsilon);
             nondegenerateMask = Vector.GreaterThan(triangleNormalLength, epsilon);
@@ -200,7 +200,7 @@ namespace BepuPhysics.Collidables
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
+        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<Number> maximumRadius, out Vector<Number> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             Matrix3x3Wide.CreateFromQuaternion(orientations, out var basis);
             Matrix3x3Wide.TransformWithoutOverlap(A, basis, out var worldA);
@@ -229,7 +229,7 @@ namespace BepuPhysics.Collidables
             }
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void RayTest(ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide c, ref Vector3Wide origin, ref Vector3Wide direction, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        public static void RayTest(ref Vector3Wide a, ref Vector3Wide b, ref Vector3Wide c, ref Vector3Wide origin, ref Vector3Wide direction, out Vector<int> intersected, out Vector<Number> t, out Vector3Wide normal)
         {
             //Note that this assumes clockwise winding. Rays coming from the opposite direction pass through; triangles are one sided.
             Vector3Wide.Subtract(b, a, out var ab);
@@ -247,15 +247,15 @@ namespace BepuPhysics.Collidables
             Vector3Wide.Normalize(normal, out normal);
             intersected = Vector.BitwiseAnd(
                 Vector.BitwiseAnd(
-                    Vector.GreaterThan(dn, Vector<float>.Zero),
-                    Vector.GreaterThanOrEqual(t, Vector<float>.Zero)),
+                    Vector.GreaterThan(dn, Vector<Number>.Zero),
+                    Vector.GreaterThanOrEqual(t, Vector<Number>.Zero)),
                 Vector.BitwiseAnd(
                     Vector.BitwiseAnd(
-                        Vector.GreaterThanOrEqual(v, Vector<float>.Zero),
-                        Vector.GreaterThanOrEqual(w, Vector<float>.Zero)),
+                        Vector.GreaterThanOrEqual(v, Vector<Number>.Zero),
+                        Vector.GreaterThanOrEqual(w, Vector<Number>.Zero)),
                     Vector.LessThanOrEqual(v + w, dn)));
         }
-        public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        public void RayTest(ref RigidPoseWide pose, ref RayWide ray, out Vector<int> intersected, out Vector<Number> t, out Vector3Wide normal)
         {
             Vector3Wide.Subtract(ray.Origin, pose.Position, out var offset);
             Matrix3x3Wide.CreateFromQuaternion(pose.Orientation, out var orientation);
@@ -275,7 +275,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetMargin(in TriangleWide shape, out Vector<float> margin)
+        public void GetMargin(in TriangleWide shape, out Vector<Number> margin)
         {
             margin = default;
         }

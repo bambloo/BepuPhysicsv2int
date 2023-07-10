@@ -1,21 +1,18 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using DemoUtilities;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System;
-using System.Numerics;
-using System.Diagnostics;
-using BepuUtilities.Memory;
-using BepuUtilities.Collections;
-using System.Runtime.CompilerServices;
 using BepuPhysics.CollisionDetection;
-using BepuPhysics.Trees;
-using DemoRenderer.UI;
-using DemoRenderer.Constraints;
-using System.Threading;
-using Demos.SpecializedTests;
+using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
+using DemoRenderer;
+using DemoRenderer.UI;
+using DemoUtilities;
+using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Demos.SpecializedTests
 {
@@ -28,7 +25,7 @@ namespace Demos.SpecializedTests
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+            public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
             {
                 return false;
             }
@@ -59,8 +56,8 @@ namespace Demos.SpecializedTests
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-20f, 13, -20f);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
-            camera.Pitch = MathHelper.Pi * 0.1f;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
+            camera.Pitch = MathHelper.Pi * Constants.C0p1;
             Simulation = Simulation.Create(BufferPool, new NoCollisionCallbacks(), new DemoPoseIntegratorCallbacks(), new SolveDescription(8, 1));
 
             var sphere = new Sphere(0.5f);
@@ -70,7 +67,7 @@ namespace Demos.SpecializedTests
             const int length = 16;
             var spacing = new Vector3(2.01f);
             var halfSpacing = spacing / 2;
-            float randomizationSubset = 0.9f;
+            Number randomizationSubset = 0.9f;
             var randomizationSpan = (spacing - new Vector3(1)) * randomizationSubset;
             var randomizationBase = randomizationSpan * -0.5f;
             var random = new Random(5);
@@ -87,12 +84,12 @@ namespace Demos.SpecializedTests
                         orientation.X = -1 + 2 * random.NextSingle();
                         orientation.Y = -1 + 2 * random.NextSingle();
                         orientation.Z = -1 + 2 * random.NextSingle();
-                        orientation.W = 0.01f + random.NextSingle();
+                        orientation.W = Constants.C0p01 + random.NextSingle();
                         QuaternionEx.Normalize(ref orientation);
 
                         if ((i + j + k) % 2 == 1)
                         {
-                            var bodyDescription = BodyDescription.CreateKinematic((location, orientation), shapeIndex, -1);
+                            var bodyDescription = BodyDescription.CreateKinematic((location, orientation), shapeIndex, (Number)(-1));
                             Simulation.Bodies.Add(bodyDescription);
                         }
                         else
@@ -169,7 +166,7 @@ namespace Demos.SpecializedTests
                     internalWorker(0);
                 }
                 var stop = Stopwatch.GetTimestamp();
-                Timings.Add((stop - start) / (double)Stopwatch.Frequency);
+                Timings.Add((stop - start) / (Number)Stopwatch.Frequency);
             }
         }
 
@@ -217,7 +214,7 @@ namespace Demos.SpecializedTests
 
         bool shouldUseMultithreading = true;
 
-        public unsafe override void Update(Window window, Camera camera, Input input, float dt)
+        public unsafe override void Update(Window window, Camera camera, Input input, Number dt)
         {
             base.Update(window, camera, input, dt);
 
@@ -250,23 +247,23 @@ namespace Demos.SpecializedTests
         }
 
 
-        void WriteResults(string name, double time, double baseline, float y, TextBatcher batcher, TextBuilder text, Font font)
+        void WriteResults(string name, Number time, Number baseline, Number y, TextBatcher batcher, TextBuilder text, Font font)
         {
             batcher.Write(
                 text.Clear().Append(name).Append(":"),
                 new Vector2(32, y), 16, new Vector3(1), font);
             batcher.Write(
-                text.Clear().Append(time * 1e6, 2),
+                text.Clear().Append((float)time * 1e6, 2),
                 new Vector2(128, y), 16, new Vector3(1), font);
             batcher.Write(
-                text.Clear().Append(queryBoxes.Count / time, 0),
+                text.Clear().Append(queryBoxes.Count / (float)time, 0),
                 new Vector2(224, y), 16, new Vector3(1), font);
             batcher.Write(
-                text.Clear().Append(baseline / time, 2),
+                text.Clear().Append((float)baseline / (float)time, 2),
                 new Vector2(350, y), 16, new Vector3(1), font);
         }
 
-        void WriteControl(string name, TextBuilder control, float y, TextBatcher batcher, Font font)
+        void WriteControl(string name, TextBuilder control, Number y, TextBatcher batcher, Font font)
         {
             batcher.Write(control,
                 new Vector2(176, y), 16, new Vector3(1), font);

@@ -1,17 +1,17 @@
 ﻿using BepuPhysics.CollisionDetection;
+using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
-using BepuUtilities;
 
 namespace BepuPhysics.Constraints.Contact
 {
     public struct NonconvexContactPrestepData
     {
         public Vector3Wide Offset;
-        public Vector<float> Depth;
+        public Vector<Number> Depth;
         public Vector3Wide Normal;
     }
 
@@ -165,7 +165,7 @@ namespace BepuPhysics.Constraints.Contact
     public struct NonconvexAccumulatedImpulses
     {
         public Vector2Wide Tangent;
-        public Vector<float> Penetration;
+        public Vector<Number> Penetration;
     }
 
     public struct ContactNonconvexOneBodyFunctions<TPrestep, TAccumulatedImpulses> :
@@ -174,7 +174,7 @@ namespace BepuPhysics.Constraints.Contact
         where TAccumulatedImpulses : struct
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateContactData(in Vector<float> dt, in BodyVelocityWide velocity, ref TPrestep prestep)
+        public void IncrementallyUpdateContactData(in Vector<Number> dt, in BodyVelocityWide velocity, ref TPrestep prestep)
         {
             ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
             for (int i = 0; i < prestep.ContactCount; ++i)
@@ -199,7 +199,7 @@ namespace BepuPhysics.Constraints.Contact
             }
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, Number dt, Number inverseDt, ref TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
             //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
@@ -207,7 +207,7 @@ namespace BepuPhysics.Constraints.Contact
             ref var accumulatedImpulsesStart = ref Unsafe.As<TAccumulatedImpulses, NonconvexAccumulatedImpulses>(ref accumulatedImpulses);
             ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
             SpringSettingsWide.ComputeSpringiness(prestepMaterial.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
-            var inverseDtWide = new Vector<float>(inverseDt);
+            var inverseDtWide = new Vector<Number>(inverseDt);
             for (int i = 0; i < prestep.ContactCount; ++i)
             {
                 ref var contact = ref Unsafe.Add(ref prestepContactStart, i);
@@ -223,13 +223,13 @@ namespace BepuPhysics.Constraints.Contact
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void UpdateForNewPose(
             in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in BodyVelocityWide wsvA,
-            in Vector<float> dt, in TAccumulatedImpulses accumulatedImpulses, ref TPrestep prestep)
+            in Vector<Number> dt, in TAccumulatedImpulses accumulatedImpulses, ref TPrestep prestep)
         {
             throw new System.NotImplementedException();
         }
 
         public bool RequiresIncrementalSubstepUpdates => true;
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref TPrestep prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, ref TPrestep prestep)
         {
             ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
             for (int i = 0; i < prestep.ContactCount; ++i)
@@ -262,7 +262,7 @@ namespace BepuPhysics.Constraints.Contact
             }
         }
 
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, Number dt, Number inverseDt, ref TPrestep prestep, ref TAccumulatedImpulses accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             //Note that, unlike convex manifolds, we simply solve every contact in sequence rather than tangent->penetration.
             //This is not for any principled reason- only simplicity. May want to reconsider later, but remember the significant change in access pattern.
@@ -271,7 +271,7 @@ namespace BepuPhysics.Constraints.Contact
             ref var accumulatedImpulsesStart = ref Unsafe.As<TAccumulatedImpulses, NonconvexAccumulatedImpulses>(ref accumulatedImpulses);
             ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);
             SpringSettingsWide.ComputeSpringiness(prestepMaterial.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
-            var inverseDtWide = new Vector<float>(inverseDt);
+            var inverseDtWide = new Vector<Number>(inverseDt);
             for (int i = 0; i < prestep.ContactCount; ++i)
             {
                 ref var contact = ref Unsafe.Add(ref prestepContactStart, i);
@@ -287,7 +287,7 @@ namespace BepuPhysics.Constraints.Contact
 
 
         public bool RequiresIncrementalSubstepUpdates => true;
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TPrestep prestep)
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref TPrestep prestep)
         {
             ref var prestepOffsetB = ref prestep.GetOffsetB(ref prestep);
             ref var prestepContactStart = ref prestep.GetContact(ref prestep, 0);

@@ -1,23 +1,22 @@
-﻿using System;
-using System.Numerics;
+﻿using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
 {
     public struct QuaternionWide
     {
-        public Vector<float> X;
-        public Vector<float> Y;
-        public Vector<float> Z;
-        public Vector<float> W;
+        public Vector<Number> X;
+        public Vector<Number> Y;
+        public Vector<Number> Z;
+        public Vector<Number> W;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Broadcast(Quaternion source, out QuaternionWide broadcasted)
         {
-            broadcasted.X = new Vector<float>(source.X);
-            broadcasted.Y = new Vector<float>(source.Y);
-            broadcasted.Z = new Vector<float>(source.Z);
-            broadcasted.W = new Vector<float>(source.W);
+            broadcasted.X = new Vector<Number>(source.X);
+            broadcasted.Y = new Vector<Number>(source.Y);
+            broadcasted.Z = new Vector<Number>(source.Z);
+            broadcasted.W = new Vector<Number>(source.W);
         }
 
         /// <summary>
@@ -29,10 +28,10 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void Rebroadcast(in QuaternionWide source, int slotIndex, out QuaternionWide broadcasted)
         {
-            broadcasted.X = new Vector<float>(source.X[slotIndex]);
-            broadcasted.Y = new Vector<float>(source.Y[slotIndex]);
-            broadcasted.Z = new Vector<float>(source.Z[slotIndex]);
-            broadcasted.W = new Vector<float>(source.W[slotIndex]);
+            broadcasted.X = new Vector<Number>(source.X[slotIndex]);
+            broadcasted.Y = new Vector<Number>(source.Y[slotIndex]);
+            broadcasted.Z = new Vector<Number>(source.Z[slotIndex]);
+            broadcasted.W = new Vector<Number>(source.W[slotIndex]);
         }
 
         /// <summary>
@@ -45,8 +44,8 @@ namespace BepuUtilities
             //Since we can't branch, we're going to end up calculating the possible states of all branches.
             //This requires doing more ALU work than the branching implementation, but there are a lot of common terms across the branches, and (random-ish) branches aren't free.
             //Overall, this turns out to be about 2x-2.5x more expensive per call than the scalar version, but it handles multiple lanes, so it's a net win.
-            var oneAddX = Vector<float>.One + r.X.X;
-            var oneSubX = Vector<float>.One - r.X.X;
+            var oneAddX = Vector<Number>.One + r.X.X;
+            var oneSubX = Vector<Number>.One - r.X.X;
             var yAddZ = r.Y.Y + r.Z.Z;
             var ySubZ = r.Y.Y - r.Z.Z;
             var tX = oneAddX - yAddZ;
@@ -56,7 +55,7 @@ namespace BepuUtilities
 
             //There are two layers of conditions- inner, and outer. We have to first select each of the two inner halves- upper, and lower-
             //and then we will select which of the two inners to use for the outer.
-            var useUpper = Vector.LessThan(r.Z.Z, Vector<float>.Zero);
+            var useUpper = Vector.LessThan(r.Z.Z, Vector<Number>.Zero);
             var useUpperUpper = Vector.GreaterThan(r.X.X, r.Y.Y);
             var useLowerUpper = Vector.LessThan(r.X.X, -r.Y.Y);
             var t = Vector.ConditionalSelect(useUpper,
@@ -81,7 +80,7 @@ namespace BepuUtilities
                     Vector.ConditionalSelect(useUpperUpper, yzSubZy, zxSubXz),
                     Vector.ConditionalSelect(useLowerUpper, xySubYx, tW));
 
-            var scale = new Vector<float>(0.5f) / Vector.SquareRoot(t);
+            var scale = new Vector<Number>(Constants.C0p5) / Vector.SquareRoot(t);
             Scale(q, scale, out q);
         }
 
@@ -101,7 +100,7 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in QuaternionWide q, in Vector<float> scale, out QuaternionWide result)
+        public static void Scale(in QuaternionWide q, in Vector<Number> scale, out QuaternionWide result)
         {
             result.X = q.X * scale;
             result.Y = q.Y * scale;
@@ -110,13 +109,13 @@ namespace BepuUtilities
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Vector<float> LengthSquared()
+        public Vector<Number> LengthSquared()
         {
             return X * X + Y * Y + Z * Z + W * W;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public Vector<float> Length()
+        public Vector<Number> Length()
         {
             return Vector.SquareRoot(X * X + Y * Y + Z * Z + W * W);
         }
@@ -125,7 +124,7 @@ namespace BepuUtilities
         public static QuaternionWide Normalize(QuaternionWide q)
         {
             //TODO: fast path is possible with intrinsics.
-            var inverseNorm = Vector<float>.One / Vector.SquareRoot(q.X * q.X + q.Y * q.Y + q.Z * q.Z + q.W * q.W);
+            var inverseNorm = Vector<Number>.One / Vector.SquareRoot(q.X * q.X + q.Y * q.Y + q.Z * q.Z + q.W * q.W);
             QuaternionWide normalized;
             normalized.X = q.X * inverseNorm;
             normalized.Y = q.Y * inverseNorm;
@@ -164,7 +163,7 @@ namespace BepuUtilities
         {
             Vector3Wide.Dot(v1, v2, out var dot);
             //For non-normal vectors, the multiplying the axes length squared would be necessary:
-            //float w = dot + Sqrt(v1.LengthSquared() * v2.LengthSquared());
+            //Number w = dot + Sqrt(v1.LengthSquared() * v2.LengthSquared());
 
 
             //There exists an ambiguity at dot == -1. If the directions point away from each other, there are an infinite number of shortest paths.
@@ -172,16 +171,16 @@ namespace BepuUtilities
             //Since this is a SIMD operation, the special case is always executed and its result is conditionally selected.
 
             Vector3Wide.CrossWithoutOverlap(v1, v2, out var cross);
-            var useNormalCase = Vector.GreaterThan(dot, new Vector<float>(-0.999999f));
+            var useNormalCase = Vector.GreaterThan(dot, new Vector<Number>(Constants.Cm0p999999));
             var absX = Vector.Abs(v1.X);
             var absY = Vector.Abs(v1.Y);
             var absZ = Vector.Abs(v1.Z);
             var xIsSmallest = Vector.BitwiseAnd(Vector.LessThan(absX, absY), Vector.LessThan(absX, absZ));
             var yIsSmaller = Vector.LessThan(absY, absZ);
-            q.X = Vector.ConditionalSelect(useNormalCase, cross.X, Vector.ConditionalSelect(xIsSmallest, Vector<float>.Zero, Vector.ConditionalSelect(yIsSmaller, -v1.Z, -v1.Y)));
-            q.Y = Vector.ConditionalSelect(useNormalCase, cross.Y, Vector.ConditionalSelect(xIsSmallest, -v1.Z, Vector.ConditionalSelect(yIsSmaller, Vector<float>.Zero, v1.X)));
-            q.Z = Vector.ConditionalSelect(useNormalCase, cross.Z, Vector.ConditionalSelect(xIsSmallest, v1.Y, Vector.ConditionalSelect(yIsSmaller, v1.X, Vector<float>.Zero)));
-            q.W = Vector.ConditionalSelect(useNormalCase, dot + Vector<float>.One, Vector<float>.Zero);
+            q.X = Vector.ConditionalSelect(useNormalCase, cross.X, Vector.ConditionalSelect(xIsSmallest, Vector<Number>.Zero, Vector.ConditionalSelect(yIsSmaller, -v1.Z, -v1.Y)));
+            q.Y = Vector.ConditionalSelect(useNormalCase, cross.Y, Vector.ConditionalSelect(xIsSmallest, -v1.Z, Vector.ConditionalSelect(yIsSmaller, Vector<Number>.Zero, v1.X)));
+            q.Z = Vector.ConditionalSelect(useNormalCase, cross.Z, Vector.ConditionalSelect(xIsSmallest, v1.Y, Vector.ConditionalSelect(yIsSmaller, v1.X, Vector<Number>.Zero)));
+            q.W = Vector.ConditionalSelect(useNormalCase, dot + Vector<Number>.One, Vector<Number>.Zero);
 
             q = Normalize(q);
         }
@@ -196,7 +195,7 @@ namespace BepuUtilities
         {
             Vector3Wide.Dot(v1, v2, out var dot);
             //For non-normal vectors, the multiplying the axes length squared would be necessary:
-            //float w = dot + Sqrt(v1.LengthSquared() * v2.LengthSquared());
+            //Number w = dot + Sqrt(v1.LengthSquared() * v2.LengthSquared());
 
 
             //There exists an ambiguity at dot == -1. If the directions point away from each other, there are an infinite number of shortest paths.
@@ -204,17 +203,17 @@ namespace BepuUtilities
             //Since this is a SIMD operation, the special case is always executed and its result is conditionally selected.
 
             var cross = Vector3Wide.Cross(v1, v2);
-            var useNormalCase = Vector.GreaterThan(dot, new Vector<float>(-0.999999f));
+            var useNormalCase = Vector.GreaterThan(dot, new Vector<Number>(Constants.Cm0p999999));
             var absX = Vector.Abs(v1.X);
             var absY = Vector.Abs(v1.Y);
             var absZ = Vector.Abs(v1.Z);
             var xIsSmallest = Vector.BitwiseAnd(Vector.LessThan(absX, absY), Vector.LessThan(absX, absZ));
             var yIsSmaller = Vector.LessThan(absY, absZ);
             QuaternionWide q;
-            q.X = Vector.ConditionalSelect(useNormalCase, cross.X, Vector.ConditionalSelect(xIsSmallest, Vector<float>.Zero, Vector.ConditionalSelect(yIsSmaller, -v1.Z, -v1.Y)));
-            q.Y = Vector.ConditionalSelect(useNormalCase, cross.Y, Vector.ConditionalSelect(xIsSmallest, -v1.Z, Vector.ConditionalSelect(yIsSmaller, Vector<float>.Zero, v1.X)));
-            q.Z = Vector.ConditionalSelect(useNormalCase, cross.Z, Vector.ConditionalSelect(xIsSmallest, v1.Y, Vector.ConditionalSelect(yIsSmaller, v1.X, Vector<float>.Zero)));
-            q.W = Vector.ConditionalSelect(useNormalCase, dot + Vector<float>.One, Vector<float>.Zero);
+            q.X = Vector.ConditionalSelect(useNormalCase, cross.X, Vector.ConditionalSelect(xIsSmallest, Vector<Number>.Zero, Vector.ConditionalSelect(yIsSmaller, -v1.Z, -v1.Y)));
+            q.Y = Vector.ConditionalSelect(useNormalCase, cross.Y, Vector.ConditionalSelect(xIsSmallest, -v1.Z, Vector.ConditionalSelect(yIsSmaller, Vector<Number>.Zero, v1.X)));
+            q.Z = Vector.ConditionalSelect(useNormalCase, cross.Z, Vector.ConditionalSelect(xIsSmallest, v1.Y, Vector.ConditionalSelect(yIsSmaller, v1.X, Vector<Number>.Zero)));
+            q.W = Vector.ConditionalSelect(useNormalCase, dot + Vector<Number>.One, Vector<Number>.Zero);
             return Normalize(q);
         }
 
@@ -225,22 +224,22 @@ namespace BepuUtilities
         /// <param name="axis">Axis of rotation extracted from the quaternion.</param>
         /// <param name="angle">Angle of rotation extracted from the quaternion.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetAxisAngleFromQuaternion(in QuaternionWide q, out Vector3Wide axis, out Vector<float> angle)
+        public static void GetAxisAngleFromQuaternion(in QuaternionWide q, out Vector3Wide axis, out Vector<Number> angle)
         {
-            var shouldNegate = Vector.LessThan(q.W, Vector<float>.Zero);
+            var shouldNegate = Vector.LessThan(q.W, Vector<Number>.Zero);
             axis.X = Vector.ConditionalSelect(shouldNegate, -q.X, q.X);
             axis.Y = Vector.ConditionalSelect(shouldNegate, -q.Y, q.Y);
             axis.Z = Vector.ConditionalSelect(shouldNegate, -q.Z, q.Z);
             var qw = Vector.ConditionalSelect(shouldNegate, -q.W, q.W);
 
             Vector3Wide.Length(axis, out var axisLength);
-            Vector3Wide.Scale(axis, Vector<float>.One / axisLength, out axis);
-            var useFallback = Vector.LessThan(axisLength, new Vector<float>(1e-14f));
-            axis.X = Vector.ConditionalSelect(useFallback, Vector<float>.One, axis.X);
-            axis.Y = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, axis.Y);
-            axis.Z = Vector.ConditionalSelect(useFallback, Vector<float>.Zero, axis.Z);
+            Vector3Wide.Scale(axis, Vector<Number>.One / axisLength, out axis);
+            var useFallback = Vector.LessThan(axisLength, new Vector<Number>(Constants.C1em14));
+            axis.X = Vector.ConditionalSelect(useFallback, Vector<Number>.One, axis.X);
+            axis.Y = Vector.ConditionalSelect(useFallback, Vector<Number>.Zero, axis.Y);
+            axis.Z = Vector.ConditionalSelect(useFallback, Vector<Number>.Zero, axis.Z);
             var halfAngle = MathHelper.Acos(qw);
-            angle = new Vector<float>(2) * halfAngle;
+            angle = new Vector<Number>(2) * halfAngle;
         }
 
         /// <summary>
@@ -268,9 +267,9 @@ namespace BepuUtilities
             var wx2 = rotation.W * x2;
             var wy2 = rotation.W * y2;
             var wz2 = rotation.W * z2;
-            result.X = v.X * (Vector<float>.One - yy2 - zz2) + v.Y * (xy2 - wz2) + v.Z * (xz2 + wy2);
-            result.Y = v.X * (xy2 + wz2) + v.Y * (Vector<float>.One - xx2 - zz2) + v.Z * (yz2 - wx2);
-            result.Z = v.X * (xz2 - wy2) + v.Y * (yz2 + wx2) + v.Z * (Vector<float>.One - xx2 - yy2);
+            result.X = v.X * (Vector<Number>.One - yy2 - zz2) + v.Y * (xy2 - wz2) + v.Z * (xz2 + wy2);
+            result.Y = v.X * (xy2 + wz2) + v.Y * (Vector<Number>.One - xx2 - zz2) + v.Z * (yz2 - wx2);
+            result.Z = v.X * (xz2 - wy2) + v.Y * (yz2 + wx2) + v.Z * (Vector<Number>.One - xx2 - yy2);
 
         }
 
@@ -313,9 +312,9 @@ namespace BepuUtilities
             var wy2 = rotation.W * y2;
             var wz2 = rotation.W * z2;
             Vector3Wide result;
-            result.X = v.X * (Vector<float>.One - yy2 - zz2) + v.Y * (xy2 - wz2) + v.Z * (xz2 + wy2);
-            result.Y = v.X * (xy2 + wz2) + v.Y * (Vector<float>.One - xx2 - zz2) + v.Z * (yz2 - wx2);
-            result.Z = v.X * (xz2 - wy2) + v.Y * (yz2 + wx2) + v.Z * (Vector<float>.One - xx2 - yy2);
+            result.X = v.X * (Vector<Number>.One - yy2 - zz2) + v.Y * (xy2 - wz2) + v.Z * (xz2 + wy2);
+            result.Y = v.X * (xy2 + wz2) + v.Y * (Vector<Number>.One - xx2 - zz2) + v.Z * (yz2 - wx2);
+            result.Z = v.X * (xz2 - wy2) + v.Y * (yz2 + wx2) + v.Z * (Vector<Number>.One - xx2 - yy2);
             return result;
         }
 
@@ -346,9 +345,9 @@ namespace BepuUtilities
             var wy2 = nW * y2;
             var wz2 = nW * z2;
             Vector3Wide result;
-            result.X = v.X * (Vector<float>.One - yy2 - zz2) + v.Y * (xy2 - wz2) + v.Z * (xz2 + wy2);
-            result.Y = v.X * (xy2 + wz2) + v.Y * (Vector<float>.One - xx2 - zz2) + v.Z * (yz2 - wx2);
-            result.Z = v.X * (xz2 - wy2) + v.Y * (yz2 + wx2) + v.Z * (Vector<float>.One - xx2 - yy2);
+            result.X = v.X * (Vector<Number>.One - yy2 - zz2) + v.Y * (xy2 - wz2) + v.Z * (xz2 + wy2);
+            result.Y = v.X * (xy2 + wz2) + v.Y * (Vector<Number>.One - xx2 - zz2) + v.Z * (yz2 - wx2);
+            result.Z = v.X * (xz2 - wy2) + v.Y * (yz2 + wx2) + v.Z * (Vector<Number>.One - xx2 - yy2);
             return result;
         }
 
@@ -375,7 +374,7 @@ namespace BepuUtilities
             var wy2 = rotation.W * y2;
             var wz2 = rotation.W * z2;
             Vector3Wide result;
-            result.X = Vector<float>.One - yy2 - zz2;
+            result.X = Vector<Number>.One - yy2 - zz2;
             result.Y = xy2 + wz2;
             result.Z = xz2 - wy2;
             return result;
@@ -400,7 +399,7 @@ namespace BepuUtilities
             var wz2 = rotation.W * z2;
             Vector3Wide result;
             result.X = xy2 - wz2;
-            result.Y = Vector<float>.One - xx2 - zz2;
+            result.Y = Vector<Number>.One - xx2 - zz2;
             result.Z = yz2 + wx2;
             return result;
         }
@@ -425,7 +424,7 @@ namespace BepuUtilities
             Vector3Wide result;
             result.X = xz2 + wy2;
             result.Y = yz2 - wx2;
-            result.Z = Vector<float>.One - xx2 - yy2;
+            result.Z = Vector<Number>.One - xx2 - yy2;
             return result;
         }
 
@@ -450,11 +449,11 @@ namespace BepuUtilities
             var wx2 = rotation.W * x2;
             var wy2 = rotation.W * y2;
             var wz2 = rotation.W * z2;
-            x.X = Vector<float>.One - yy2 - zz2;
+            x.X = Vector<Number>.One - yy2 - zz2;
             x.Y = xy2 + wz2;
             x.Z = xz2 - wy2;
             y.X = xy2 - wz2;
-            y.Y = Vector<float>.One - xx2 - zz2;
+            y.Y = Vector<Number>.One - xx2 - zz2;
             y.Z = yz2 + wx2;
         }
 
@@ -473,7 +472,7 @@ namespace BepuUtilities
 
             var YY = qY2 * rotation.Y;
             var ZZ = qZ2 * rotation.Z;
-            x.X = Vector<float>.One - YY - ZZ;
+            x.X = Vector<Number>.One - YY - ZZ;
             var XY = qX2 * rotation.Y;
             var ZW = qZ2 * rotation.W;
             x.Y = XY + ZW;
@@ -486,7 +485,7 @@ namespace BepuUtilities
             var YZ = qY2 * rotation.Z;
             z.X = XZ + YW;
             z.Y = YZ - XW;
-            z.Z = Vector<float>.One - XX - YY;
+            z.Z = Vector<Number>.One - XX - YY;
         }
 
 

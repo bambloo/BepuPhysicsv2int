@@ -1,9 +1,5 @@
-﻿using BepuPhysics.Collidables;
-using BepuPhysics.Constraints;
-using BepuUtilities;
-using BepuUtilities.Memory;
-using System;
-using System.Numerics;
+﻿using BepuUtilities;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -269,7 +265,7 @@ namespace BepuPhysics
         /// <summary>
         /// Inverse of the body's mass.
         /// </summary>
-        public float InverseMass;
+        public Number InverseMass;
 
         /// <summary>
         /// Returns a string representing the BodyInertia as "InverseMass, InverseInertiaTensor".
@@ -381,7 +377,7 @@ namespace BepuPhysics
         //Note that the inverse mass is included in the bundle. InverseMass is rotationally invariant, so it doesn't need to be updated...
         //But it's included alongside the rotated inertia tensor because to split it out would require that constraint presteps suffer another cache miss when they
         //gather the inverse mass in isolation. (From the solver's perspective, inertia/mass gathering is incoherent.)
-        public Vector<float> InverseMass;
+        public Vector<Number> InverseMass;
     }
 
     /// <summary>
@@ -393,7 +389,7 @@ namespace BepuPhysics
         /// Threshold of squared velocity under which the body is allowed to go to sleep. This is compared against dot(linearVelocity, linearVelocity) + dot(angularVelocity, angularVelocity).
         /// Setting this to a negative value guarantees the body cannot go to sleep without user action.
         /// </summary>
-        public float SleepThreshold;
+        public Number SleepThreshold;
         /// <summary>
         /// The number of time steps that the body must be under the sleep threshold before the body becomes a sleeping candidate.
         /// Note that the body is not guaranteed to go to sleep immediately after meeting this minimum.

@@ -1,16 +1,13 @@
 ﻿using BepuUtilities;
-using System;
-using System.Collections.Generic;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace BepuPhysics.Trees
 {
     public interface ISweepLeafTester
     {
-        unsafe void TestLeaf(int leafIndex, ref float maximumT);
+        unsafe void TestLeaf(int leafIndex, ref Number maximumT);
     }
     partial struct Tree
     {
@@ -106,20 +103,20 @@ namespace BepuPhysics.Trees
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ConvertBoxToCentroidWithExtent(Vector3 min, Vector3 max, out Vector3 origin, out Vector3 expansion)
         {
-            var halfMin = 0.5f * min;
-            var halfMax = 0.5f * max;
+            var halfMin = Constants.C0p5 * min;
+            var halfMax = Constants.C0p5 * max;
             expansion = halfMax - halfMin;
             origin = halfMax + halfMin;
         }
 
-        public readonly unsafe void Sweep<TLeafTester>(Vector3 min, Vector3 max, Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
+        public readonly unsafe void Sweep<TLeafTester>(Vector3 min, Vector3 max, Vector3 direction, Number maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
         {
             ConvertBoxToCentroidWithExtent(min, max, out var origin, out var expansion);
             TreeRay.CreateFrom(origin, direction, maximumT, out var treeRay);
             Sweep(expansion, origin, direction, &treeRay, ref sweepTester);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public readonly unsafe void Sweep<TLeafTester>(in BoundingBox boundingBox, Vector3 direction, float maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
+        public readonly unsafe void Sweep<TLeafTester>(in BoundingBox boundingBox, Vector3 direction, Number maximumT, ref TLeafTester sweepTester) where TLeafTester : ISweepLeafTester
         {
             Sweep(boundingBox.Min, boundingBox.Max, direction, maximumT, ref sweepTester);
         }

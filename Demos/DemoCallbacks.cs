@@ -1,12 +1,11 @@
-﻿using BepuUtilities;
-using BepuUtilities.Memory;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
-using System;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using System.Runtime.CompilerServices;
-using System.Numerics;
 
 namespace Demos
 {
@@ -19,11 +18,11 @@ namespace Demos
         /// <summary>
         /// Fraction of dynamic body linear velocity to remove per unit of time. Values range from 0 to 1. 0 is fully undamped, while values very close to 1 will remove most velocity.
         /// </summary>
-        public float LinearDamping;
+        public Number LinearDamping;
         /// <summary>
         /// Fraction of dynamic body angular velocity to remove per unit of time. Values range from 0 to 1. 0 is fully undamped, while values very close to 1 will remove most velocity.
         /// </summary>
-        public float AngularDamping;
+        public Number AngularDamping;
 
 
         /// <summary>
@@ -58,16 +57,24 @@ namespace Demos
         /// <param name="gravity">Gravity to apply to dynamic bodies in the simulation.</param>
         /// <param name="linearDamping">Fraction of dynamic body linear velocity to remove per unit of time. Values range from 0 to 1. 0 is fully undamped, while values very close to 1 will remove most velocity.</param>
         /// <param name="angularDamping">Fraction of dynamic body angular velocity to remove per unit of time. Values range from 0 to 1. 0 is fully undamped, while values very close to 1 will remove most velocity.</param>
-        public DemoPoseIntegratorCallbacks(Vector3 gravity, float linearDamping = .03f, float angularDamping = .03f) : this()
+        public DemoPoseIntegratorCallbacks(Vector3 gravity, Number linearDamping, Number angularDamping) : this()
         {
             Gravity = gravity;
             LinearDamping = linearDamping;
             AngularDamping = angularDamping;
         }
 
+        public DemoPoseIntegratorCallbacks(Vector3 gravity) : this(gravity, (Number).03f, (Number).03f)
+        {
+        }
+
+        public DemoPoseIntegratorCallbacks(Vector3 gravity, Number angularDamping) : this(gravity, (Number)0.03f, angularDamping)
+        {
+        }
+
         Vector3Wide gravityWideDt;
-        Vector<float> linearDampingDt;
-        Vector<float> angularDampingDt;
+        Vector<Number> linearDampingDt;
+        Vector<Number> angularDampingDt;
 
         /// <summary>
         /// Callback invoked ahead of dispatches that may call into <see cref="IntegrateVelocity"/>.
@@ -77,12 +84,12 @@ namespace Demos
         /// </summary>
         /// <param name="dt">Current integration time step duration.</param>
         /// <remarks>This is typically used for precomputing anything expensive that will be used across velocity integration.</remarks>
-        public void PrepareForIntegration(float dt)
+        public void PrepareForIntegration(Number dt)
         {
             //No reason to recalculate gravity * dt for every body; just cache it ahead of time.
             //Since these callbacks don't use per-body damping values, we can precalculate everything.
-            linearDampingDt = new Vector<float>(MathF.Pow(MathHelper.Clamp(1 - LinearDamping, 0, 1), dt));
-            angularDampingDt = new Vector<float>(MathF.Pow(MathHelper.Clamp(1 - AngularDamping, 0, 1), dt));
+            linearDampingDt = new Vector<Number>(MathF.Pow(MathHelper.Clamp(1 - LinearDamping, 0, 1), dt));
+            angularDampingDt = new Vector<Number>(MathF.Pow(MathHelper.Clamp(1 - AngularDamping, 0, 1), dt));
             gravityWideDt = Vector3Wide.Broadcast(Gravity * dt);
         }
 
@@ -97,12 +104,12 @@ namespace Demos
         /// <param name="workerIndex">Index of the worker thread processing this bundle.</param>
         /// <param name="dt">Durations to integrate the velocity over. Can vary over lanes.</param>
         /// <param name="velocity">Velocity of bodies in the bundle. Any changes to lanes which are not active by the integrationMask will be discarded.</param>
-        public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<float> dt, ref BodyVelocityWide velocity)
+        public void IntegrateVelocity(Vector<int> bodyIndices, Vector3Wide position, QuaternionWide orientation, BodyInertiaWide localInertia, Vector<int> integrationMask, int workerIndex, Vector<Number> dt, ref BodyVelocityWide velocity)
         {
             //This is a handy spot to implement things like position dependent gravity or per-body damping.
             //This implementation uses a single damping value for all bodies that allows it to be precomputed.
             //We don't have to check for kinematics; IntegrateVelocityForKinematics returns false, so we'll never see them in this callback.
-            //Note that these are SIMD operations and "Wide" types. There are Vector<float>.Count lanes of execution being evaluated simultaneously.
+            //Note that these are SIMD operations and "Wide" types. There are Vector<Number>.Count lanes of execution being evaluated simultaneously.
             //The types are laid out in array-of-structures-of-arrays (AOSOA) format. That's because this function is frequently called from vectorized contexts within the solver.
             //Transforming to "array of structures" (AOS) format for the callback and then back to AOSOA would involve a lot of overhead, so instead the callback works on the AOSOA representation directly.
             velocity.Linear = (velocity.Linear + gravityWideDt) * linearDampingDt;
@@ -112,10 +119,20 @@ namespace Demos
     public unsafe struct DemoNarrowPhaseCallbacks : INarrowPhaseCallbacks
     {
         public SpringSettings ContactSpringiness;
-        public float MaximumRecoveryVelocity;
-        public float FrictionCoefficient;
+        public Number MaximumRecoveryVelocity;
+        public Number FrictionCoefficient;
 
-        public DemoNarrowPhaseCallbacks(SpringSettings contactSpringiness, float maximumRecoveryVelocity = 2f, float frictionCoefficient = 1f)
+        public DemoNarrowPhaseCallbacks(SpringSettings contactSpringiness) : this(contactSpringiness, 2, 1)
+        {
+
+        }
+
+        public DemoNarrowPhaseCallbacks(SpringSettings contactSpringiness, Number maximumRecoveryVelocity) : this(contactSpringiness, maximumRecoveryVelocity, 1)
+        {
+
+        }
+
+        public DemoNarrowPhaseCallbacks(SpringSettings contactSpringiness, Number maximumRecoveryVelocity, Number frictionCoefficient)
         {
             ContactSpringiness = contactSpringiness;
             MaximumRecoveryVelocity = maximumRecoveryVelocity;
@@ -128,13 +145,13 @@ namespace Demos
             if (ContactSpringiness.AngularFrequency == 0 && ContactSpringiness.TwiceDampingRatio == 0)
             {
                 ContactSpringiness = new(30, 1);
-                MaximumRecoveryVelocity = 2f;
-                FrictionCoefficient = 1f;
+                MaximumRecoveryVelocity = 2;
+                FrictionCoefficient = 1;
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref float speculativeMargin)
+        public bool AllowContactGeneration(int workerIndex, CollidableReference a, CollidableReference b, ref Number speculativeMargin)
         {
             //While the engine won't even try creating pairs between statics at all, it will ask about kinematic-kinematic pairs.
             //Those pairs cannot emit constraints since both involved bodies have infinite inertia. Since most of the demos don't need

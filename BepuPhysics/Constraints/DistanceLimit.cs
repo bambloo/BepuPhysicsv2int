@@ -3,7 +3,7 @@ using BepuUtilities;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
@@ -25,11 +25,11 @@ namespace BepuPhysics.Constraints
         /// <summary>
         /// Minimum distance permitted between the point on A and the point on B.
         /// </summary>
-        public float MinimumDistance;
+        public Number MinimumDistance;
         /// <summary>
         /// Maximum distance permitted between the point on A and the point on B.
         /// </summary>
-        public float MaximumDistance;
+        public Number MaximumDistance;
         /// <summary>
         /// Spring frequency and damping parameters.
         /// </summary>
@@ -44,7 +44,7 @@ namespace BepuPhysics.Constraints
         /// <param name="maximumDistance">Maximum distance permitted between the point on A and the point on B.</param>
         /// <param name="springSettings">Spring frequency and damping parameters.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public DistanceLimit(Vector3 localOffsetA, Vector3 localOffsetB, float minimumDistance, float maximumDistance, in SpringSettings springSettings)
+        public DistanceLimit(Vector3 localOffsetA, Vector3 localOffsetB, Number minimumDistance, Number maximumDistance, in SpringSettings springSettings)
         {
             LocalOffsetA = localOffsetA;
             LocalOffsetB = localOffsetB;
@@ -96,16 +96,16 @@ namespace BepuPhysics.Constraints
     {
         public Vector3Wide LocalOffsetA;
         public Vector3Wide LocalOffsetB;
-        public Vector<float> MinimumDistance;
-        public Vector<float> MaximumDistance;
+        public Vector<Number> MinimumDistance;
+        public Vector<Number> MaximumDistance;
         public SpringSettingsWide SpringSettings;
     }
 
-    public struct DistanceLimitFunctions : ITwoBodyConstraintFunctions<DistanceLimitPrestepData, Vector<float>>
+    public struct DistanceLimitFunctions : ITwoBodyConstraintFunctions<DistanceLimitPrestepData, Vector<Number>>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void ApplyImpulse(in Vector3Wide linearJacobianA, in Vector3Wide angularJacobianA, in Vector3Wide angularJacobianB, in BodyInertiaWide inertiaA, in BodyInertiaWide inertiaB,
-            in Vector<float> csi, ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
+            in Vector<Number> csi, ref BodyVelocityWide velocityA, ref BodyVelocityWide velocityB)
         {
             //TODO: Examine codegen quality for operators before generalizing.
             var impulseScaledLinearJacobian = linearJacobianA * csi;
@@ -118,7 +118,7 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void ComputeJacobians(
             in Vector3Wide localOffsetA, in Vector3Wide positionA, in QuaternionWide orientationA, in Vector3Wide localOffsetB, in Vector3Wide positionB, in QuaternionWide orientationB,
-            in Vector<float> minimumDistance, in Vector<float> maximumDistance, out Vector<int> useMinimum, out Vector<float> distance, out Vector3Wide direction, out Vector3Wide angularJA, out Vector3Wide angularJB)
+            in Vector<Number> minimumDistance, in Vector<Number> maximumDistance, out Vector<int> useMinimum, out Vector<Number> distance, out Vector3Wide direction, out Vector3Wide angularJA, out Vector3Wide angularJB)
         {
             QuaternionWide.TransformWithoutOverlap(localOffsetA, orientationA, out var offsetA);
             QuaternionWide.TransformWithoutOverlap(localOffsetB, orientationB, out var offsetB);
@@ -126,27 +126,27 @@ namespace BepuPhysics.Constraints
             Vector3Wide.Length(anchorOffset, out distance);
             //If the current distance is closer to the minimum, calibrate for the minimum. Otherwise, calibrate for the maximum.
             useMinimum = Vector.LessThan(Vector.Abs(distance - minimumDistance), Vector.Abs(distance - maximumDistance));
-            var sign = Vector.ConditionalSelect(useMinimum, new Vector<float>(-1f), Vector<float>.One);
+            var sign = Vector.ConditionalSelect(useMinimum, new Vector<Number>(Constants.Cm1), Vector<Number>.One);
             Vector3Wide.Scale(anchorOffset, sign / distance, out direction);
             //If the distance is too short to extract a direction, use an arbitrary fallback.
-            var needFallback = Vector.LessThan(distance, new Vector<float>(1e-9f));
-            direction.X = Vector.ConditionalSelect(needFallback, Vector<float>.One, direction.X);
-            direction.Y = Vector.ConditionalSelect(needFallback, Vector<float>.Zero, direction.Y);
-            direction.Z = Vector.ConditionalSelect(needFallback, Vector<float>.Zero, direction.Z);
+            var needFallback = Vector.LessThan(distance, new Vector<Number>(Constants.C1em9));
+            direction.X = Vector.ConditionalSelect(needFallback, Vector<Number>.One, direction.X);
+            direction.Y = Vector.ConditionalSelect(needFallback, Vector<Number>.Zero, direction.Y);
+            direction.Z = Vector.ConditionalSelect(needFallback, Vector<Number>.Zero, direction.Z);
 
             Vector3Wide.CrossWithoutOverlap(offsetA, direction, out angularJA);
             Vector3Wide.CrossWithoutOverlap(direction, offsetB, out angularJB); //Note flip negation.
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref DistanceLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void WarmStart(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, ref DistanceLimitPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobians(prestep.LocalOffsetA, positionA, orientationA, prestep.LocalOffsetB, positionB, orientationB, prestep.MinimumDistance, prestep.MaximumDistance, out _, out _, out var direction, out var angularJA, out var angularJB);
             ApplyImpulse(direction, angularJA, angularJB, inertiaA, inertiaB, accumulatedImpulses, ref wsvA, ref wsvB);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, float dt, float inverseDt, ref DistanceLimitPrestepData prestep, ref Vector<float> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, in Vector3Wide positionB, in QuaternionWide orientationB, in BodyInertiaWide inertiaB, Number dt, Number inverseDt, ref DistanceLimitPrestepData prestep, ref Vector<Number> accumulatedImpulses, ref BodyVelocityWide wsvA, ref BodyVelocityWide wsvB)
         {
             ComputeJacobians(prestep.LocalOffsetA, positionA, orientationA, prestep.LocalOffsetB, positionB, orientationB, prestep.MinimumDistance, prestep.MaximumDistance, out var useMinimum, out var distance, out var direction, out var angularJA, out var angularJB);
 
@@ -174,14 +174,14 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref DistanceLimitPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, in BodyVelocityWide wsvB, ref DistanceLimitPrestepData prestepData) { }
     }
 
 
     /// <summary>
     /// Handles the solve iterations of a bunch of distance servos.
     /// </summary>
-    public class DistanceLimitTypeProcessor : TwoBodyTypeProcessor<DistanceLimitPrestepData, Vector<float>, DistanceLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
+    public class DistanceLimitTypeProcessor : TwoBodyTypeProcessor<DistanceLimitPrestepData, Vector<Number>, DistanceLimitFunctions, AccessAll, AccessAll, AccessAll, AccessAll>
     {
         public const int BatchTypeId = 34;
     }

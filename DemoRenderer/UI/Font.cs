@@ -3,8 +3,6 @@ using SharpDX;
 using SharpDX.Direct3D11;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
 
 namespace DemoRenderer.UI
 {
@@ -13,7 +11,7 @@ namespace DemoRenderer.UI
     /// </summary>
     public struct GlyphSource
     {
-        public Vector2 Minimum;
+        public System.Numerics.Vector2 Minimum;
         public int PackedSpan;  //Lower 16 bits X, upper 16 bits Y. In texels.
         public float DistanceScale;
     }
@@ -70,7 +68,7 @@ namespace DemoRenderer.UI
                 sourceIds.Add(character.Key, nextSourceId);
                 sourcesData[nextSourceId] = new GlyphSource
                 {
-                    Minimum = new Vector2(character.Value.SourceMinimum.X, character.Value.SourceMinimum.Y),
+                    Minimum = new System.Numerics.Vector2(character.Value.SourceMinimum.X, character.Value.SourceMinimum.Y),
                     PackedSpan = character.Value.SourceSpan.X | (character.Value.SourceSpan.Y << 16),
                     DistanceScale = character.Value.DistanceScale
                 };

@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Numerics;
-using System.Text;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
-using Demos.Demos;
 
 namespace Demos.SpecializedTests
 {
@@ -30,7 +26,7 @@ namespace Demos.SpecializedTests
             for (int meshIndex = 0; meshIndex < 3; ++meshIndex)
             {
                 Simulation.Bodies.Add(
-                    BodyDescription.CreateDynamic(new Vector3(0, 2 + meshIndex * 2, 0), approximateInertia, meshShapeIndex, 0.01f));
+                    BodyDescription.CreateDynamic(new Vector3(0, 2 + meshIndex * 2, 0), approximateInertia, meshShapeIndex, Constants.C0p01));
             }
 
             var compoundBuilder = new CompoundBuilder(BufferPool, Simulation.Shapes, 12);
@@ -44,7 +40,7 @@ namespace Demos.SpecializedTests
             compoundBuilder.Dispose();
             for (int i = 0; i < 3; ++i)
             {
-                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(5, 2 + i * 2, 0), compoundInertia, compoundShapeIndex, 0.01f));
+                Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(5, 2 + i * 2, 0), compoundInertia, compoundShapeIndex, Constants.C0p01));
             }
 
             var staticShape = new Box(1500, 1, 1500);

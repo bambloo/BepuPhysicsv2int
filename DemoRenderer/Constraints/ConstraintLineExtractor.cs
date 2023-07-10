@@ -1,16 +1,14 @@
-﻿using System;
+﻿using BepuPhysics;
+using BepuPhysics.CollisionDetection;
+using BepuPhysics.Constraints;
+using BepuPhysics.Constraints.Contact;
+using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using BepuPhysics;
-using BepuPhysics.Constraints;
-using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
+using BepuUtilities.Numerics;
+using System;
 using System.Diagnostics;
-using BepuUtilities;
-using System.Numerics;
-using BepuPhysics.CollisionDetection;
-using BepuPhysics.Constraints.Contact;
-using System.Threading;
+using System.Runtime.CompilerServices;
 
 namespace DemoRenderer.Constraints
 {
@@ -67,7 +65,7 @@ namespace DemoRenderer.Constraints
             }
             else
             {
-                var tint = new Vector3(0.4f, 0.4f, 0.8f);
+                var tint = new Vector3(Constants.C0p4, Constants.C0p4, Constants.C0p8);
                 for (int i = constraintStart; i < constraintEnd; ++i)
                 {
                     if (typeBatch.IndexToHandle[i].Value >= 0)

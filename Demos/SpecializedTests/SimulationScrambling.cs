@@ -1,14 +1,11 @@
 ﻿using BepuPhysics;
-using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace Demos.SpecializedTests
 {
@@ -264,7 +261,7 @@ namespace Demos.SpecializedTests
             }
         }
 
-        public static double AddRemoveChurn<T>(Simulation simulation, int iterations, BodyHandle[] bodyHandles, ConstraintHandle[] constraintHandles) where T : unmanaged, ITwoBodyConstraintDescription<T>
+        public static Number AddRemoveChurn<T>(Simulation simulation, int iterations, BodyHandle[] bodyHandles, ConstraintHandle[] constraintHandles) where T : unmanaged, ITwoBodyConstraintDescription<T>
         {
             //There are three levels of 'index' for each object in this test:
             //1) The top level 'identity'. Even when a body or constraint gets readded, the slot in the top level array maintains a pointer to the new handle.
@@ -318,7 +315,7 @@ namespace Demos.SpecializedTests
 
             Validate(simulation, removedConstraints, removedBodies, bodyHandles.Length, originalConstraintCount);
 
-            var constraintActionProbability = originalConstraintCount > 0 ? 1 - (double)simulation.Bodies.ActiveSet.Count / originalConstraintCount : 0;
+            var constraintActionProbability = originalConstraintCount > 0 ? 1 - (Number)simulation.Bodies.ActiveSet.Count / originalConstraintCount : 0;
 
             var timer = Stopwatch.StartNew();
             for (int iterationIndex = 0; iterationIndex < iterations; ++iterationIndex)
@@ -326,7 +323,7 @@ namespace Demos.SpecializedTests
                 if (random.NextDouble() < constraintActionProbability)
                 {
                     //Constraint action.
-                    var constraintRemovalProbability = (originalConstraintCount - removedConstraints.Count) / (double)originalConstraintCount;
+                    var constraintRemovalProbability = (originalConstraintCount - removedConstraints.Count) / (Number)originalConstraintCount;
                     if (random.NextDouble() < constraintRemovalProbability)
                     {
                         ChurnRemoveConstraint(simulation, bodyHandles.Length, constraintHandlesToIdentity, constraintHandles, constraintDescriptions, removedConstraints, removedBodies, random);
@@ -339,7 +336,7 @@ namespace Demos.SpecializedTests
                 else
                 {
                     //Body action.
-                    var bodyRemovalProbability = (bodyHandles.Length - removedBodies.Count) / (double)bodyHandles.Length;
+                    var bodyRemovalProbability = (bodyHandles.Length - removedBodies.Count) / (Number)bodyHandles.Length;
                     if (random.NextDouble() < bodyRemovalProbability)
                     {
                         ChurnRemoveBody(simulation, bodyHandles, bodyHandlesToIdentity, constraintHandles, constraintHandlesToIdentity, constraintDescriptions, removedConstraints, removedBodies, random);
@@ -372,7 +369,7 @@ namespace Demos.SpecializedTests
             Debug.Assert(newConstraintCount == originalConstraintCount, "Best have the same number of constraints if we actually added them all back!");
             Debug.Assert(bodyHandles.Length == simulation.Bodies.ActiveSet.Count, "And bodies, too!");
 
-            return timer.Elapsed.TotalSeconds;
+            return (Number)timer.Elapsed.TotalSeconds;
         }
 
 

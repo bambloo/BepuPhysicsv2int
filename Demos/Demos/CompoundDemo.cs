@@ -1,13 +1,13 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System;
-using System.Numerics;
-using DemoContentLoader;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using DemoContentLoader;
+using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
+using System;
 
 namespace Demos.Demos
 {
@@ -16,7 +16,7 @@ namespace Demos.Demos
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-13f, 6, -13f);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             camera.Pitch = MathHelper.Pi * 0.05f;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10f, 0)), new SolveDescription(8, 1));
@@ -38,17 +38,17 @@ namespace Demos.Demos
                     compoundBuilder.Add(boxChildShape, boxLocalPose, 1);
                     compoundBuilder.BuildDynamicCompound(out var compoundChildren, out var compoundInertia, out var compoundCenter);
                     compoundBuilder.Reset();
-                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(compoundCenter, compoundInertia, Simulation.Shapes.Add(new Compound(compoundChildren)), 0.01f));
+                    Simulation.Bodies.Add(BodyDescription.CreateDynamic(compoundCenter, compoundInertia, Simulation.Shapes.Add(new Compound(compoundChildren)), Constants.C0p01));
                 }
 
                 //Build a stack of sphere grids to stress manifold reduction heuristics in a convex-ish situation.
                 {
                     var gridShape = new Sphere(0.5f);
-                    const float gridSpacing = 1.5f;
+                    Number gridSpacing = 1.5f;
                     const int gridWidth = 3;
                     var gridShapeIndex = Simulation.Shapes.Add(gridShape);
                     var gridBoxInertia = gridShape.ComputeInertia(1);
-                    float localPoseOffset = -0.5f * gridSpacing * (gridWidth - 1);
+                    Number localPoseOffset = -0.5f * gridSpacing * (gridWidth - 1);
                     for (int i = 0; i < gridWidth; ++i)
                     {
                         for (int j = 0; j < gridWidth; ++j)
@@ -59,7 +59,7 @@ namespace Demos.Demos
                     compoundBuilder.BuildDynamicCompound(out var gridChildren, out var gridInertia, out var center);
                     compoundBuilder.Reset();
                     var gridCompound = new Compound(gridChildren);
-                    var bodyDescription = BodyDescription.CreateDynamic(RigidPose.Identity, gridInertia, Simulation.Shapes.Add(gridCompound), 0.01f);
+                    var bodyDescription = BodyDescription.CreateDynamic(RigidPose.Identity, gridInertia, Simulation.Shapes.Add(gridCompound), Constants.C0p01);
                     for (int i = 0; i < 4; ++i)
                     {
                         bodyDescription.Pose.Position = new Vector3(0, 2 + i * 3, 0);
@@ -87,7 +87,7 @@ namespace Demos.Demos
                     compoundBuilder.BuildDynamicCompound(out var tableChildren, out var tableInertia, out var tableCenter);
                     compoundBuilder.Reset();
                     var table = new Compound(tableChildren);
-                    var tableDescription = BodyDescription.CreateDynamic(RigidPose.Identity, tableInertia, Simulation.Shapes.Add(table), 0.01f);
+                    var tableDescription = BodyDescription.CreateDynamic(RigidPose.Identity, tableInertia, Simulation.Shapes.Add(table), Constants.C0p01);
 
                     //Stack some tables.
                     {
@@ -132,7 +132,7 @@ namespace Demos.Demos
                         tableDescription.Pose.Position = new Vector3(10, 3, -10);
                         Simulation.Bodies.Add(tableDescription);
 
-                        var clampPieceShape = new Box(2f, 0.1f, 0.3f);
+                        var clampPieceShape = new Box(Constants.C0p3, 0.1f, 0.3f);
                         var clampPieceInverseInertia = clampPieceShape.ComputeInertia(1f);
                         var clampPieceShapeIndex = Simulation.Shapes.Add(clampPieceShape);
                         var clamp0 = new RigidPose { Position = new Vector3(0, -0.2f, -1.1f), Orientation = Quaternion.Identity };
@@ -152,7 +152,7 @@ namespace Demos.Demos
                         compoundBuilder.Reset();
                         var clamp = new Compound(clampChildren);
                         var clampDescription = BodyDescription.CreateDynamic(
-                            tableDescription.Pose.Position + new Vector3(2f, 0.3f, 0), clampInertia, Simulation.Shapes.Add(clamp), 0.01f);
+                            tableDescription.Pose.Position + new Vector3(Constants.C0p3, 0.3f, 0), clampInertia, Simulation.Shapes.Add(clamp), Constants.C0p01);
                         Simulation.Bodies.Add(clampDescription);
                     }
 
@@ -168,7 +168,7 @@ namespace Demos.Demos
                     {
                         RigidPose localPose;
                         localPose.Position = new Vector3(12, 6, 12) * (0.5f * new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) - Vector3.One);
-                        float orientationLengthSquared;
+                        Number orientationLengthSquared;
                         do
                         {
                             localPose.Orientation = new Quaternion(random.NextSingle(), random.NextSingle(), random.NextSingle(), random.NextSingle());
@@ -188,7 +188,7 @@ namespace Demos.Demos
                     var compoundIndex = Simulation.Shapes.Add(compound);
                     for (int i = 0; i < 8; ++i)
                     {
-                        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 4 + 5 * i, 32), inertia, compoundIndex, 0.01f));
+                        Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(0, 4 + 5 * i, 32), inertia, compoundIndex, Constants.C0p01));
                     }
                 }
             }
@@ -206,7 +206,7 @@ namespace Demos.Demos
                 (int x, int y) =>
                         {
                             Vector2 offsetFromCenter = new Vector2(x - planeWidth / 2, y - planeHeight / 2);
-                            return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - 0.01f * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
+                            return new Vector3(offsetFromCenter.X, MathF.Cos(x / 4f) * MathF.Sin(y / 4f) - Constants.C0p01 * offsetFromCenter.LengthSquared(), offsetFromCenter.Y);
                         }, new Vector3(2, 1, 2), BufferPool);
             Simulation.Statics.Add(new StaticDescription(new Vector3(64, 4, 32), QuaternionEx.CreateFromAxisAngle(new Vector3(0, 1, 0), MathF.PI / 2), Simulation.Shapes.Add(planeMesh)));
         }

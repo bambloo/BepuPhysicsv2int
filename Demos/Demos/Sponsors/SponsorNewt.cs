@@ -1,13 +1,15 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
+
 using Helpers = DemoRenderer.Helpers;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.Demos.Sponsors
 {
@@ -15,25 +17,25 @@ namespace Demos.Demos.Sponsors
     {
         public int SponsorIndex;
         public BodyHandle BodyHandle;
-        public SponsorNewt(Simulation simulation, TypedIndex shape, float height, in Vector2 arenaMin, in Vector2 arenaMax, Random random, int sponsorIndex) : this()
+        public SponsorNewt(Simulation simulation, TypedIndex shape, Number height, in Vector2 arenaMin, in Vector2 arenaMax, Random random, int sponsorIndex) : this()
         {
             var arenaSpan = arenaMax - arenaMin;
             var position = arenaMin + arenaSpan * new Vector2(random.NextSingle(), random.NextSingle());
             var angle = MathF.PI * 2 * random.NextSingle();
-            BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic((new Vector3(position.X, height, position.Y), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle)), shape, -1));
+            BodyHandle = simulation.Bodies.Add(BodyDescription.CreateKinematic((new Vector3(position.X, height, position.Y), QuaternionEx.CreateFromAxisAngle(Vector3.UnitY, angle)), shape, Constants.Cm1));
             SponsorIndex = sponsorIndex;
         }
 
         //The newt hops between predetermined points unstoppably, waiting a moment in between jumps.
-        double nextAllowedJump;
+        Number nextAllowedJump;
         Vector2 jumpStart, jumpEnd;
         //The orientation will interpolate while jumping.
         Vector2 forwardAtJumpStart, forwardAtJumpEnd;
-        double jumpStartTime, jumpEndTime;
+        Number jumpStartTime, jumpEndTime;
 
-        public void Update(Simulation simulation, double time, float height, in Vector2 arenaMin, in Vector2 arenaMax, Random random, float inverseDt)
+        public void Update(Simulation simulation, Number time, Number height, in Vector2 arenaMin, in Vector2 arenaMax, Random random, Number inverseDt)
         {
-            const float jumpDuration = 1;
+            Number jumpDuration = 1;
             var body = simulation.Bodies[BodyHandle];
             if (time >= nextAllowedJump)
             {
@@ -56,9 +58,9 @@ namespace Demos.Demos.Sponsors
             if (time >= jumpStartTime && time <= jumpEndTime)
             {
                 //The newt's in the middle of a jump. Choose a target position/orientation by interpolation.
-                const float maximumJumpHeight = 5;
-                var jumpProgress = (float)(time - jumpStartTime) / jumpDuration;
-                var targetPosition2D = (float)jumpProgress * (jumpEnd - jumpStart) + jumpStart;
+                Number maximumJumpHeight = 5;
+                var jumpProgress = (Number)(time - jumpStartTime) / jumpDuration;
+                var targetPosition2D = (Number)jumpProgress * (jumpEnd - jumpStart) + jumpStart;
                 var parabolaTerm = (2 * jumpProgress - 1);
                 var currentHeight = height + (1 - parabolaTerm * parabolaTerm) * maximumJumpHeight;
                 targetPosition = new Vector3(targetPosition2D.X, currentHeight, targetPosition2D.Y);
@@ -98,10 +100,10 @@ namespace Demos.Demos.Sponsors
             var name = sponsors[SponsorIndex].Name;
             var body = simulation.Bodies[BodyHandle];
             Helpers.GetScreenLocation(body.Pose.Position + new Vector3(0, 8, 0), viewProjection, resolution, out var screenspacePosition);
-            const float nameHeight = 14;
+            Number nameHeight = 14;
             var nameLength = GlyphBatch.MeasureLength(name, font, nameHeight);
             screenspacePosition.X -= nameLength * 0.5f;
-            renderer.TextBatcher.Write(text.Clear().Append(name), screenspacePosition, nameHeight, new Vector3(0.3f, 0f, 0f), font);
+            renderer.TextBatcher.Write(text.Clear().Append(name), screenspacePosition, nameHeight, new Vector3(0.3f, Constants.C0, Constants.C0), font);
         }
     }
 }

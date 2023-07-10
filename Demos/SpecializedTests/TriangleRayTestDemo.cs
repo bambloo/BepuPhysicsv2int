@@ -1,17 +1,14 @@
 ﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
-using DemoRenderer.UI;
-using DemoUtilities;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
-using System.Text;
+using Math = BepuUtilities.Utils.Math;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.SpecializedTests
 {
@@ -19,8 +16,8 @@ namespace Demos.SpecializedTests
     {
         void GetPointOnTriangle(Random random, in Triangle triangle, in RigidPose pose, out Vector3 pointOnTriangle)
         {
-            float total;
-            float a, b, c;
+            Number total;
+            Number a, b, c;
             do
             {
                 a = random.NextSingle();
@@ -55,7 +52,7 @@ namespace Demos.SpecializedTests
                     borderPoint = triangle.B + (triangle.C - triangle.B) * random.NextSingle();
                     break;
             }
-            var center = (triangle.A + triangle.B + triangle.C) / 3f;
+            var center = (triangle.A + triangle.B + triangle.C) / Constants.C3;
             var offsetToBorder = borderPoint - center;
             var localP = center + offsetToBorder * (1.01f + 4 * random.NextSingle());
 
@@ -84,7 +81,7 @@ namespace Demos.SpecializedTests
                 var normalDot = Vector3.Dot(normalWideLane0, normal);
                 Debug.Assert(normalDot > 0.9999f && normalDot < 1.00001f);
                 var hitLocationError = rayDirection * t + (rayOrigin - pointOnTrianglePlane);
-                Debug.Assert(hitLocationError.Length() < 1e-2f * MathF.Max(pointOnTrianglePlane.Length(), rayDirection.Length()));
+                Debug.Assert(hitLocationError.Length() < Constants.C1em2 * MathF.Max(pointOnTrianglePlane.Length(), rayDirection.Length()));
 
             }
         }
@@ -92,7 +89,7 @@ namespace Demos.SpecializedTests
         public unsafe override void Initialize(ContentArchive content, Camera camera)
         {
             camera.Position = new Vector3(-30, 8, -60);
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
 
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
@@ -105,29 +102,29 @@ namespace Demos.SpecializedTests
                 Orientation = Quaternion.Identity,
                 Position = new Vector3(0)
             };
-            var rayOrigin = new Vector3(1f / 3f, 5, 1 / 3f);
+            var rayOrigin = new Vector3(1f / Constants.C3, 5, 1 / Constants.C3);
             var rayDirection = new Vector3(0, -1, 0);
 
             //The other convex ray tester doesn't quite map well to infinitely thin triangles, so we have our own little tester here.
             TestRay(triangle, pose, rayOrigin, rayDirection, true, new Vector3(rayOrigin.X, 0, rayOrigin.Z));
 
             Random random = new Random(5);
-            const float shapeMin = -50;
-            const float shapeSpan = 100;
+            Number shapeMin = -50;
+            Number shapeSpan = 100;
             for (int i = 0; i < 10000; ++i)
             {
                 triangle.A = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * shapeSpan + new Vector3(shapeMin);
                 triangle.B = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * shapeSpan + new Vector3(shapeMin);
                 triangle.C = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * shapeSpan + new Vector3(shapeMin);
                 
-                var localTriangleCenter = (triangle.A + triangle.B + triangle.C) / 3f;
+                var localTriangleCenter = (triangle.A + triangle.B + triangle.C) / Constants.C3;
                 triangle.A -= localTriangleCenter;
                 triangle.B -= localTriangleCenter;
                 triangle.C -= localTriangleCenter;
 
                 rayOrigin = new Vector3(random.NextSingle(), random.NextSingle(), random.NextSingle()) * shapeSpan + new Vector3(shapeMin);
 
-                float orientationLengthSquared;
+                Number orientationLengthSquared;
                 while (true)
                 {
                     pose.Orientation.X = random.NextSingle() * 2 - 1;
@@ -138,7 +135,7 @@ namespace Demos.SpecializedTests
                     if (orientationLengthSquared > 1e-7f)
                         break;
                 }
-                BepuUtilities.QuaternionEx.Scale(pose.Orientation, 1f / (float)Math.Sqrt(orientationLengthSquared), out pose.Orientation);
+                BepuUtilities.QuaternionEx.Scale(pose.Orientation, 1f / (Number)Math.Sqrt(orientationLengthSquared), out pose.Orientation);
                 pose.Position = BepuUtilities.QuaternionEx.Transform(localTriangleCenter, pose.Orientation);
 
                 var normal = Vector3.Cross(triangle.C - triangle.A, triangle.B - triangle.A);

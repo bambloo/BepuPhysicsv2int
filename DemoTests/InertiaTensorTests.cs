@@ -4,6 +4,8 @@ using BepuPhysics.Trees;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;

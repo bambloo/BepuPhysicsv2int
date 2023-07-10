@@ -3,13 +3,9 @@ using BepuPhysics.Constraints.Contact;
 using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System;
-using System.Collections.Generic;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -27,7 +23,7 @@ namespace BepuPhysics.CollisionDetection
         protected bool Convex;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe void GatherOldImpulses(ref ConstraintReference constraintReference, float* oldImpulses)
+        public unsafe void GatherOldImpulses(ref ConstraintReference constraintReference, Number* oldImpulses)
         {
             BundleIndexing.GetBundleIndices(constraintReference.IndexInTypeBatch, out var bundleIndex, out var inner);
             ref var buffer = ref constraintReference.TypeBatch.AccumulatedImpulses;
@@ -36,7 +32,7 @@ namespace BepuPhysics.CollisionDetection
                 //Note that we do not modify the friction accumulated impulses. This is just for simplicity- the impact of accumulated impulses on friction *should* be relatively
                 //hard to notice compared to penetration impulses. TODO: We should, however, test this assumption.
                 //Note that we assume that the tangent friction impulses always come first. This should be safe for now, but it is important to keep in mind for later.
-                ref var start = ref GatherScatter.GetOffsetInstance(ref Unsafe.As<byte, Vector<float>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]), inner);
+                ref var start = ref GatherScatter.GetOffsetInstance(ref Unsafe.As<byte, Vector<Number>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]), inner);
                 for (int i = 0; i < ContactCount; ++i)
                 {
                     oldImpulses[i] = Unsafe.Add(ref start, i)[0];
@@ -62,8 +58,8 @@ namespace BepuPhysics.CollisionDetection
             if (Convex)
             {
                 //Note that we assume that the tangent friction impulses always come first. This should be safe for now, but it is important to keep in mind for later.
-                ref var sourceStart = ref Unsafe.As<TContactImpulses, float>(ref contactImpulses);
-                ref var targetStart = ref GatherScatter.GetOffsetInstance(ref Unsafe.As<byte, Vector<float>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]), inner);
+                ref var sourceStart = ref Unsafe.As<TContactImpulses, Number>(ref contactImpulses);
+                ref var targetStart = ref GatherScatter.GetOffsetInstance(ref Unsafe.As<byte, Vector<Number>>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex + Unsafe.SizeOf<Vector2Wide>()]), inner);
                 for (int i = 0; i < ContactCount; ++i)
                 {
                     GatherScatter.GetFirst(ref Unsafe.Add(ref targetStart, i)) = Unsafe.Add(ref sourceStart, i);
@@ -71,7 +67,7 @@ namespace BepuPhysics.CollisionDetection
             }
             else
             {
-                ref var sourceStart = ref Unsafe.As<TContactImpulses, float>(ref contactImpulses);
+                ref var sourceStart = ref Unsafe.As<TContactImpulses, Number>(ref contactImpulses);
                 ref var targetStart = ref GatherScatter.GetOffsetInstance(ref Unsafe.As<byte, NonconvexAccumulatedImpulses>(ref buffer[AccumulatedImpulseBundleStrideInBytes * bundleIndex]), inner);
                 for (int i = 0; i < ContactCount; ++i)
                 {
@@ -160,7 +156,7 @@ namespace BepuPhysics.CollisionDetection
                 typeof(TContactImpulses) == typeof(ContactImpulses6) ||
                 typeof(TContactImpulses) == typeof(ContactImpulses7) ||
                 typeof(TContactImpulses) == typeof(ContactImpulses8));
-            ContactCount = Unsafe.SizeOf<TContactImpulses>() / Unsafe.SizeOf<float>();
+            ContactCount = Unsafe.SizeOf<TContactImpulses>() / Unsafe.SizeOf<Number>();
 
             Convex =
                 typeof(TConstraintDescription) == typeof(Contact1) ||
@@ -173,12 +169,12 @@ namespace BepuPhysics.CollisionDetection
                 typeof(TConstraintDescription) == typeof(Contact4OneBody);
             if (Convex)
             {
-                Debug.Assert((ContactCount + 3) * Unsafe.SizeOf<Vector<float>>() == Unsafe.SizeOf<TAccumulatedImpulses>(),
+                Debug.Assert((ContactCount + 3) * Unsafe.SizeOf<Vector<Number>>() == Unsafe.SizeOf<TAccumulatedImpulses>(),
                     "The layout of convex accumulated impulses seems to have changed; the assumptions of impulse gather/scatter are probably no longer valid.");
             }
             else
             {
-                Debug.Assert(ContactCount * 3 * Unsafe.SizeOf<Vector<float>>() == Unsafe.SizeOf<TAccumulatedImpulses>(),
+                Debug.Assert(ContactCount * 3 * Unsafe.SizeOf<Vector<Number>>() == Unsafe.SizeOf<TAccumulatedImpulses>(),
                     "The layout of nonconvex accumulated impulses seems to have changed; the assumptions of impulse gather/scatter are probably no longer valid.");
             }
             AccumulatedImpulseBundleStrideInBytes = Unsafe.SizeOf<TAccumulatedImpulses>();

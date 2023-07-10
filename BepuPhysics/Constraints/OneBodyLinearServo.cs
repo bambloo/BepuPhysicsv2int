@@ -3,7 +3,7 @@ using BepuUtilities;
 using BepuUtilities.Memory;
 using System;
 using System.Diagnostics;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using static BepuUtilities.GatherScatter;
 namespace BepuPhysics.Constraints
@@ -78,7 +78,7 @@ namespace BepuPhysics.Constraints
     public struct OneBodyLinearServoFunctions : IOneBodyConstraintFunctions<OneBodyLinearServoPrestepData, Vector3Wide>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ComputeTransforms(in Vector3Wide localOffset, in QuaternionWide orientation, in Vector<float> effectiveMassCFMScale,
+        public static void ComputeTransforms(in Vector3Wide localOffset, in QuaternionWide orientation, in Vector<Number> effectiveMassCFMScale,
             in BodyInertiaWide inertia, out Vector3Wide offset, out Symmetric3x3Wide effectiveMass)
         {
             //The grabber is roughly equivalent to a ball socket joint with a nonzero goal (and only one body).
@@ -112,7 +112,7 @@ namespace BepuPhysics.Constraints
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, float dt, float inverseDt, ref OneBodyLinearServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
+        public void Solve(in Vector3Wide positionA, in QuaternionWide orientationA, in BodyInertiaWide inertiaA, Number dt, Number inverseDt, ref OneBodyLinearServoPrestepData prestep, ref Vector3Wide accumulatedImpulses, ref BodyVelocityWide wsvA)
         {
             QuaternionWide.TransformWithoutOverlap(prestep.LocalOffset, orientationA, out var offset);
             SpringSettingsWide.ComputeSpringiness(prestep.SpringSettings, dt, out var positionErrorToVelocity, out var effectiveMassCFMScale, out var softnessImpulseScale);
@@ -143,7 +143,7 @@ namespace BepuPhysics.Constraints
 
         public bool RequiresIncrementalSubstepUpdates => false;
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void IncrementallyUpdateForSubstep(in Vector<float> dt, in BodyVelocityWide wsvA, ref OneBodyLinearServoPrestepData prestepData) { }
+        public void IncrementallyUpdateForSubstep(in Vector<Number> dt, in BodyVelocityWide wsvA, ref OneBodyLinearServoPrestepData prestepData) { }
     }
 
     public class OneBodyLinearServoTypeProcessor : OneBodyTypeProcessor<OneBodyLinearServoPrestepData, Vector3Wide, OneBodyLinearServoFunctions, AccessAll, AccessAll>

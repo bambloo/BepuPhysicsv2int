@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+﻿using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuUtilities
@@ -111,7 +111,7 @@ namespace BepuUtilities
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ref T GetOffsetInstance<T>(ref T bundleContainer, int innerIndex) where T : struct
         {
-            return ref Unsafe.As<float, T>(ref Unsafe.Add(ref Unsafe.As<T, float>(ref bundleContainer), innerIndex));
+            return ref Unsafe.As<Number, T>(ref Unsafe.Add(ref Unsafe.As<T, Number>(ref bundleContainer), innerIndex));
         }
 
         /// <summary>
@@ -121,8 +121,7 @@ namespace BepuUtilities
         /// <param name="vector">Vector to pull the first slot value from.</param>
         /// <returns>Reference to the value in the given vector's first slot.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ref T GetFirst<T>(ref Vector<T> vector) where T : struct
-        {
+        public static ref T GetFirst<T>(ref Vector<T> vector) where T : struct { 
             return ref Unsafe.As<Vector<T>, T>(ref vector);
         }
     }

@@ -1,9 +1,7 @@
 ﻿using BepuPhysics.Collidables;
-using BepuPhysics.CollisionDetection.SweepTasks;
 using BepuUtilities;
+using BepuUtilities.Numerics;
 using System;
-using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
@@ -14,28 +12,28 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         public int BatchSize => 16;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void IntersectLineCircle(in Vector2Wide linePosition, in Vector2Wide lineDirection, in Vector<float> radius, out Vector<float> tMin, out Vector<float> tMax, out Vector<int> intersected)
+        internal static void IntersectLineCircle(in Vector2Wide linePosition, in Vector2Wide lineDirection, in Vector<Number> radius, out Vector<Number> tMin, out Vector<Number> tMax, out Vector<int> intersected)
         {
             //||linePosition + lineDirection * t|| = radius
             //dot(linePosition + lineDirection * t, linePosition + lineDirection * t) = radius * radius
             //dot(linePosition, linePosition) - radius * radius + t * 2 * dot(linePosition, lineDirection) + t^2 * dot(lineDirection, lineDirection) = 0
             Vector2Wide.Dot(lineDirection, lineDirection, out var a);
-            a = Vector.Max(a, new Vector<float>(2e-38f)); //Guard against division by zero.
-            var inverseA = Vector<float>.One / a;
+            a = Vector.Max(a, new Vector<Number>(Constants.C2em38)); //Guard against division by zero.
+            var inverseA = Vector<Number>.One / a;
             Vector2Wide.Dot(linePosition, lineDirection, out var b);
             Vector2Wide.Dot(linePosition, linePosition, out var c);
             var radiusSquared = radius * radius;
             c -= radiusSquared;
             var d = b * b - a * c;
-            intersected = Vector.GreaterThanOrEqual(d, Vector<float>.Zero);
-            var tOffset = Vector.SquareRoot(Vector.Max(Vector<float>.Zero, d)) * inverseA;
+            intersected = Vector.GreaterThanOrEqual(d, Vector<Number>.Zero);
+            var tOffset = Vector.SquareRoot(Vector.Max(Vector<Number>.Zero, d)) * inverseA;
             var tBase = -b * inverseA;
             tMin = tBase - tOffset;
             tMax = tBase + tOffset;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal static void AddCandidateForEdge(in Vector2Wide edgeStart, in Vector2Wide edgeOffset, in Vector<float> tMin, in Vector<float> tMax, in Vector<int> intersected, in Vector<int> edgeId, in Vector<int> allowFeatureContacts, int pairCount,
+        internal static void AddCandidateForEdge(in Vector2Wide edgeStart, in Vector2Wide edgeOffset, in Vector<Number> tMin, in Vector<Number> tMax, in Vector<int> intersected, in Vector<int> edgeId, in Vector<int> allowFeatureContacts, int pairCount,
                  ref ManifoldCandidate candidates, ref Vector<int> candidateCount)
         {
             //We're going to be a little lazy with feature ids. If the box face changes, these will get partially invalidated even if an edge survived.
@@ -48,12 +46,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var allowContacts = Vector.BitwiseAnd(intersected, allowFeatureContacts);
             //If tMin is overlapping the previous edge's tMax (or this edge's tMax!), don't bother including it.
             ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate,
-                Vector.BitwiseAnd(allowContacts, Vector.BitwiseAnd(Vector.LessThan(tMin, tMax), Vector.GreaterThan(tMin, Vector<float>.Zero))), pairCount);
+                Vector.BitwiseAnd(allowContacts, Vector.BitwiseAnd(Vector.LessThan(tMin, tMax), Vector.GreaterThan(tMin, Vector<Number>.Zero))), pairCount);
             candidate.FeatureId = edgeId + new Vector<int>(4);
             candidate.X = edgeStart.X + edgeOffset.X * tMax;
             candidate.Y = edgeStart.Y + edgeOffset.Y * tMax;
             ManifoldCandidateHelper.AddCandidate(ref candidates, ref candidateCount, candidate,
-                Vector.BitwiseAnd(allowContacts, Vector.GreaterThan(tMax, Vector<float>.Zero)), pairCount);
+                Vector.BitwiseAnd(allowContacts, Vector.GreaterThan(tMax, Vector<Number>.Zero)), pairCount);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -61,30 +59,30 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         {
             //Assume we can just use the 4 local extreme points of the cylinder at first.
             //Then, if there is sufficient tilt, replace the closest extreme point to the deepest point with the deepest point.
-            var interpolationMin = new Vector<float>(0.9999f);
-            var inverseInterpolationSpan = new Vector<float>(1f / 0.00005f);
-            var parallelWeight = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (Vector.Abs(cylinderLocalNormal.Y) - interpolationMin) * inverseInterpolationSpan));
-            var deepestWeight = Vector<float>.One - parallelWeight;
+            var interpolationMin = new Vector<Number>(Constants.C0p9999);
+            var inverseInterpolationSpan = new Vector<Number>(Constants.C1 / Constants.C0p00005);
+            var parallelWeight = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (Vector.Abs(cylinderLocalNormal.Y) - interpolationMin) * inverseInterpolationSpan));
+            var deepestWeight = Vector<Number>.One - parallelWeight;
             var replaceX = Vector.GreaterThan(Vector.Abs(localClosestOnCylinder.X), Vector.Abs(localClosestOnCylinder.Z));
-            var replace0 = Vector.BitwiseAnd(Vector.GreaterThan(localClosestOnCylinder.X, Vector<float>.Zero), replaceX);
-            var replace1 = Vector.BitwiseAnd(Vector.LessThanOrEqual(localClosestOnCylinder.X, Vector<float>.Zero), replaceX);
-            var replace2 = Vector.AndNot(Vector.GreaterThan(localClosestOnCylinder.Z, Vector<float>.Zero), replaceX);
-            var replace3 = Vector.AndNot(Vector.LessThanOrEqual(localClosestOnCylinder.Z, Vector<float>.Zero), replaceX);
+            var replace0 = Vector.BitwiseAnd(Vector.GreaterThan(localClosestOnCylinder.X, Vector<Number>.Zero), replaceX);
+            var replace1 = Vector.BitwiseAnd(Vector.LessThanOrEqual(localClosestOnCylinder.X, Vector<Number>.Zero), replaceX);
+            var replace2 = Vector.AndNot(Vector.GreaterThan(localClosestOnCylinder.Z, Vector<Number>.Zero), replaceX);
+            var replace3 = Vector.AndNot(Vector.LessThanOrEqual(localClosestOnCylinder.Z, Vector<Number>.Zero), replaceX);
             var scaledRadius = parallelWeight * cylinder.Radius;
             interior0.X = Vector.ConditionalSelect(replace0, deepestWeight * localClosestOnCylinder.X + scaledRadius, cylinder.Radius);
-            interior0.Y = Vector.ConditionalSelect(replace0, deepestWeight * localClosestOnCylinder.Z, Vector<float>.Zero);
+            interior0.Y = Vector.ConditionalSelect(replace0, deepestWeight * localClosestOnCylinder.Z, Vector<Number>.Zero);
             interior1.X = Vector.ConditionalSelect(replace1, deepestWeight * localClosestOnCylinder.X - scaledRadius, -cylinder.Radius);
-            interior1.Y = Vector.ConditionalSelect(replace1, deepestWeight * localClosestOnCylinder.Z, Vector<float>.Zero);
-            interior2.X = Vector.ConditionalSelect(replace2, deepestWeight * localClosestOnCylinder.X, Vector<float>.Zero);
+            interior1.Y = Vector.ConditionalSelect(replace1, deepestWeight * localClosestOnCylinder.Z, Vector<Number>.Zero);
+            interior2.X = Vector.ConditionalSelect(replace2, deepestWeight * localClosestOnCylinder.X, Vector<Number>.Zero);
             interior2.Y = Vector.ConditionalSelect(replace2, deepestWeight * localClosestOnCylinder.Z + scaledRadius, cylinder.Radius);
-            interior3.X = Vector.ConditionalSelect(replace3, deepestWeight * localClosestOnCylinder.X, Vector<float>.Zero);
+            interior3.X = Vector.ConditionalSelect(replace3, deepestWeight * localClosestOnCylinder.X, Vector<Number>.Zero);
             interior3.Y = Vector.ConditionalSelect(replace3, deepestWeight * localClosestOnCylinder.Z - scaledRadius, -cylinder.Radius);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         static void TryAddInteriorPoint(in Vector2Wide point, in Vector<int> featureId,
-            in Vector2Wide edge0010, in Vector<float> edge0010PlaneMin, in Vector<float> edge0010PlaneMax,
-            in Vector2Wide edge1011, in Vector<float> edge1011PlaneMin, in Vector<float> edge1011PlaneMax,
+            in Vector2Wide edge0010, in Vector<Number> edge0010PlaneMin, in Vector<Number> edge0010PlaneMax,
+            in Vector2Wide edge1011, in Vector<Number> edge1011PlaneMin, in Vector<Number> edge1011PlaneMax,
             in Vector<int> allowContact, ref ManifoldCandidate candidates, ref Vector<int> candidateCount, int pairCount)
         {
             var edge0010Dot = point.X * edge0010.Y - point.Y * edge0010.X;
@@ -101,7 +99,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe void Test(
-            ref BoxWide a, ref CylinderWide b, ref Vector<float> speculativeMargin,
+            ref BoxWide a, ref CylinderWide b, ref Vector<Number> speculativeMargin,
             ref Vector3Wide offsetB, ref QuaternionWide orientationA, ref QuaternionWide orientationB, int pairCount,
             out Convex4ContactManifoldWide manifold)
         {
@@ -114,11 +112,11 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Negate(localOffsetB, out var localOffsetA);
 
             Vector3Wide.Length(localOffsetA, out var length);
-            Vector3Wide.Scale(localOffsetA, Vector<float>.One / length, out var localNormal);
-            var useInitialSampleFallback = Vector.LessThan(length, new Vector<float>(1e-10f));
-            localNormal.X = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.X);
-            localNormal.Y = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.One, localNormal.Y);
-            localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<float>.Zero, localNormal.Z);
+            Vector3Wide.Scale(localOffsetA, Vector<Number>.One / length, out var localNormal);
+            var useInitialSampleFallback = Vector.LessThan(length, new Vector<Number>(Constants.C1em10));
+            localNormal.X = Vector.ConditionalSelect(useInitialSampleFallback, Vector<Number>.Zero, localNormal.X);
+            localNormal.Y = Vector.ConditionalSelect(useInitialSampleFallback, Vector<Number>.One, localNormal.Y);
+            localNormal.Z = Vector.ConditionalSelect(useInitialSampleFallback, Vector<Number>.Zero, localNormal.Z);
             BoxSupportFinder boxSupportFinder = default;
             CylinderSupportFinder cylinderSupportFinder = default;
 
@@ -128,7 +126,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             var depthThreshold = -speculativeMargin;
             var epsilonScale = Vector.Min(Vector.Max(a.HalfWidth, Vector.Max(a.HalfHeight, a.HalfLength)), Vector.Max(b.HalfLength, b.Radius));
             DepthRefiner.FindMinimumDepth(
-                b, a, localOffsetA, rA, ref cylinderSupportFinder, ref boxSupportFinder, localNormal, inactiveLanes, epsilonScale * new Vector<float>(1e-6f), depthThreshold,
+                b, a, localOffsetA, rA, ref cylinderSupportFinder, ref boxSupportFinder, localNormal, inactiveLanes, epsilonScale * new Vector<Number>(Constants.C1em6), depthThreshold,
                 out var depth, out localNormal, out var closestOnB, maximumIterations: 25);
 
             inactiveLanes = Vector.BitwiseOr(inactiveLanes, Vector.LessThan(depth, depthThreshold));
@@ -156,8 +154,8 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.ConditionalSelect(useX, rA.Z, rA.Y, out var boxFaceY);
             Vector3Wide.ConditionalSelect(useY, rA.X, boxFaceY, out boxFaceY);
             var negateFace = 
-                Vector.ConditionalSelect(useX, Vector.GreaterThan(localNormalInA.X, Vector<float>.Zero), 
-                Vector.ConditionalSelect(useY, Vector.GreaterThan(localNormalInA.Y, Vector<float>.Zero), Vector.GreaterThan(localNormalInA.Z, Vector<float>.Zero)));
+                Vector.ConditionalSelect(useX, Vector.GreaterThan(localNormalInA.X, Vector<Number>.Zero), 
+                Vector.ConditionalSelect(useY, Vector.GreaterThan(localNormalInA.Y, Vector<Number>.Zero), Vector.GreaterThan(localNormalInA.Z, Vector<Number>.Zero)));
             Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceNormal);
             Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceX);
             Vector3Wide.ConditionallyNegate(negateFace, ref boxFaceY);
@@ -173,12 +171,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Vector3Wide.Add(boxFaceCenter, boxFaceXOffset, out var v11);
             Vector3Wide.Add(v11, boxFaceYOffset, out v11);
 
-            var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<float>.Zero), -b.HalfLength, b.HalfLength);
+            var capCenterBY = Vector.ConditionalSelect(Vector.LessThan(localNormal.Y, Vector<Number>.Zero), -b.HalfLength, b.HalfLength);
 
-            var useCap = Vector.AndNot(Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<float>(0.70710678118f)), inactiveLanes);
+            var useCap = Vector.AndNot(Vector.GreaterThan(Vector.Abs(localNormal.Y), new Vector<Number>(Constants.HalfRoot2)), inactiveLanes);
 
             Vector3Wide.Dot(boxFaceNormal, localNormal, out var faceNormalDotLocalNormal);
-            var inverseFaceNormalDotLocalNormal = Vector<float>.One / faceNormalDotLocalNormal;
+            var inverseFaceNormalDotLocalNormal = Vector<Number>.One / faceNormalDotLocalNormal;
 
             if (Vector.LessThanAny(useCap, Vector<int>.Zero))
             {
@@ -189,7 +187,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 var candidateCount = Vector<int>.Zero;
 
                 //Project the edges down onto the cap's plane.
-                var inverseLocalNormalY = Vector<float>.One / localNormal.Y;
+                var inverseLocalNormalY = Vector<Number>.One / localNormal.Y;
                 Vector3Wide.Subtract(boxFaceCenter, boxFaceXOffset, out var v01);
                 Vector3Wide.Add(v01, boxFaceYOffset, out v01);
                 Vector3Wide.Add(boxFaceCenter, boxFaceXOffset, out var v10);
@@ -209,14 +207,14 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 IntersectLineCircle(p10, edge1011, b.Radius, out var tMin1011, out var tMax1011, out var intersected1011);
                 IntersectLineCircle(p11, edge1101, b.Radius, out var tMin1101, out var tMax1101, out var intersected1101);
 
-                tMin0010 = Vector.Min(Vector.Max(tMin0010, Vector<float>.Zero), Vector<float>.One);
-                tMax0010 = Vector.Min(Vector.Max(tMax0010, Vector<float>.Zero), Vector<float>.One);
-                tMin1101 = Vector.Min(Vector.Max(tMin1101, Vector<float>.Zero), Vector<float>.One);
-                tMax1101 = Vector.Min(Vector.Max(tMax1101, Vector<float>.Zero), Vector<float>.One);
-                tMin0100 = Vector.Min(Vector.Max(tMin0100, Vector<float>.Zero), Vector<float>.One);
-                tMax0100 = Vector.Min(Vector.Max(tMax0100, Vector<float>.Zero), Vector<float>.One);
-                tMin1011 = Vector.Min(Vector.Max(tMin1011, Vector<float>.Zero), Vector<float>.One);
-                tMax1011 = Vector.Min(Vector.Max(tMax1011, Vector<float>.Zero), Vector<float>.One);
+                tMin0010 = Vector.Min(Vector.Max(tMin0010, Vector<Number>.Zero), Vector<Number>.One);
+                tMax0010 = Vector.Min(Vector.Max(tMax0010, Vector<Number>.Zero), Vector<Number>.One);
+                tMin1101 = Vector.Min(Vector.Max(tMin1101, Vector<Number>.Zero), Vector<Number>.One);
+                tMax1101 = Vector.Min(Vector.Max(tMax1101, Vector<Number>.Zero), Vector<Number>.One);
+                tMin0100 = Vector.Min(Vector.Max(tMin0100, Vector<Number>.Zero), Vector<Number>.One);
+                tMax0100 = Vector.Min(Vector.Max(tMax0100, Vector<Number>.Zero), Vector<Number>.One);
+                tMin1011 = Vector.Min(Vector.Max(tMin1011, Vector<Number>.Zero), Vector<Number>.One);
+                tMax1011 = Vector.Min(Vector.Max(tMax1011, Vector<Number>.Zero), Vector<Number>.One);
 
                 AddCandidateForEdge(p00, edge0010, tMin0010, tMax0010, intersected0010, Vector<int>.Zero, useCap, pairCount, ref candidates, ref candidateCount);
                 AddCandidateForEdge(p01, edge0100, tMin0100, tMax0100, intersected0100, Vector<int>.One, useCap, pairCount, ref candidates, ref candidateCount);
@@ -244,12 +242,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 capCenterToBoxFaceCenter.Y = boxFaceCenter.Y - capCenterBY;
                 capCenterToBoxFaceCenter.Z = boxFaceCenter.Z;
                 Vector3Wide tangentBX, tangentBY;
-                tangentBX.X = Vector<float>.One;
-                tangentBX.Y = Vector<float>.Zero;
-                tangentBX.Z = Vector<float>.Zero;
-                tangentBY.X = Vector<float>.Zero;
-                tangentBY.Y = Vector<float>.Zero;
-                tangentBY.Z = Vector<float>.One;
+                tangentBX.X = Vector<Number>.One;
+                tangentBX.Y = Vector<Number>.Zero;
+                tangentBX.Z = Vector<Number>.Zero;
+                tangentBY.X = Vector<Number>.Zero;
+                tangentBY.Y = Vector<Number>.Zero;
+                tangentBY.Z = Vector<Number>.One;
                 ManifoldCandidateHelper.Reduce(ref candidates, candidateCount, 12, boxFaceNormal, inverseFaceNormalDotLocalNormal, capCenterToBoxFaceCenter, tangentBX, tangentBY, epsilonScale, depthThreshold, pairCount,
                     out var candidate0, out var candidate1, out var candidate2, out var candidate3,
                     out manifold.Contact0Exists, out manifold.Contact1Exists, out manifold.Contact2Exists, out manifold.Contact3Exists);
@@ -299,13 +297,13 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.CrossWithoutOverlap(boxFaceY, localNormal, out var edgeNormalY); //Points right
                 //Center of the side line is just (closestOnB.X, 0, closestOnB.Z), sideLineDirection is just (0, 1, 0).
                 //t = dot(sideLineStart - pointOnFaceEdge, edgeNormal) / dot(sideLineDirection, edgeNormal)
-                var negativeOne = new Vector<float>(-1f);
+                var negativeOne = new Vector<Number>(Constants.Cm1);
                 var xDenominator = negativeOne / edgeNormalX.Y;
                 var yDenominator = negativeOne / edgeNormalY.Y;
                 Vector3Wide.LengthSquared(edgeNormalX, out var edgeNormalXLengthSquared);
                 Vector3Wide.LengthSquared(edgeNormalY, out var edgeNormalYLengthSquared);
-                var inverseEdgeNormalXLengthSquared = Vector<float>.One / edgeNormalXLengthSquared;
-                var inverseEdgeNormalYLengthSquared = Vector<float>.One / edgeNormalYLengthSquared;
+                var inverseEdgeNormalXLengthSquared = Vector<Number>.One / edgeNormalXLengthSquared;
+                var inverseEdgeNormalYLengthSquared = Vector<Number>.One / edgeNormalYLengthSquared;
                 Vector3Wide v00ToSideLine, v11ToSideLine;
                 v00ToSideLine.X = closestOnB.X - v00.X;
                 v00ToSideLine.Y = -v00.Y;
@@ -318,10 +316,10 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 Vector3Wide.Dot(edgeNormalY, v00ToSideLine, out var leftNumerator);
                 Vector3Wide.Dot(edgeNormalX, v11ToSideLine, out var topNumerator);
                 Vector3Wide.Dot(edgeNormalY, v11ToSideLine, out var rightNumerator);
-                var xInvalid = Vector.Equals(edgeNormalX.Y, Vector<float>.Zero);
-                var yInvalid = Vector.Equals(edgeNormalY.Y, Vector<float>.Zero);
-                var minValue = new Vector<float>(float.MinValue);
-                var maxValue = new Vector<float>(float.MaxValue);
+                var xInvalid = Vector.Equals(edgeNormalX.Y, Vector<Number>.Zero);
+                var yInvalid = Vector.Equals(edgeNormalY.Y, Vector<Number>.Zero);
+                var minValue = new Vector<Number>(Number.MinValue);
+                var maxValue = new Vector<Number>(Number.MaxValue);
                 var tX0 = bottomNumerator * xDenominator;
                 var tX1 = topNumerator * xDenominator;
                 var tY0 = leftNumerator * yDenominator;
@@ -334,16 +332,16 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                 //angleFromEdgePlane = dot(sideLineDirection, edgeNormal / ||edgeNormal||)
                 //Interpolation behavior is pretty arbitrary, so squaring is fine:
                 //angleFromEdgePlane^2 = dot(sideLineDirection, edgeNormal)^2 / ||edgeNormal||^2
-                const float lowerThresholdAngle = 0.01f;
-                const float upperThresholdAngle = 0.02f;
-                const float lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
-                const float upperThreshold = upperThresholdAngle * upperThresholdAngle;
-                var interpolationMin = new Vector<float>(upperThreshold);
-                var inverseInterpolationSpan = new Vector<float>(1f / (upperThreshold - lowerThreshold));
-                var unrestrictWeightX = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (interpolationMin - edgeNormalX.Y * edgeNormalX.Y * inverseEdgeNormalXLengthSquared) * inverseInterpolationSpan));
-                var unrestrictWeightY = Vector.Max(Vector<float>.Zero, Vector.Min(Vector<float>.One, (interpolationMin - edgeNormalY.Y * edgeNormalY.Y * inverseEdgeNormalYLengthSquared) * inverseInterpolationSpan));
-                var regularWeightX = Vector<float>.One - unrestrictWeightX;
-                var regularWeightY = Vector<float>.One - unrestrictWeightY;
+                Number lowerThresholdAngle = Constants.C0p01;
+                Number upperThresholdAngle = Constants.C0p02;
+                Number lowerThreshold = lowerThresholdAngle * lowerThresholdAngle;
+                Number upperThreshold = upperThresholdAngle * upperThresholdAngle;
+                var interpolationMin = new Vector<Number>(upperThreshold);
+                var inverseInterpolationSpan = new Vector<Number>(Constants.C1 / (upperThreshold - lowerThreshold));
+                var unrestrictWeightX = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (interpolationMin - edgeNormalX.Y * edgeNormalX.Y * inverseEdgeNormalXLengthSquared) * inverseInterpolationSpan));
+                var unrestrictWeightY = Vector.Max(Vector<Number>.Zero, Vector.Min(Vector<Number>.One, (interpolationMin - edgeNormalY.Y * edgeNormalY.Y * inverseEdgeNormalYLengthSquared) * inverseInterpolationSpan));
+                var regularWeightX = Vector<Number>.One - unrestrictWeightX;
+                var regularWeightY = Vector<Number>.One - unrestrictWeightY;
                 var negativeHalfLength = -b.HalfLength;
                 var tXMin = Vector.ConditionalSelect(xInvalid, minValue, unrestrictWeightX * negativeHalfLength + regularWeightX * Vector.Min(tX0, tX1));
                 var tXMax = Vector.ConditionalSelect(xInvalid, maxValue, unrestrictWeightX * b.HalfLength + regularWeightX * Vector.Max(tX0, tX1));
@@ -386,12 +384,12 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         }
 
 
-        public void Test(ref BoxWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref BoxWide a, ref CylinderWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, ref QuaternionWide orientationB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }
 
-        public void Test(ref BoxWide a, ref CylinderWide b, ref Vector<float> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
+        public void Test(ref BoxWide a, ref CylinderWide b, ref Vector<Number> speculativeMargin, ref Vector3Wide offsetB, int pairCount, out Convex4ContactManifoldWide manifold)
         {
             throw new NotImplementedException();
         }

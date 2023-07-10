@@ -1,10 +1,10 @@
-﻿using System;
-using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.CompilerServices;
-using BepuPhysics.CollisionDetection;
+﻿using BepuPhysics.CollisionDetection;
 using BepuUtilities;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
+using System;
+using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace BepuPhysics.Collidables
 {
@@ -17,13 +17,13 @@ namespace BepuPhysics.Collidables
         /// <summary>
         /// Offset from the origin to a point on the plane along the normal. 
         /// </summary>
-        public Vector<float> Offset;
+        public Vector<Number> Offset;
     }
 
 
     public struct HullVertexIndex
     {
-        //This means you can only have Vector<float>.Count * 65536 points in a convex hull. Oh no!
+        //This means you can only have Vector<Number>.Count * 65536 points in a convex hull. Oh no!
         public ushort BundleIndex;
         public ushort InnerIndex;
 
@@ -88,10 +88,10 @@ namespace BepuPhysics.Collidables
         }
 
         //TODO: With platform intrinsics, we could improve the 'horizontal' parts of these functions.
-        public readonly void ComputeAngularExpansionData(out float maximumRadius, out float maximumAngularExpansion)
+        public readonly void ComputeAngularExpansionData(out Number maximumRadius, out Number maximumAngularExpansion)
         {
-            Vector<float> maximumRadiusSquaredWide = default;
-            Vector<float> minimumRadiusSquaredWide = new(float.MaxValue);
+            Vector<Number> maximumRadiusSquaredWide = default;
+            Vector<Number> minimumRadiusSquaredWide = new(Number.MaxValue);
             for (int i = 0; i < Points.Length; ++i)
             {
                 Vector3Wide.LengthSquared(Points[i], out var candidate);
@@ -101,8 +101,8 @@ namespace BepuPhysics.Collidables
             var minimumRadiusWide = Vector.SquareRoot(minimumRadiusSquaredWide);
             var maximumRadiusWide = Vector.SquareRoot(maximumRadiusSquaredWide);
             maximumRadius = maximumRadiusWide[0];
-            float minimumRadius = minimumRadiusWide[0];
-            for (int i = 1; i < Vector<float>.Count; ++i)
+            Number minimumRadius = minimumRadiusWide[0];
+            for (int i = 1; i < Vector<Number>.Count; ++i)
             {
                 var maxCandidate = maximumRadiusWide[i];
                 var minCandidate = minimumRadiusWide[i];
@@ -127,7 +127,7 @@ namespace BepuPhysics.Collidables
             }
             Vector3Wide.ReadFirst(minWide, out min);
             Vector3Wide.ReadFirst(maxWide, out max);
-            for (int i = 1; i < Vector<float>.Count; ++i)
+            for (int i = 1; i < Vector<Number>.Count; ++i)
             {
                 //TODO: Check codegen. Bounds checks elided?
                 var minCandidate = new Vector3(minWide.X[i], minWide.Y[i], minWide.Z[i]);
@@ -183,12 +183,12 @@ namespace BepuPhysics.Collidables
             }
         }
 
-        public readonly BodyInertia ComputeInertia(float mass)
+        public readonly BodyInertia ComputeInertia(Number mass)
         {
             var triangleSource = new ConvexHullTriangleSource(this);
             MeshInertiaHelper.ComputeClosedInertia(ref triangleSource, mass, out _, out var inertiaTensor);
             BodyInertia inertia;
-            inertia.InverseMass = 1f / mass;
+            inertia.InverseMass = Constants.C1 / mass;
             Symmetric3x3.Invert(inertiaTensor, out inertia.InverseInertiaTensor);
             return inertia;
         }
@@ -198,7 +198,7 @@ namespace BepuPhysics.Collidables
             return new ConvexHullShapeBatch(pool, initialCapacity);
         }
 
-        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out float t, out Vector3 normal)
+        public readonly bool RayTest(in RigidPose pose, Vector3 origin, Vector3 direction, out Number t, out Vector3 normal)
         {
             Matrix3x3.CreateFromQuaternion(pose.Orientation, out var orientation);
             var shapeToRay = origin - pose.Position;
@@ -210,11 +210,11 @@ namespace BepuPhysics.Collidables
             Helpers.FillVectorWithLaneIndices(out var indexOffsets);
             //The interval of intersection on the ray is the time after it enters all bounding planes, and before it exits any of them.
             //All face normals point outward.
-            var latestEntryWide = new Vector<float>(-float.MaxValue);
-            var earliestExitWide = new Vector<float>(float.MaxValue);
+            var latestEntryWide = new Vector<Number>(-Number.MaxValue);
+            var earliestExitWide = new Vector<Number>(Number.MaxValue);
             var latestEntryIndexBundle = new Vector<int>();
-            var epsilon = new Vector<float>(1e-14f);
-            var minValue = new Vector<float>(float.MinValue);
+            var epsilon = new Vector<Number>(Constants.C1em14);
+            var minValue = new Vector<Number>(Number.MinValue);
             for (int i = 0; i < BoundingPlanes.Length; ++i)
             {
                 ref var boundingPlane = ref BoundingPlanes[i];
@@ -227,9 +227,9 @@ namespace BepuPhysics.Collidables
                 //If the local direction has a near zero component, it is clamped to a nonzero but extremely small value. This is a hack, but it works reasonably well.
                 //The idea is that any interval computed using such an inverse would be enormous. Those values will not be exactly accurate, but they will never appear as a result
                 //because a parallel ray will never actually intersect the surface. The resulting intervals are practical approximations of the 'true' infinite intervals.
-                denominator = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(denominator), epsilon), Vector.ConditionalSelect(Vector.LessThan(denominator, Vector<float>.Zero), -epsilon, epsilon), denominator);
+                denominator = Vector.ConditionalSelect(Vector.LessThan(Vector.Abs(denominator), epsilon), Vector.ConditionalSelect(Vector.LessThan(denominator, Vector<Number>.Zero), -epsilon, epsilon), denominator);
                 var planeT = numerator / denominator;
-                var exitCandidate = Vector.GreaterThan(denominator, Vector<float>.Zero);
+                var exitCandidate = Vector.GreaterThan(denominator, Vector<Number>.Zero);
                 var laneExists = Vector.GreaterThan(boundingPlane.Offset, minValue);
                 earliestExitWide = Vector.ConditionalSelect(Vector.BitwiseAnd(laneExists, exitCandidate), Vector.Min(planeT, earliestExitWide), earliestExitWide);
                 var entryCandidate = Vector.BitwiseAnd(Vector.GreaterThan(planeT, latestEntryWide), Vector.AndNot(laneExists, exitCandidate));
@@ -240,7 +240,7 @@ namespace BepuPhysics.Collidables
             var latestEntryT = latestEntryWide[0];
             var earliestExitT = earliestExitWide[0];
             int latestEntryIndex = latestEntryIndexBundle[0];
-            for (int i = 1; i < Vector<float>.Count; ++i)
+            for (int i = 1; i < Vector<Number>.Count; ++i)
             {
                 var entryCandidate = latestEntryWide[i];
                 var exitCandidate = earliestExitWide[i];
@@ -294,7 +294,7 @@ namespace BepuPhysics.Collidables
         public int MinimumWideRayCount => int.MaxValue; //'Wide' ray tests just fall through to scalar tests anyway.
 
         public bool AllowOffsetMemoryAccess => false;
-        public int InternalAllocationSize => Vector<float>.Count * Unsafe.SizeOf<ConvexHull>();
+        public int InternalAllocationSize => Vector<Number>.Count * Unsafe.SizeOf<ConvexHull>();
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Initialize(in Buffer<byte> memory)
         {
@@ -308,18 +308,18 @@ namespace BepuPhysics.Collidables
                 Hulls[i] = shape;
         }
 
-        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<float> maximumRadius, out Vector<float> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
+        public void GetBounds(ref QuaternionWide orientations, int countInBundle, out Vector<Number> maximumRadius, out Vector<Number> maximumAngularExpansion, out Vector3Wide min, out Vector3Wide max)
         {
             Unsafe.SkipInit(out maximumRadius);
             Unsafe.SkipInit(out min);
             Unsafe.SkipInit(out max);
             for (int i = 0; i < countInBundle; ++i)
             {
-                Vector3Wide.Broadcast(new Vector3(float.MaxValue), out var minWide);
-                Vector3Wide.Broadcast(new Vector3(float.MinValue), out var maxWide);
+                Vector3Wide.Broadcast(new Vector3(Number.MaxValue), out var minWide);
+                Vector3Wide.Broadcast(new Vector3(Number.MinValue), out var maxWide);
                 QuaternionWide.Rebroadcast(orientations, i, out var orientationWide);
                 Matrix3x3Wide.CreateFromQuaternion(orientationWide, out var orientationMatrix);
-                Vector<float> maximumRadiusSquaredWide = default;
+                Vector<Number> maximumRadiusSquaredWide = default;
                 ref var hull = ref Hulls[i];
                 for (int j = 0; j < hull.Points.Length; ++j)
                 {
@@ -332,8 +332,8 @@ namespace BepuPhysics.Collidables
                 }
                 Vector3Wide.ReadFirst(minWide, out var minNarrow);
                 Vector3Wide.ReadFirst(maxWide, out var maxNarrow);
-                float maximumRadiusSquared = maximumRadiusSquaredWide[0];
-                for (int j = 1; j < Vector<float>.Count; ++j)
+                Number maximumRadiusSquared = maximumRadiusSquaredWide[0];
+                for (int j = 1; j < Vector<Number>.Count; ++j)
                 {
                     //TODO: Check codegen. Bounds checks elided?
                     var minCandidate = new Vector3(minWide.X[j], minWide.Y[j], minWide.Z[j]);
@@ -355,12 +355,12 @@ namespace BepuPhysics.Collidables
             maximumAngularExpansion = maximumRadius;
         }
 
-        public void RayTest(ref RigidPoseWide poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<float> t, out Vector3Wide normal)
+        public void RayTest(ref RigidPoseWide poses, ref RayWide rayWide, out Vector<int> intersected, out Vector<Number> t, out Vector3Wide normal)
         {
             Unsafe.SkipInit(out intersected);
             Unsafe.SkipInit(out t);
             Unsafe.SkipInit(out normal);
-            Debug.Assert(Hulls.Length > 0 && Hulls.Length <= Vector<float>.Count);
+            Debug.Assert(Hulls.Length > 0 && Hulls.Length <= Vector<Number>.Count);
             for (int i = 0; i < Hulls.Length; ++i)
             {
                 RigidPoseWide.ReadFirst(GatherScatter.GetOffsetInstance(ref poses, i), out var pose);
@@ -381,17 +381,17 @@ namespace BepuPhysics.Collidables
         /// <param name="terminatedLanes">Mask of lanes which are inactive.</param>
         /// <param name="epsilonScale">Approximate scale of the shape for use in epsilons.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EstimateEpsilonScale(in Vector<int> terminatedLanes, out Vector<float> epsilonScale)
+        public void EstimateEpsilonScale(in Vector<int> terminatedLanes, out Vector<Number> epsilonScale)
         {
             Unsafe.SkipInit(out Vector3Wide bundle);
-            for (int i = 0; i < Vector<float>.Count; ++i)
+            for (int i = 0; i < Vector<Number>.Count; ++i)
             {
                 if (terminatedLanes[i] < 0)
                     continue;
                 Debug.Assert(Hulls.Length > i);
                 Vector3Wide.CopySlot(ref Hulls[i].Points[0], 0, ref bundle, i);
             }
-            epsilonScale = (Vector.Abs(bundle.X) + Vector.Abs(bundle.Y) + Vector.Abs(bundle.Z)) * new Vector<float>(1f / 3f);
+            epsilonScale = (Vector.Abs(bundle.X) + Vector.Abs(bundle.Y) + Vector.Abs(bundle.Z)) * new Vector<Number>(Constants.C1 / Constants.C3);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -423,7 +423,7 @@ namespace BepuPhysics.Collidables
         {
             Unsafe.SkipInit(out support);
             Helpers.FillVectorWithLaneIndices(out var indexOffsets);
-            for (int slotIndex = 0; slotIndex < Vector<float>.Count; ++slotIndex)
+            for (int slotIndex = 0; slotIndex < Vector<Number>.Count; ++slotIndex)
             {
                 if (terminatedLanes[slotIndex] < 0)
                     continue;
@@ -443,7 +443,7 @@ namespace BepuPhysics.Collidables
                 //This horizontal phase is actually a nontrivial cost; platform intrinsics may offer some potential improvements.
                 var bestSlotIndex = 0;
                 var bestSlotDot = dot[0];
-                for (int j = 1; j < Vector<float>.Count; ++j)
+                for (int j = 1; j < Vector<Number>.Count; ++j)
                 {
                     var candidate = dot[j];
                     if (candidate > bestSlotDot)
@@ -467,7 +467,7 @@ namespace BepuPhysics.Collidables
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetMargin(in ConvexHullWide shape, out Vector<float> margin)
+        public void GetMargin(in ConvexHullWide shape, out Vector<Number> margin)
         {
             margin = default;
         }

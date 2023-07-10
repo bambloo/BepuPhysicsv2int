@@ -1,5 +1,6 @@
 ﻿using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
@@ -10,7 +11,7 @@ namespace BepuPhysics.Trees
     partial struct Tree
     {
         unsafe void CollectSubtreesForNodeDirect(int nodeIndex, int remainingDepth,
-            ref QuickList<int> subtrees, ref QuickQueue<int> internalNodes, out float treeletCost)
+            ref QuickList<int> subtrees, ref QuickQueue<int> internalNodes, out Number treeletCost)
         {
             internalNodes.EnqueueUnsafely(nodeIndex);
 
@@ -27,7 +28,7 @@ namespace BepuPhysics.Trees
                     if (child.Index >= 0)
                     {
                         treeletCost += ComputeBoundsMetric(ref child.Min, ref child.Max);
-                        float childCost;
+                        Number childCost;
                         CollectSubtreesForNodeDirect(child.Index, remainingDepth, ref subtrees, ref internalNodes, out childCost);
                         treeletCost += childCost;
                     }
@@ -51,7 +52,7 @@ namespace BepuPhysics.Trees
         }
 
         public unsafe void CollectSubtreesDirect(int nodeIndex, int maximumSubtrees,
-            ref QuickList<int> subtrees, ref QuickQueue<int> internalNodes, out float treeletCost)
+            ref QuickList<int> subtrees, ref QuickQueue<int> internalNodes, out Number treeletCost)
         {
             var maximumDepth = SpanHelper.GetContainingPowerOf2(maximumSubtrees) - 1;
             Debug.Assert(maximumDepth > 0);

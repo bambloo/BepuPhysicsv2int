@@ -1,12 +1,8 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
 using BepuUtilities.Collections;
-using BepuUtilities.Memory;
-using System;
-using System.Collections.Generic;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace BepuPhysics
 {
@@ -281,7 +277,7 @@ namespace BepuPhysics
         }
 
         /// <summary>
-        /// Gets a copy of the body's bounding box. If the body has no shape, the bounding box has a min at float.MaxValue and a max at float.MinValue.
+        /// Gets a copy of the body's bounding box. If the body has no shape, the bounding box has a min at Number.MaxValue and a max at Number.MinValue.
         /// </summary>
         public unsafe BoundingBox BoundingBox
         {
@@ -295,8 +291,8 @@ namespace BepuPhysics
                 }
                 else
                 {
-                    box.Min = new Vector3(float.MaxValue);
-                    box.Max = new Vector3(float.MinValue);
+                    box.Min = new Vector3(Number.MaxValue);
+                    box.Max = new Vector3(Number.MinValue);
                 }
                 return box;
             }
@@ -393,7 +389,7 @@ namespace BepuPhysics
         /// <param name="inverseMass">Inverse mass to transform the impulse with.</param>
         /// <param name="linearVelocity">Linear velocity to be modified.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void ApplyLinearImpulse(Vector3 impulse, float inverseMass, ref Vector3 linearVelocity)
+        public static void ApplyLinearImpulse(Vector3 impulse, Number inverseMass, ref Vector3 linearVelocity)
         {
             linearVelocity += impulse * inverseMass;
         }

@@ -1,6 +1,5 @@
-﻿using System;
+﻿using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -22,7 +21,7 @@ namespace BepuPhysics.CollisionDetection
         /// Penetration depth between the two collidables at this contact. Negative values represent separation.
         /// </summary>
         [FieldOffset(12)]
-        public float Depth;
+        public Number Depth;
         /// <summary>
         /// Surface basis of the contact. If transformed into a rotation matrix, X and Z represent tangent directions and Y represents the contact normal. Points from collidable B to collidable A.
         /// </summary>
@@ -50,7 +49,7 @@ namespace BepuPhysics.CollisionDetection
         /// Penetration depth between the two collidables at this contact. Negative values represent separation.
         /// </summary>
         [FieldOffset(12)]
-        public float Depth;
+        public Number Depth;
         /// <summary>
         /// Id of the features involved in the collision that generated this contact. If a contact has the same feature id as in a previous frame, it is an indication that the
         /// same parts of the shape contributed to its creation. This is useful for carrying information from frame to frame.
@@ -87,7 +86,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="depth">Penetration depth at the requested contact.</param>
         /// <param name="featureId">Feature id of the requested contact.
         /// Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</param>
-        void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId);
+        void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out Number depth, out int featureId);
 
         //Can't return refs to the this instance, but it's convenient to have ref returns for parameters and interfaces can't require static functions, so...
         /// <summary>
@@ -96,7 +95,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="manifold">Manifold to pull a reference from.</param>
         /// <param name="contactIndex">Contact to pull data from.</param>
         /// <returns>Reference to a contact's depth.</returns>
-        ref float GetDepth(ref TManifold manifold, int contactIndex);
+        ref Number GetDepth(ref TManifold manifold, int contactIndex);
 
         /// <summary>
         /// Pulls a reference to a contact's normal. Points from collidable B to collidable A. For convex manifolds that share a normal, all contact indices will simply return a reference to the manifold-wide normal.
@@ -174,7 +173,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="featureId">Feature id of the requested contact.
         /// Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId)
+        public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out Number depth, out int featureId)
         {
             ValidateIndex(contactIndex);
             ref var contact = ref Unsafe.Add(ref Contact0, contactIndex);
@@ -230,7 +229,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="contactIndex">Contact to pull data from.</param>
         /// <returns>Reference to a contact's depth.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref float GetDepth(ref NonconvexContactManifold manifold, int contactIndex)
+        public ref Number GetDepth(ref NonconvexContactManifold manifold, int contactIndex)
         {
             return ref Unsafe.Add(ref manifold.Contact0, contactIndex).Depth;
         }
@@ -334,7 +333,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="featureId">Feature id of the requested contact.
         /// Feature ids represent which parts of the collidables formed the contact and can be used to track unique contacts across frames.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out float depth, out int featureId)
+        public void GetContact(int contactIndex, out Vector3 offset, out Vector3 normal, out Number depth, out int featureId)
         {
             ValidateIndex(contactIndex);
             ref var contact = ref Unsafe.Add(ref Contact0, contactIndex);
@@ -361,7 +360,7 @@ namespace BepuPhysics.CollisionDetection
         /// <param name="contactIndex">Contact to pull data from.</param>
         /// <returns>Reference to a contact's depth.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ref float GetDepth(ref ConvexContactManifold manifold, int contactIndex)
+        public ref Number GetDepth(ref ConvexContactManifold manifold, int contactIndex)
         {
             return ref Unsafe.Add(ref manifold.Contact0, contactIndex).Depth;
         }

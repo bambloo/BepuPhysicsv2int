@@ -1,14 +1,11 @@
-﻿using BepuUtilities;
-using DemoRenderer;
-using DemoUtilities;
-using BepuPhysics;
+﻿using BepuPhysics;
 using BepuPhysics.Collidables;
-using System;
-using System.Numerics;
-using System.Diagnostics;
-using BepuUtilities.Collections;
-using DemoContentLoader;
 using BepuPhysics.Constraints;
+using BepuUtilities;
+using BepuUtilities.Numerics;
+using BepuUtilities.Utils;
+using DemoContentLoader;
+using DemoRenderer;
 
 namespace Demos.SpecializedTests
 {
@@ -18,11 +15,11 @@ namespace Demos.SpecializedTests
         {
             camera.Position = new Vector3(-10, 0, -10);
             //camera.Yaw = MathHelper.Pi ; 
-            camera.Yaw = MathHelper.Pi * 3f / 4;
+            camera.Yaw = MathHelper.Pi * Constants.C3 / 4;
             //camera.Pitch = MathHelper.PiOver2 * 0.999f;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
-            var box = new Box(1f, 3f, 2f);
+            var box = new Box(1f, Constants.C3, 2f);
             var capsule = new Capsule(1f, 1f);
             var sphere = new Sphere(1f);
             var boxInertia = box.ComputeInertia(1);
@@ -41,7 +38,7 @@ namespace Demos.SpecializedTests
                     for (int k = 0; k < length; ++k)
                     {
                         var location = new Vector3(5, 5, 5) * new Vector3(i, j, k);// + new Vector3(-width * 1.5f, 1.5f, -length * 1.5f);
-                        var bodyDescription = BodyDescription.CreateDynamic(location, default, default, 0.01f);
+                        var bodyDescription = BodyDescription.CreateDynamic(location, default, default, Constants.C0p01);
                         switch ((i + j) % 3)
                         {
                             case 0:
@@ -65,11 +62,11 @@ namespace Demos.SpecializedTests
 
             //var testShape = new Box(50, 2, 0.2f);
             //testShape.ComputeInertia(1, out var testInertia);
-            //Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(10, 10, 10), testInertia, new CollidableDescription(Simulation.Shapes.Add(testShape), 10.1f), new BodyActivityDescription(-0.01f)));
+            //Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(10, 10, 10), testInertia, new CollidableDescription(Simulation.Shapes.Add(testShape), 10.1f), new BodyActivityDescription(-Constants.C0p01)));
 
 
             var newtMesh = DemoMeshHelper.LoadModel(content, BufferPool, @"Content\newt.obj", new Vector3(5, 5, 5));
-            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(30, 20, 30), newtMesh.ComputeClosedInertia(10), Simulation.Shapes.Add(newtMesh), 0.01f));
+            Simulation.Bodies.Add(BodyDescription.CreateDynamic(new Vector3(30, 20, 30), newtMesh.ComputeClosedInertia(10), Simulation.Shapes.Add(newtMesh), Constants.C0p01));
 
             Simulation.Statics.Add(new StaticDescription(new Vector3(30, 15, 30), Simulation.Shapes.Add(new Box(15, 1, 15))));
 

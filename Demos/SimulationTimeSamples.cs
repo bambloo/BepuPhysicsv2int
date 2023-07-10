@@ -1,6 +1,6 @@
 ﻿using BepuPhysics;
 using BepuUtilities.Memory;
-using System;
+using BepuUtilities.Numerics;
 using System.Collections.Generic;
 using System.Text;
 
@@ -8,11 +8,11 @@ namespace Demos
 {
     public struct TimelineStats
     {
-        public double Total;
-        public double Average;
-        public double Min;
-        public double Max;
-        public double StdDev;
+        public Number Total;
+        public Number Average;
+        public Number Min;
+        public Number Max;
+        public Number StdDev;
     }
     
     /// <summary>

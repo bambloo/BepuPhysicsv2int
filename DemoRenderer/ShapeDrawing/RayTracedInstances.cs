@@ -1,5 +1,4 @@
-﻿using System.Numerics;
-
+﻿
 namespace DemoRenderer.ShapeDrawing
 {
     /// <summary>
@@ -7,9 +6,9 @@ namespace DemoRenderer.ShapeDrawing
     /// </summary>
     public struct SphereInstance
     {
-        public Vector3 Position;
+        public System.Numerics.Vector3 Position;
         public float Radius;
-        public Vector3 PackedOrientation;
+        public System.Numerics.Vector3 PackedOrientation;
         public uint PackedColor;
     }
     /// <summary>
@@ -17,7 +16,7 @@ namespace DemoRenderer.ShapeDrawing
     /// </summary>
     public struct CapsuleInstance
     {
-        public Vector3 Position;
+        public System.Numerics.Vector3 Position;
         public float Radius;
         public ulong PackedOrientation;
         public float HalfLength;
@@ -28,7 +27,7 @@ namespace DemoRenderer.ShapeDrawing
     /// </summary>
     public struct CylinderInstance
     {
-        public Vector3 Position;
+        public System.Numerics.Vector3 Position;
         public float Radius;
         public ulong PackedOrientation;
         public float HalfLength;

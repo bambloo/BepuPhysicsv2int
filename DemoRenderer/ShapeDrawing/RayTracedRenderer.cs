@@ -1,9 +1,11 @@
 ﻿using BepuUtilities;
+
 using DemoContentLoader;
 using SharpDX.Direct3D11;
 using System;
-using System.Numerics;
+
 using System.Runtime.InteropServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace DemoRenderer.ShapeDrawing
 {
@@ -12,33 +14,33 @@ namespace DemoRenderer.ShapeDrawing
     struct RayTracedVertexConstants
     {
         [FieldOffset(0)]
-        public Matrix Projection;
+        public MatrixFloat Projection;
         [FieldOffset(64)]
-        public Vector3 CameraPosition;
+        public System.Numerics.Vector3 CameraPosition;
         [FieldOffset(76)]
         public float NearClip;
         [FieldOffset(80)]
-        public Vector3 CameraRight;
+        public System.Numerics.Vector3 CameraRight;
         [FieldOffset(96)]
-        public Vector3 CameraUp;
+        public System.Numerics.Vector3 CameraUp;
         [FieldOffset(112)]
-        public Vector3 CameraBackward;
+        public System.Numerics.Vector3 CameraBackward;
     }
     [StructLayout(LayoutKind.Explicit, Size = 64)]
     struct RayTracedPixelConstants
     {
         [FieldOffset(0)]
-        public Vector3 CameraRight;
+        public System.Numerics.Vector3 CameraRight;
         [FieldOffset(12)]
         public float NearClip;
         [FieldOffset(16)]
-        public Vector3 CameraUp;
+        public System.Numerics.Vector3 CameraUp;
         [FieldOffset(28)]
         public float FarClip;
         [FieldOffset(32)]
-        public Vector3 CameraBackward;
+        public System.Numerics.Vector3 CameraBackward;
         [FieldOffset(48)]
-        public Vector2 PixelSizeAtUnitPlane;
+        public System.Numerics.Vector2 PixelSizeAtUnitPlane;
 
     }
     public class RayTracedRenderer<TInstance> : IDisposable where TInstance : struct
@@ -77,21 +79,21 @@ namespace DemoRenderer.ShapeDrawing
                 Projection = Matrix.Transpose(camera.Projection), //compensate for the shader packing.
                 CameraPosition = camera.Position,
                 CameraRight = camera.Right,
-                NearClip = camera.NearClip,
+                NearClip = (float)camera.NearClip,
                 CameraUp = camera.Up,
                 CameraBackward = camera.Backward,
             };
             vertexConstants.Update(context, ref vertexConstantsData);
-            var viewportHeight = 2 * (float)Math.Tan(camera.FieldOfView / 2);
+            var viewportHeight = 2 * Math.Tan(camera.FieldOfView / 2);
             var viewportWidth = viewportHeight * camera.AspectRatio;
             var pixelConstantsData = new RayTracedPixelConstants
             {
                 CameraRight = camera.Right,
-                NearClip = camera.NearClip,
+                NearClip = (float)camera.NearClip,
                 CameraUp = camera.Up,
-                FarClip = camera.FarClip,
+                FarClip = (float)camera.FarClip,
                 CameraBackward = camera.Backward,
-                PixelSizeAtUnitPlane = new Vector2(viewportWidth / screenResolution.X, viewportHeight / screenResolution.Y)
+                PixelSizeAtUnitPlane = new System.Numerics.Vector2((float)(viewportWidth / screenResolution.X), (float)(viewportHeight / screenResolution.Y))
             };
             pixelConstants.Update(context, ref pixelConstantsData);
 

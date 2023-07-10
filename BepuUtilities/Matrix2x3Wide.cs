@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Numerics;
+using BepuUtilities.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -95,7 +95,7 @@ namespace BepuUtilities
         /// <param name="scale">Scaling value to apply to the matrix's components.</param>
         /// <param name="result">Resulting matrix with scaled components.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Scale(in Matrix2x3Wide m, in Vector<float> scale, out Matrix2x3Wide result)
+        public static void Scale(in Matrix2x3Wide m, in Vector<Number> scale, out Matrix2x3Wide result)
         {
             result.X.X = m.X.X * scale;
             result.X.Y = m.X.Y * scale;

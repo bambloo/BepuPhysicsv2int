@@ -1,12 +1,9 @@
 ﻿using BepuPhysics.Collidables;
 using BepuUtilities;
 using BepuUtilities.Memory;
-using System;
-using System.Collections.Generic;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace BepuPhysics.CollisionDetection.CollisionTasks
 {
@@ -20,7 +17,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
         where TCompoundB : struct, IBoundsQueryableCompound
     {
 
-        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, float dt, out CompoundPairOverlaps overlaps)
+        public unsafe void FindLocalOverlaps(ref Buffer<BoundsTestedPair> pairs, int pairCount, BufferPool pool, Shapes shapes, Number dt, out CompoundPairOverlaps overlaps)
         {
             var totalCompoundChildCount = 0;
             for (int i = 0; i < pairCount; ++i)
@@ -53,17 +50,17 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
             Unsafe.SkipInit(out Vector3Wide relativeLinearVelocityA);
             Unsafe.SkipInit(out Vector3Wide angularVelocityA);
             Unsafe.SkipInit(out Vector3Wide angularVelocityB);
-            Unsafe.SkipInit(out Vector<float> maximumAllowedExpansion);
-            Unsafe.SkipInit(out Vector<float> maximumRadius);
-            Unsafe.SkipInit(out Vector<float> maximumAngularExpansion);
+            Unsafe.SkipInit(out Vector<Number> maximumAllowedExpansion);
+            Unsafe.SkipInit(out Vector<Number> maximumRadius);
+            Unsafe.SkipInit(out Vector<Number> maximumAngularExpansion);
             Unsafe.SkipInit(out RigidPoseWide localPosesA);
             Unsafe.SkipInit(out Vector3Wide mins);
             Unsafe.SkipInit(out Vector3Wide maxes);
-            for (int i = 0; i < totalCompoundChildCount; i += Vector<float>.Count)
+            for (int i = 0; i < totalCompoundChildCount; i += Vector<Number>.Count)
             {
                 var count = totalCompoundChildCount - i;
-                if (count > Vector<float>.Count)
-                    count = Vector<float>.Count;
+                if (count > Vector<Number>.Count)
+                    count = Vector<Number>.Count;
 
                 //Compute the local bounding boxes using wide operations for the expansion work.
                 //Doing quite a bit of gather work (and still quite a bit of scalar work). Very possible that a scalar path could win. TODO: test that.
@@ -77,7 +74,7 @@ namespace BepuPhysics.CollisionDetection.CollisionTasks
                     Vector3Wide.WriteFirst(subpair.Pair->RelativeLinearVelocityA, ref GatherScatter.GetOffsetInstance(ref relativeLinearVelocityA, j));
                     Vector3Wide.WriteFirst(subpair.Pair->AngularVelocityA, ref GatherScatter.GetOffsetInstance(ref angularVelocityA, j));
                     Vector3Wide.WriteFirst(subpair.Pair->AngularVelocityB, ref GatherScatter.GetOffsetInstance(ref angularVelocityB, j));
-                    Unsafe.Add(ref Unsafe.As<Vector<float>, float>(ref maximumAllowedExpansion), j) = subpair.Pair->MaximumExpansion;
+                    Unsafe.Add(ref Unsafe.As<Vector<Number>, Number>(ref maximumAllowedExpansion), j) = subpair.Pair->MaximumExpansion;
 
                     RigidPoseWide.WriteFirst(CompoundChild.AsPose(ref *subpair.Child), ref GatherScatter.GetOffsetInstance(ref localPosesA, j));
                 }

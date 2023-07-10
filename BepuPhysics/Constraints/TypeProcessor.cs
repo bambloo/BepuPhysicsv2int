@@ -1,12 +1,11 @@
-﻿using BepuUtilities.Memory;
+﻿using BepuUtilities;
+using BepuUtilities.Collections;
+using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using BepuUtilities.Collections;
-using BepuUtilities;
-using System.Runtime.Intrinsics;
-using System.Runtime.Intrinsics.X86;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Constraints
 {
@@ -24,7 +23,7 @@ namespace BepuPhysics.Constraints
     public abstract class TypeProcessor
     {
         //TODO: Having this in the base class actually complicates the implementation of some special constraint types. Consider an 'articulation' subsolver that involves
-        //N bodies, for N > Vector<float>.Count * 2. You may want to do SIMD internally in such a case, so there would be no 'bundles' at this level. Worry about that later.
+        //N bodies, for N > Vector<Number>.Count * 2. You may want to do SIMD internally in such a case, so there would be no 'bundles' at this level. Worry about that later.
 
         //We cache type id and bodies per constraint to avoid virtual calls.
         protected int typeId;
@@ -135,20 +134,20 @@ namespace BepuPhysics.Constraints
 
         [Conditional("DEBUG")]
         protected abstract void ValidateAccumulatedImpulsesSizeInBytes(int sizeInBytes);
-        public unsafe void EnumerateAccumulatedImpulses<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<float>
+        public unsafe void EnumerateAccumulatedImpulses<TEnumerator>(ref TypeBatch typeBatch, int indexInTypeBatch, ref TEnumerator enumerator) where TEnumerator : IForEach<Number>
         {
             BundleIndexing.GetBundleIndices(indexInTypeBatch, out var bundleIndex, out var innerIndex);
-            var bundleSizeInFloats = ConstrainedDegreesOfFreedom * Vector<float>.Count;
+            var bundleSizeInFloats = ConstrainedDegreesOfFreedom * Vector<Number>.Count;
             ValidateAccumulatedImpulsesSizeInBytes(bundleSizeInFloats * 4);
-            var impulseAddress = (float*)typeBatch.AccumulatedImpulses.Memory + (bundleIndex * bundleSizeInFloats + innerIndex);
+            var impulseAddress = (Number*)typeBatch.AccumulatedImpulses.Memory + (bundleIndex * bundleSizeInFloats + innerIndex);
             enumerator.LoopBody(*impulseAddress);
             for (int i = 1; i < ConstrainedDegreesOfFreedom; ++i)
             {
-                impulseAddress += Vector<float>.Count;
+                impulseAddress += Vector<Number>.Count;
                 enumerator.LoopBody(*impulseAddress);
             }
         }
-        public abstract void ScaleAccumulatedImpulses(ref TypeBatch typeBatch, float scale);
+        public abstract void ScaleAccumulatedImpulses(ref TypeBatch typeBatch, Number scale);
 
         /// <summary>
         /// Updates a type batch's body index references for the movement of a body in memory.
@@ -203,17 +202,17 @@ namespace BepuPhysics.Constraints
 
         public abstract void WarmStart<TIntegratorCallbacks, TBatchIntegrationMode, TAllowPoseIntegration>(ref TypeBatch typeBatch, ref Buffer<IndexSet> integrationFlags, Bodies bodies,
             ref TIntegratorCallbacks poseIntegratorCallbacks,
-            float dt, float inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
+            Number dt, Number inverseDt, int startBundle, int exclusiveEndBundle, int workerIndex)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
             where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode
             where TAllowPoseIntegration : unmanaged, IBatchPoseIntegrationAllowed;
-        public abstract void Solve(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int exclusiveEndBundle);
+        public abstract void Solve(ref TypeBatch typeBatch, Bodies bodies, Number dt, Number inverseDt, int startBundle, int exclusiveEndBundle);
 
         /// <summary>
         /// Gets whether this type requires incremental updates for each substep in a frame beyond the first.
         /// </summary>
         public abstract bool RequiresIncrementalSubstepUpdates { get; }
-        public virtual void IncrementallyUpdateForSubstep(ref TypeBatch typeBatch, Bodies bodies, float dt, float inverseDt, int startBundle, int end)
+        public virtual void IncrementallyUpdateForSubstep(ref TypeBatch typeBatch, Bodies bodies, Number dt, Number inverseDt, int startBundle, int end)
         {
             Debug.Fail("An incremental update was scheduled for a type batch that does not have a contact data update implementation.");
         }
@@ -222,7 +221,7 @@ namespace BepuPhysics.Constraints
         internal static int GetCountInBundle(ref TypeBatch typeBatch, int bundleStartIndex)
         {
             //TODO: May want to check codegen on this. Min vs explicit branch. Theoretically, it could do this branchlessly...
-            return Math.Min(Vector<float>.Count, typeBatch.ConstraintCount - (bundleStartIndex << BundleIndexing.VectorShift));
+            return Math.Min(Vector<Number>.Count, typeBatch.ConstraintCount - (bundleStartIndex << BundleIndexing.VectorShift));
         }
 
     }
@@ -245,8 +244,8 @@ namespace BepuPhysics.Constraints
             get
             {
                 //We're making an assumption about the layout of memory here. It's not guaranteed to be valid, but it does happen to be for all existing and planned constraints.
-                var dofCount = Unsafe.SizeOf<TAccumulatedImpulse>() / (4 * Vector<float>.Count);
-                Debug.Assert(dofCount * 4 * Vector<float>.Count == Unsafe.SizeOf<TAccumulatedImpulse>(), "One of the assumptions of this DOF calculator is broken. Fix this!");
+                var dofCount = Unsafe.SizeOf<TAccumulatedImpulse>() / (4 * Vector<Number>.Count);
+                Debug.Assert(dofCount * 4 * Vector<Number>.Count == Unsafe.SizeOf<TAccumulatedImpulse>(), "One of the assumptions of this DOF calculator is broken. Fix this!");
                 return dofCount;
             }
         }
@@ -255,11 +254,11 @@ namespace BepuPhysics.Constraints
             Debug.Assert(sizeInBytes == Unsafe.SizeOf<TAccumulatedImpulse>(), "Your assumptions about memory layout and size are wrong for this type! Fix it!");
         }
 
-        public override unsafe void ScaleAccumulatedImpulses(ref TypeBatch typeBatch, float scale)
+        public override unsafe void ScaleAccumulatedImpulses(ref TypeBatch typeBatch, Number scale)
         {
-            var dofCount = Unsafe.SizeOf<TAccumulatedImpulse>() / Unsafe.SizeOf<Vector<float>>();
-            var broadcastedScale = new Vector<float>(scale);
-            ref var impulsesBase = ref Unsafe.AsRef<Vector<float>>(typeBatch.AccumulatedImpulses.Memory);
+            var dofCount = Unsafe.SizeOf<TAccumulatedImpulse>() / Unsafe.SizeOf<Vector<Number>>();
+            var broadcastedScale = new Vector<Number>(scale);
+            ref var impulsesBase = ref Unsafe.AsRef<Vector<Number>>(typeBatch.AccumulatedImpulses.Memory);
             for (int i = 0; i < dofCount; ++i)
             {
                 Unsafe.Add(ref impulsesBase, i) *= broadcastedScale;
@@ -325,7 +324,7 @@ namespace BepuPhysics.Constraints
             ref var bundle = ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, bundleIndex);
             AddBodyReferencesLane(ref bundle, innerIndex, bodyIndices);
             //Clear the slot's accumulated impulse. The backing memory could be initialized to any value.
-            GatherScatter.ClearLane<TAccumulatedImpulse, float>(ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
+            GatherScatter.ClearLane<TAccumulatedImpulse, Number>(ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, bundleIndex), innerIndex);
             var bundleCount = typeBatch.BundleCount;
             Debug.Assert(typeBatch.PrestepData.Length >= bundleCount * Unsafe.SizeOf<TPrestepData>());
             Debug.Assert(typeBatch.BodyReferences.Length >= bundleCount * Unsafe.SizeOf<TBodyReferences>());
@@ -435,11 +434,11 @@ namespace BepuPhysics.Constraints
         [Conditional("DEBUG")]
         void ValidateAccumulatedImpulses(ref TypeBatch typeBatch)
         {
-            var dofCount = Unsafe.SizeOf<TAccumulatedImpulse>() / Unsafe.SizeOf<Vector<float>>();
+            var dofCount = Unsafe.SizeOf<TAccumulatedImpulse>() / Unsafe.SizeOf<Vector<Number>>();
             for (int i = 0; i < typeBatch.BundleCount; ++i)
             {
                 var impulseBundle = typeBatch.AccumulatedImpulses.As<TAccumulatedImpulse>()[i];
-                ref var impulses = ref Unsafe.As<TAccumulatedImpulse, Vector<float>>(ref impulseBundle);
+                ref var impulses = ref Unsafe.As<TAccumulatedImpulse, Vector<Number>>(ref impulseBundle);
                 var mask = Vector.GreaterThanOrEqual(Unsafe.As<TBodyReferences, Vector<int>>(ref typeBatch.BodyReferences.As<TBodyReferences>()[i]), Vector<int>.Zero);
                 for (int dofIndex = 0; dofIndex < dofCount; ++dofIndex)
                 {
@@ -533,7 +532,7 @@ namespace BepuPhysics.Constraints
                 ref var bundle = ref Buffer<TBodyReferences>.Get(ref typeBatch.BodyReferences, bundleCount);
                 AddBodyReferencesLane(ref bundle, 0, encodedBodyIndices);
                 //Clear the slot's accumulated impulse. The backing memory could be initialized to any value.
-                GatherScatter.ClearLane<TAccumulatedImpulse, float>(ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, bundleCount), 0);
+                GatherScatter.ClearLane<TAccumulatedImpulse, Number>(ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, bundleCount), 0);
                 Debug.Assert(typeBatch.PrestepData.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TPrestepData>());
                 Debug.Assert(typeBatch.BodyReferences.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TBodyReferences>());
                 Debug.Assert(typeBatch.AccumulatedImpulses.Length >= typeBatch.BundleCount * Unsafe.SizeOf<TAccumulatedImpulse>());
@@ -554,7 +553,7 @@ namespace BepuPhysics.Constraints
             else
             {
                 //Clear the slot's accumulated impulse. The backing memory could be initialized to any value.
-                GatherScatter.ClearLane<TAccumulatedImpulse, float>(ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, targetBundleIndex), targetInnerIndex);
+                GatherScatter.ClearLane<TAccumulatedImpulse, Number>(ref Buffer<TAccumulatedImpulse>.Get(ref typeBatch.AccumulatedImpulses, targetBundleIndex), targetInnerIndex);
                 var indexInTypeBatch = targetBundleIndex * Vector<int>.Count + targetInnerIndex;
                 //If the constraint was added after the highest index currently existing constraint, the constraint count needs to be boosted.
                 typeBatch.ConstraintCount = Math.Max(indexInTypeBatch + 1, typeBatch.ConstraintCount);
@@ -1131,7 +1130,7 @@ namespace BepuPhysics.Constraints
             var bodiesPerConstraint = InternalBodiesPerConstraint;
             for (int bundleIndex = 0; bundleIndex < bundleCount; ++bundleIndex)
             {
-                var bundleSize = Math.Min(Vector<float>.Count, typeBatch.ConstraintCount - (bundleIndex << BundleIndexing.VectorShift));
+                var bundleSize = Math.Min(Vector<Number>.Count, typeBatch.ConstraintCount - (bundleIndex << BundleIndexing.VectorShift));
                 ref var bundleBase = ref Unsafe.As<TBodyReferences, Vector<int>>(ref bodyReferences[bundleIndex]);
                 for (int constraintBodyIndex = 0; constraintBodyIndex < bodiesPerConstraint; ++constraintBodyIndex)
                 {
@@ -1157,11 +1156,11 @@ namespace BepuPhysics.Constraints
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static BundleIntegrationMode BundleShouldIntegrate(int bundleIndex, in IndexSet integrationFlags, out Vector<int> integrationMask)
         {
-            Debug.Assert(Vector<float>.Count <= 32, "Wait, what? The integration mask isn't big enough to handle a vector this big.");
-            var constraintStartIndex = bundleIndex * Vector<float>.Count;
+            Debug.Assert(Vector<Number>.Count <= 32, "Wait, what? The integration mask isn't big enough to handle a vector this big.");
+            var constraintStartIndex = bundleIndex * Vector<Number>.Count;
             var flagBundleIndex = constraintStartIndex >> 6;
             var flagInnerIndex = constraintStartIndex - (flagBundleIndex << 6);
-            var flagMask = (1 << Vector<float>.Count) - 1;
+            var flagMask = (1 << Vector<Number>.Count) - 1;
             var scalarIntegrationMask = ((int)(integrationFlags.Flags[flagBundleIndex] >> flagInnerIndex)) & flagMask;
             if (scalarIntegrationMask == flagMask)
             {
@@ -1171,23 +1170,23 @@ namespace BepuPhysics.Constraints
             }
             else if (scalarIntegrationMask > 0)
             {
-                if (Vector<int>.Count == 4 || Vector<int>.Count == 8)
-                {
-                    Vector<int> selectors;
-                    if (Vector<int>.Count == 8)
-                    {
-                        selectors = Vector256.Create(1, 2, 4, 8, 16, 32, 64, 128).AsVector();
-                    }
-                    else
-                    {
-                        selectors = Vector128.Create(1, 2, 4, 8).AsVector();
-                    }
-                    var scalarBroadcast = new Vector<int>(scalarIntegrationMask);
-                    var selected = Vector.BitwiseAnd(selectors, scalarBroadcast);
-                    integrationMask = Vector.Equals(selected, selectors);
-                }
-                else
-                {
+                //if (Vector<int>.Count == 4 || Vector<int>.Count == 8)
+                //{
+                //    Vector<int> selectors;
+                //    if (Vector<int>.Count == 8)
+                //    {
+                //        selectors = Vector256.Create(1, 2, 4, 8, 16, 32, 64, 128).AsVector();
+                //    }
+                //    else
+                //    {
+                //        selectors = Vector128.Create(1, 2, 4, 8).AsVector();
+                //    }
+                //    var scalarBroadcast = new Vector<int>(scalarIntegrationMask);
+                //    var selected = Vector.BitwiseAnd(selectors, scalarBroadcast);
+                //    integrationMask = Vector.Equals(selected, selectors);
+                //}
+                //else
+                //{
                     //This is not a good implementation, but I don't know of any target platforms that will hit this.
                     //TODO: AVX512 being enabled by the runtime could force this path to be taken; it'll require an update!
                     Debug.Assert(Vector<int>.Count <= 8, "The vector path assumes that AVX512 is not supported, so this is hitting a fallback path.");
@@ -1197,7 +1196,7 @@ namespace BepuPhysics.Constraints
                         mask[i] = (scalarIntegrationMask & (1 << i)) > 0 ? -1 : 0;
                     }
                     integrationMask = new Vector<int>(mask);
-                }
+                //}
                 return BundleIntegrationMode.Partial;
             }
             integrationMask = default;
@@ -1205,7 +1204,7 @@ namespace BepuPhysics.Constraints
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void IntegratePoseAndVelocity<TIntegratorCallbacks>(
-            ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, in BodyInertiaWide localInertia, float dt, in Vector<int> integrationMask,
+            ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, in BodyInertiaWide localInertia, Number dt, in Vector<int> integrationMask,
             ref Vector3Wide position, ref QuaternionWide orientation, ref BodyVelocityWide velocity,
             int workerIndex,
             out BodyInertiaWide inertia)
@@ -1216,7 +1215,7 @@ namespace BepuPhysics.Constraints
             //This ensures that velocities set externally are still solved before being integrated.
             //So, the solver runs velocity integration alone on the first substep. All later substeps then run pose + velocity, and then after the last substep, a final pose integration.
             //This is equivalent in ordering to running each substep as velocity, warmstart, solve, pose integration, but just shifting the execution context.
-            var dtWide = new Vector<float>(dt);
+            var dtWide = new Vector<Number>(dt);
             var newPosition = position + velocity.Linear * dtWide;
             //Note that we only take results for slots which actually need integration. Reintegration would be an error.
             Vector3Wide.ConditionalSelect(integrationMask, newPosition, position, out position);
@@ -1226,25 +1225,25 @@ namespace BepuPhysics.Constraints
             if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
             {
                 var previousOrientation = orientation;
-                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out newOrientation);
+                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<Number>(Constants.C0p5), out newOrientation);
                 QuaternionWide.ConditionalSelect(integrationMask, newOrientation, orientation, out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
                 PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia.InverseInertiaTensor, inertia.InverseInertiaTensor, ref velocity.Angular);
             }
             else if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
             {
-                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out newOrientation);
+                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<Number>(Constants.C0p5), out newOrientation);
                 QuaternionWide.ConditionalSelect(integrationMask, newOrientation, orientation, out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
                 PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, dtWide);
             }
             else
             {
-                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<float>(0.5f), out newOrientation);
+                PoseIntegration.Integrate(orientation, velocity.Angular, dtWide * new Vector<Number>(Constants.C0p5), out newOrientation);
                 QuaternionWide.ConditionalSelect(integrationMask, newOrientation, orientation, out orientation);
                 PoseIntegration.RotateInverseInertia(localInertia.InverseInertiaTensor, orientation, out inertia.InverseInertiaTensor);
             }
-            integratorCallbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, integrationMask, workerIndex, new Vector<float>(dt), ref velocity);
+            integratorCallbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, integrationMask, workerIndex, new Vector<Number>(dt), ref velocity);
             //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
             Vector3Wide.ConditionalSelect(integrationMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
             Vector3Wide.ConditionalSelect(integrationMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);
@@ -1252,7 +1251,7 @@ namespace BepuPhysics.Constraints
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void IntegrateVelocity<TIntegratorCallbacks, TBatchIntegrationMode>(
-            ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, in BodyInertiaWide localInertia, float dt, in Vector<int> integrationMask,
+            ref TIntegratorCallbacks integratorCallbacks, ref Vector<int> bodyIndices, in BodyInertiaWide localInertia, Number dt, in Vector<int> integrationMask,
             in Vector3Wide position, in QuaternionWide orientation, ref BodyVelocityWide velocity,
             int workerIndex,
             out BodyInertiaWide inertia)
@@ -1264,30 +1263,30 @@ namespace BepuPhysics.Constraints
             if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentum)
             {
                 //Yes, that's integrating backwards to get a previous orientation to convert to momentum. Yup, that's a bit janky.
-                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<float>(dt * -0.5f), out var previousOrientation);
+                PoseIntegration.Integrate(orientation, velocity.Angular, new Vector<Number>(dt * -Constants.C0p5), out var previousOrientation);
                 PoseIntegration.IntegrateAngularVelocityConserveMomentum(previousOrientation, localInertia.InverseInertiaTensor, inertia.InverseInertiaTensor, ref velocity.Angular);
             }
             else if (integratorCallbacks.AngularIntegrationMode == AngularIntegrationMode.ConserveMomentumWithGyroscopicTorque)
             {
-                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, new Vector<float>(dt));
+                PoseIntegration.IntegrateAngularVelocityConserveMomentumWithGyroscopicTorque(orientation, localInertia.InverseInertiaTensor, ref velocity.Angular, new Vector<Number>(dt));
             }
             if (typeof(TBatchIntegrationMode) == typeof(BatchShouldConditionallyIntegrate))
             {
                 var previousVelocity = velocity;
-                integratorCallbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, integrationMask, workerIndex, new Vector<float>(dt), ref velocity);
+                integratorCallbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, integrationMask, workerIndex, new Vector<Number>(dt), ref velocity);
                 //It would be annoying to make the user handle masking velocity writes to inactive lanes, so we handle it internally.
                 Vector3Wide.ConditionalSelect(integrationMask, velocity.Linear, previousVelocity.Linear, out velocity.Linear);
                 Vector3Wide.ConditionalSelect(integrationMask, velocity.Angular, previousVelocity.Angular, out velocity.Angular);
             }
             else
             {
-                integratorCallbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, integrationMask, workerIndex, new Vector<float>(dt), ref velocity);
+                integratorCallbacks.IntegrateVelocity(bodyIndices, position, orientation, localInertia, integrationMask, workerIndex, new Vector<Number>(dt), ref velocity);
             }
         }
 
         //[MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static unsafe void GatherAndIntegrate<TIntegratorCallbacks, TBatchIntegrationMode, TAccessFilter, TShouldIntegratePoses>(
-            Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref Buffer<IndexSet> integrationFlags, int bodyIndexInConstraint, float dt, int workerIndex, int bundleIndex,
+            Bodies bodies, ref TIntegratorCallbacks integratorCallbacks, ref Buffer<IndexSet> integrationFlags, int bodyIndexInConstraint, Number dt, int workerIndex, int bundleIndex,
             ref Vector<int> bodyIndices, out Vector3Wide position, out QuaternionWide orientation, out BodyVelocityWide velocity, out BodyInertiaWide inertia)
             where TIntegratorCallbacks : struct, IPoseIntegratorCallbacks
             where TBatchIntegrationMode : unmanaged, IBatchIntegrationMode

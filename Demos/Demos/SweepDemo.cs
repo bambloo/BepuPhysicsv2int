@@ -4,13 +4,14 @@ using BepuPhysics.CollisionDetection;
 using BepuPhysics.Constraints;
 using BepuUtilities;
 using BepuUtilities.Collections;
+using BepuUtilities.Numerics;
 using DemoContentLoader;
 using DemoRenderer;
 using DemoRenderer.UI;
 using DemoUtilities;
 using System;
-using System.Numerics;
 using System.Runtime.CompilerServices;
+using MathF = BepuUtilities.Utils.MathF;
 
 namespace Demos.Demos
 {
@@ -34,7 +35,7 @@ namespace Demos.Demos
             camera.Pitch = 0;
             Simulation = Simulation.Create(BufferPool, new DemoNarrowPhaseCallbacks(new SpringSettings(30, 1)), new DemoPoseIntegratorCallbacks(new Vector3(0, -10, 0)), new SolveDescription(8, 1));
 
-            var box = new Box(2f, 2f, 2f);
+            var box = new Box(Constants.C0p3, Constants.C0p3, Constants.C0p3);
             var capsule = new Capsule(1f, 1f);
             var sphere = new Sphere(1.5f);
             var boxInertia = box.ComputeInertia(1);
@@ -54,7 +55,7 @@ namespace Demos.Demos
                     {
                         var location = new Vector3(5, 5, 5) * new Vector3(i, j, k) + new Vector3(-width * 2.5f, 2.5f, -length * 2.5f);
                         //CreateKinematic is just a helper function that sets the inertia to all zeroes. We'll set the inertia to the actual value in the following switch.
-                        var bodyDescription = BodyDescription.CreateKinematic(location, default, 0.1f);
+                        var bodyDescription = BodyDescription.CreateKinematic(location, default, Constants.C0p1);
                         switch (j % 3)
                         {
                             case 0:
@@ -94,7 +95,7 @@ namespace Demos.Demos
             //    {
             //        Continuity = new ContinuousDetectionSettings { Mode = ContinuousDetectionMode.Discrete },
             //        Shape = Simulation.Shapes.Add(new Box(100, 1, 100)),
-            //        SpeculativeMargin = 0.1f
+            //        SpeculativeMargin = Constants.C0p1
             //    },
             //    Pose = new RigidPose { Position = new Vector3(0, -1, 0), Orientation = Quaternion.Identity }
             //};
@@ -133,7 +134,7 @@ namespace Demos.Demos
         }
 
         unsafe void DrawSweep<TShape>(TShape shape, in RigidPose pose, in BodyVelocity velocity, int steps,
-            float t, Renderer renderer, Vector3 color)
+            Number t, Renderer renderer, Vector3 color)
             where TShape : struct, IShape
         {
             if (steps == 1)
@@ -164,7 +165,7 @@ namespace Demos.Demos
         unsafe void TestSweep<TShapeA, TShapeB>(
             TShapeA a, RigidPose poseA, in BodyVelocity velocityA,
             TShapeB b, RigidPose poseB, in BodyVelocity velocityB,
-            float maximumT, Renderer renderer)
+            Number maximumT, Renderer renderer)
             where TShapeA : struct, IShape
             where TShapeB : struct, IShape
         {
@@ -176,7 +177,7 @@ namespace Demos.Demos
             var intersected = task.Sweep(
                 Unsafe.AsPointer(ref a), a.TypeId, poseA.Orientation, velocityA,
                 Unsafe.AsPointer(ref b), b.TypeId, poseB.Position - poseA.Position, poseB.Orientation, velocityB,
-                maximumT, 1e-2f, 1e-5f, 25, ref filter, Simulation.Shapes, Simulation.NarrowPhase.SweepTaskRegistry, BufferPool,
+                maximumT, Constants.C1em2, 1e-5f, 25, ref filter, Simulation.Shapes, Simulation.NarrowPhase.SweepTaskRegistry, BufferPool,
                 out var t0, out var t1, out var hitLocation, out var hitNormal);
             hitLocation += poseA.Position;
 
@@ -195,22 +196,21 @@ namespace Demos.Demos
             }
         }
 
-        public override void Update(Window window, Camera camera, Input input, float dt)
+        public override void Update(Window window, Camera camera, Input input, Number dt)
         {
             base.Update(window, camera, input, dt);
 
             if (!input.WasDown(OpenTK.Input.Key.P))
-                animationT = (animationT + TimestepDuration) % (128);
+                animationT = (Number)((double)(animationT + TimestepDuration) % (128));
         }
 
-        float animationT;
-
+        Number animationT;
 
         struct SceneSweepHitHandler : ISweepHitHandler
         {
             public Vector3 HitLocation;
             public Vector3 HitNormal;
-            public float T;
+            public Number T;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool AllowTest(CollidableReference collidable)
@@ -225,7 +225,7 @@ namespace Demos.Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnHit(ref float maximumT, float t, Vector3 hitLocation, Vector3 hitNormal, CollidableReference collidable)
+            public void OnHit(ref Number maximumT, Number t, Vector3 hitLocation, Vector3 hitNormal, CollidableReference collidable)
             {
                 //Changing the maximum T value prevents the traversal from visiting any leaf nodes more distant than that later in the traversal.
                 //It is effectively an optimization that you can use if you only care about the time of first impact.
@@ -240,7 +240,7 @@ namespace Demos.Demos
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnHitAtZeroT(ref float maximumT, CollidableReference collidable)
+            public void OnHitAtZeroT(ref Number maximumT, CollidableReference collidable)
             {
                 maximumT = 0;
                 T = 0;
@@ -284,12 +284,12 @@ namespace Demos.Demos
             var mesh = DemoMeshHelper.CreateDeformedPlane(planeWidth, planeHeight,
                 (int x, int y) =>
                 {
-                    return new Vector3(x - 1.5f, 0.1f * MathF.Cos(x) * MathF.Sin(y), y - 1.5f);
+                    return new Vector3(x - 1.5f, Constants.C0p1 * MathF.Cos(x) * MathF.Sin(y), y - 1.5f);
                 }, new Vector3(1, 2, 1), BufferPool);
 
 
             var triangle = new Triangle(new Vector3(0, 0, 0), new Vector3(2, 0, -1), new Vector3(-1, 0, 1.5f));
-            var triangleCenter = (triangle.A + triangle.B + triangle.C) / 3f;
+            var triangleCenter = (triangle.A + triangle.B + triangle.C) / Constants.C3;
             triangle.A -= triangleCenter;
             triangle.B -= triangleCenter;
             triangle.C -= triangleCenter;
@@ -374,15 +374,15 @@ namespace Demos.Demos
                 Matrix3x3.Transform(localDirection, rotation, out var sweepDirection);
 
                 SceneSweepHitHandler hitHandler = default;
-                hitHandler.T = float.MaxValue;
+                hitHandler.T = Number.MaxValue;
                 var shape = new Box(1, 2, 1.5f);
                 var initialPose = new RigidPose { Position = sweepOrigin, Orientation = Quaternion.Identity };
                 var sweepVelocity = new BodyVelocity { Linear = sweepDirection };
                 Simulation.Sweep(shape, initialPose, sweepVelocity, 10, BufferPool, ref hitHandler);
                 DrawSweep(shape, initialPose, sweepVelocity, 20, hitHandler.T, renderer,
-                    hitHandler.T < float.MaxValue ? new Vector3(0.25f, 1, 0.25f) : new Vector3(1, 0.25f, 0.25f));
+                    hitHandler.T < Number.MaxValue ? new Vector3(Constants.C0p25, 1, Constants.C0p25) : new Vector3(1, Constants.C0p25, Constants.C0p25));
 
-                if (hitHandler.T < float.MaxValue && hitHandler.T > 0)
+                if (hitHandler.T < Number.MaxValue && hitHandler.T > 0)
                 {
                     DrawImpact(renderer, ref hitHandler.HitLocation, ref hitHandler.HitNormal);
                 }

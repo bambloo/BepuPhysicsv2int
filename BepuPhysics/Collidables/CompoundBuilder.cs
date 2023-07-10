@@ -1,12 +1,10 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace BepuPhysics.Collidables
 {
@@ -26,7 +24,7 @@ namespace BepuPhysics.Collidables
             /// Weight associated with this child. Acts as the child's mass when interpreted as a dynamic compound.
             /// When interpreted as kinematic with recentering, it is used as a local pose weight to compute the center of rotation.
             /// </summary>
-            public float Weight;
+            public Number Weight;
             /// <summary>
             /// Inverse inertia tensor of the child in its local space.
             /// </summary>
@@ -55,7 +53,7 @@ namespace BepuPhysics.Collidables
         /// <param name="localPose">Pose of the shape in the compound's local space.</param>
         /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
         /// <param name="localInverseInertia">Inverse inertia tensor of the shape being added in its local space. This is assumed to already be scaled as desired by the weight.</param>
-        public void Add(TypedIndex shape, in RigidPose localPose, in Symmetric3x3 localInverseInertia, float weight)
+        public void Add(TypedIndex shape, in RigidPose localPose, in Symmetric3x3 localInverseInertia, Number weight)
         {
             Debug.Assert(Compound.ValidateChildIndex(shape, Shapes));
             ref var child = ref Children.Allocate(Pool);
@@ -76,7 +74,7 @@ namespace BepuPhysics.Collidables
         /// <param name="shape">Index of the shape to add.</param>
         /// <param name="localPose">Pose of the shape in the compound's local space.</param>
         /// <param name="weight">Weight of the shape used for computing the center of rotation.</param>
-        public void AddForKinematic(TypedIndex shape, in RigidPose localPose, float weight)
+        public void AddForKinematic(TypedIndex shape, in RigidPose localPose, Number weight)
         {
             Debug.Assert(Compound.ValidateChildIndex(shape, Shapes));
             ref var child = ref Children.Allocate(Pool);
@@ -94,7 +92,7 @@ namespace BepuPhysics.Collidables
         /// <param name="localPose">Pose of the shape in the compound's local space.</param>
         /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass and scales the inertia tensor. 
         /// Otherwise, it is used for recentering.</param>
-        public void Add<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : unmanaged, IConvexShape
+        public void Add<TShape>(in TShape shape, in RigidPose localPose, Number weight) where TShape : unmanaged, IConvexShape
         {
             Add(Shapes.Add(shape), localPose, shape.ComputeInertia(weight).InverseInertiaTensor, weight);
         }
@@ -106,7 +104,7 @@ namespace BepuPhysics.Collidables
         /// <param name="shape">Shape to add.</param>
         /// <param name="localPose">Pose of the shape in the compound's local space.</param>
         /// <param name="weight">Weight of the shape. If the compound is interpreted as a dynamic, this will be used as the mass. Otherwise, it is used for recentering.</param>
-        public void AddForKinematic<TShape>(in TShape shape, in RigidPose localPose, float weight) where TShape : unmanaged, IConvexShape
+        public void AddForKinematic<TShape>(in TShape shape, in RigidPose localPose, Number weight) where TShape : unmanaged, IConvexShape
         {
             AddForKinematic(Shapes.Add(shape), localPose, weight);
         }
@@ -119,7 +117,7 @@ namespace BepuPhysics.Collidables
         /// <param name="mass">Mass of the point.</param>
         /// <param name="contribution">Contribution to the inertia tensor.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void GetOffsetInertiaContribution(Vector3 offset, float mass, out Symmetric3x3 contribution)
+        public static void GetOffsetInertiaContribution(Vector3 offset, Number mass, out Symmetric3x3 contribution)
         {
             var innerProduct = Vector3.Dot(offset, offset);
             contribution.XX = mass * (innerProduct - offset.X * offset.X);
@@ -140,7 +138,7 @@ namespace BepuPhysics.Collidables
         public void BuildDynamicCompound(out Buffer<CompoundChild> children, out BodyInertia inertia, out Vector3 center)
         {
             center = new Vector3();
-            float totalWeight = 0;
+            Number totalWeight = 0;
             for (int i = 0; i < Children.Count; ++i)
             {
                 center += Children[i].LocalPose.Position * Children[i].Weight;
@@ -148,7 +146,7 @@ namespace BepuPhysics.Collidables
             }
             Debug.Assert(totalWeight > 0, "The compound as a whole must have nonzero weight when using a recentering build. The center is undefined.");
 
-            inertia.InverseMass = 1f / totalWeight;
+            inertia.InverseMass = Constants.C1 / totalWeight;
             center *= inertia.InverseMass;
             Pool.Take(Children.Count, out children);
             Symmetric3x3 summedInertia = default;
@@ -171,14 +169,14 @@ namespace BepuPhysics.Collidables
         /// <param name="inertia">Combined inertia of the compound.</param>
         public void BuildDynamicCompound(out Buffer<CompoundChild> children, out BodyInertia inertia)
         {
-            float totalWeight = 0;
+            Number totalWeight = 0;
             for (int i = 0; i < Children.Count; ++i)
             {
                 totalWeight += Children[i].Weight;
             }
             Debug.Assert(totalWeight > 0, "The compound as a whole must have nonzero weight when creating a dynamic compound.");
 
-            inertia.InverseMass = 1f / totalWeight;
+            inertia.InverseMass = Constants.C1 / totalWeight;
             Pool.Take(Children.Count, out children);
             Symmetric3x3 summedInertia = default;
             for (int i = 0; i < Children.Count; ++i)
@@ -201,7 +199,7 @@ namespace BepuPhysics.Collidables
         /// <param name="mass">Mass of the child.</param>
         /// <returns>Inertia contribution of the child to a compound given its relative pose.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Symmetric3x3 ComputeInertiaForChild(in RigidPose pose, Symmetric3x3 inverseLocalInertia, float mass)
+        public static Symmetric3x3 ComputeInertiaForChild(in RigidPose pose, Symmetric3x3 inverseLocalInertia, Number mass)
         {
             return ComputeInertiaForChild(pose.Position, pose.Orientation, inverseLocalInertia, mass);
         }
@@ -214,7 +212,7 @@ namespace BepuPhysics.Collidables
         /// <param name="mass">Mass of the child.</param>
         /// <returns>Inertia contribution of the child to a compound given its relative pose.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Symmetric3x3 ComputeInertiaForChild(Vector3 position, Quaternion orientation, Symmetric3x3 inverseLocalInertia, float mass)
+        public static Symmetric3x3 ComputeInertiaForChild(Vector3 position, Quaternion orientation, Symmetric3x3 inverseLocalInertia, Number mass)
         {
             GetOffsetInertiaContribution(position, mass, out var offsetContribution);
             //This assumes the given inertia is nonsingular. That should be a valid assumption, unless the user is trying to supply an axis-locked tensor.
@@ -235,10 +233,10 @@ namespace BepuPhysics.Collidables
         /// <param name="inverseLocalInertias">Inverse inertias of the children, each in the child's local space. Assumed to have already been premultiplied by the mass of the child.</param>
         /// <param name="childMasses">Masses of each child in the compound.</param>
         /// <returns><see cref="BodyInertia"/> of the compound.</returns>
-        public static BodyInertia ComputeInverseInertia(Span<CompoundChild> children, Span<Symmetric3x3> inverseLocalInertias, Span<float> childMasses)
+        public static BodyInertia ComputeInverseInertia(Span<CompoundChild> children, Span<Symmetric3x3> inverseLocalInertias, Span<Number> childMasses)
         {
             Symmetric3x3 summedInertia = default;
-            float massSum = 0;
+            Number massSum = 0;
             for (int i = 0; i < children.Length; ++i)
             {
                 ref var child = ref children[i];
@@ -247,7 +245,7 @@ namespace BepuPhysics.Collidables
             }
             BodyInertia inertia;
             Symmetric3x3.Invert(summedInertia, out inertia.InverseInertiaTensor);
-            inertia.InverseMass = 1f / massSum;
+            inertia.InverseMass = Constants.C1 / massSum;
             return inertia;
         }
 
@@ -258,10 +256,10 @@ namespace BepuPhysics.Collidables
         /// <param name="inverseLocalInertias">Inverse inertias of the children, each in the child's local space. Assumed to have already been premultiplied by the mass of the child.</param>
         /// <param name="childMasses">Masses of each child in the compound.</param>
         /// <returns><see cref="BodyInertia"/> of the compound.</returns>
-        public static BodyInertia ComputeInverseInertia(Span<RigidPose> childPoses, Span<Symmetric3x3> inverseLocalInertias, Span<float> childMasses)
+        public static BodyInertia ComputeInverseInertia(Span<RigidPose> childPoses, Span<Symmetric3x3> inverseLocalInertias, Span<Number> childMasses)
         {
             Symmetric3x3 summedInertia = default;
-            float massSum = 0;
+            Number massSum = 0;
             for (int i = 0; i < childPoses.Length; ++i)
             {
                 summedInertia += ComputeInertiaForChild(childPoses[i], inverseLocalInertias[i], childMasses[i]);
@@ -269,7 +267,7 @@ namespace BepuPhysics.Collidables
             }
             BodyInertia inertia;
             Symmetric3x3.Invert(summedInertia, out inertia.InverseInertiaTensor);
-            inertia.InverseMass = 1f / massSum;
+            inertia.InverseMass = Constants.C1 / massSum;
             return inertia;
         }
         /// <summary>
@@ -279,16 +277,16 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of the children in the compound.</param>
         /// <param name="inverseMass">Inverse of the sum of all child masses.</param>
         /// <returns>The compound's center of mass.</returns>
-        public static Vector3 ComputeCenterOfMass(Span<CompoundChild> children, Span<float> childMasses, out float inverseMass)
+        public static Vector3 ComputeCenterOfMass(Span<CompoundChild> children, Span<Number> childMasses, out Number inverseMass)
         {
             Vector3 sum = default;
-            float massSum = 0;
+            Number massSum = 0;
             for (int i = 0; i < children.Length; ++i)
             {
                 sum += childMasses[i] * children[i].LocalPosition;
                 massSum += childMasses[i];
             }
-            inverseMass = 1f / massSum;
+            inverseMass = Constants.C1 / massSum;
             return sum * inverseMass;
         }
         /// <summary>
@@ -298,16 +296,16 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of the children in the compound.</param>
         /// <param name="inverseMass">Inverse of the sum of all child masses.</param>
         /// <returns>The compound's center of mass.</returns>
-        public static Vector3 ComputeCenterOfMass(Span<RigidPose> childPoses, Span<float> childMasses, out float inverseMass)
+        public static Vector3 ComputeCenterOfMass(Span<RigidPose> childPoses, Span<Number> childMasses, out Number inverseMass)
         {
             Vector3 sum = default;
-            float massSum = 0;
+            Number massSum = 0;
             for (int i = 0; i < childPoses.Length; ++i)
             {
                 sum += childMasses[i] * childPoses[i].Position;
                 massSum += childMasses[i];
             }
-            inverseMass = 1f / massSum;
+            inverseMass = Constants.C1 / massSum;
             return sum * inverseMass;
         }
         /// <summary>
@@ -316,7 +314,7 @@ namespace BepuPhysics.Collidables
         /// <param name="children">Children of the compound.</param>
         /// <param name="childMasses">Masses of the children in the compound.</param>
         /// <returns>The compound's center of mass.</returns>
-        public static Vector3 ComputeCenterOfMass(Span<CompoundChild> children, Span<float> childMasses) => ComputeCenterOfMass(children, childMasses, out _);
+        public static Vector3 ComputeCenterOfMass(Span<CompoundChild> children, Span<Number> childMasses) => ComputeCenterOfMass(children, childMasses, out _);
 
         /// <summary>
         /// Computes the center of mass of a compound.
@@ -324,7 +322,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childPoses">Poses of the children in the compound.</param>
         /// <param name="childMasses">Masses of the children in the compound.</param>
         /// <returns>The compound's center of mass.</returns>
-        public static Vector3 ComputeCenterOfMass(Span<RigidPose> childPoses, Span<float> childMasses) => ComputeCenterOfMass(childPoses, childMasses, out _);
+        public static Vector3 ComputeCenterOfMass(Span<RigidPose> childPoses, Span<Number> childMasses) => ComputeCenterOfMass(childPoses, childMasses, out _);
 
         /// <summary>
         /// Computes the inertia for a set of compound children based on their poses and the provided inverse inertias. Recenters the children onto the computed center of mass.
@@ -334,7 +332,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of each child in the compound.</param>
         /// <param name="centerOfMass">Computed center of mass that was subtracted from the child positions.</param>
         /// <returns><see cref="BodyInertia"/> of the compound.</returns>
-        public static BodyInertia ComputeInverseInertia(Span<CompoundChild> children, Span<Symmetric3x3> inverseLocalInertias, Span<float> childMasses, out Vector3 centerOfMass)
+        public static BodyInertia ComputeInverseInertia(Span<CompoundChild> children, Span<Symmetric3x3> inverseLocalInertias, Span<Number> childMasses, out Vector3 centerOfMass)
         {
             Symmetric3x3 summedInertia = default;
             BodyInertia inertia;
@@ -356,7 +354,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of each child in the compound.</param>
         /// <param name="centerOfMass">Computed center of mass that was subtracted from the child positions.</param>
         /// <returns><see cref="BodyInertia"/> of the compound.</returns>
-        public static BodyInertia ComputeInverseInertia(Span<RigidPose> childPoses, Span<Symmetric3x3> inverseLocalInertias, Span<float> childMasses, out Vector3 centerOfMass)
+        public static BodyInertia ComputeInverseInertia(Span<RigidPose> childPoses, Span<Symmetric3x3> inverseLocalInertias, Span<Number> childMasses, out Vector3 centerOfMass)
         {
             Symmetric3x3 summedInertia = default;
             BodyInertia inertia;
@@ -377,7 +375,7 @@ namespace BepuPhysics.Collidables
         /// <param name="shapes">Shapes collection containing the data for the compound child shapes.</param>
         /// <param name="childMasses">Masses of the children.</param>
         /// <returns>Inertia of the compound.</returns>
-        public static BodyInertia ComputeInertia(Span<CompoundChild> children, Span<float> childMasses, Shapes shapes)
+        public static BodyInertia ComputeInertia(Span<CompoundChild> children, Span<Number> childMasses, Shapes shapes)
         {
             Span<Symmetric3x3> localInverseInertias = stackalloc Symmetric3x3[children.Length];
             for (int i = 0; i < children.Length; ++i)
@@ -399,7 +397,7 @@ namespace BepuPhysics.Collidables
         /// <param name="childMasses">Masses of the children.</param>
         /// <param name="centerOfMass">Calculated center of mass of the compound. Subtracted from all the compound child poses.</param>
         /// <returns>Inertia of the compound.</returns>
-        public static BodyInertia ComputeInertia(Span<CompoundChild> children, Span<float> childMasses, Shapes shapes, out Vector3 centerOfMass)
+        public static BodyInertia ComputeInertia(Span<CompoundChild> children, Span<Number> childMasses, Shapes shapes, out Vector3 centerOfMass)
         {
             Span<Symmetric3x3> localInverseInertias = stackalloc Symmetric3x3[children.Length];
             for (int i = 0; i < children.Length; ++i)
@@ -422,7 +420,7 @@ namespace BepuPhysics.Collidables
         public void BuildKinematicCompound(out Buffer<CompoundChild> children, out Vector3 center)
         {
             center = new Vector3();
-            float totalWeight = 0;
+            Number totalWeight = 0;
             for (int i = 0; i < Children.Count; ++i)
             {
                 center += Children[i].LocalPose.Position * Children[i].Weight;
@@ -430,7 +428,7 @@ namespace BepuPhysics.Collidables
             }
             Debug.Assert(totalWeight > 0, "The compound as a whole must have nonzero weight when using a recentering build. The center is undefined.");
 
-            var inverseWeight = 1f / totalWeight;
+            var inverseWeight = Constants.C1 / totalWeight;
             center *= inverseWeight;
             Pool.Take(Children.Count, out children);
             for (int i = 0; i < Children.Count; ++i)

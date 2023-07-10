@@ -1,15 +1,9 @@
 ﻿using BepuUtilities;
-using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using BepuPhysics.Collidables;
-using BepuPhysics.Constraints;
-using System;
-using System.Collections.Generic;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Numerics;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Text;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -51,10 +45,10 @@ namespace BepuPhysics.CollisionDetection
                 public Vector3 RelativeLinearVelocity;
                 public Vector3 AngularA;
                 public Vector3 AngularB;
-                public float T;
+                public Number T;
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
-                public void Initialize(ref CollidablePair pair, Vector3 relativeLinearVelocity, Vector3 angularVelocityA, Vector3 angularVelocityB, float t)
+                public void Initialize(ref CollidablePair pair, Vector3 relativeLinearVelocity, Vector3 angularVelocityA, Vector3 angularVelocityB, Number t)
                 {
                     Pair = pair;
                     AngularA = angularVelocityA;
@@ -120,7 +114,7 @@ namespace BepuPhysics.CollisionDetection
                 return new CCDContinuationIndex((int)ConstraintGeneratorType.Discrete, index);
             }
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public CCDContinuationIndex AddContinuous(ref CollidablePair pair, Vector3 relativeLinearVelocity, Vector3 angularVelocityA, Vector3 angularVelocityB, float t)
+            public CCDContinuationIndex AddContinuous(ref CollidablePair pair, Vector3 relativeLinearVelocity, Vector3 angularVelocityA, Vector3 angularVelocityB, Number t)
             {
                 continuous.Allocate(pool, out var index).Initialize(ref pair, relativeLinearVelocity, angularVelocityA, angularVelocityB, t);
                 return new CCDContinuationIndex((int)ConstraintGeneratorType.Continuous, index);
@@ -139,7 +133,7 @@ namespace BepuPhysics.CollisionDetection
                     manifoldReference.GetDepth(ref manifoldReference, i).Validate();
                     ref var normal = ref manifoldReference.GetNormal(ref manifoldReference, i);
                     normal.Validate();
-                    Debug.Assert(Math.Abs(normal.LengthSquared() - 1) < 1e-5f, "Normals should be unit length. Something's gone wrong!");
+                    Debug.Assert(Math.Abs(normal.LengthSquared() - 1) < Constants.C1em5, "Normals should be unit length. Something's gone wrong!");
                     manifoldReference.GetOffset(ref manifoldReference, i).Validate();
                 }
 #endif

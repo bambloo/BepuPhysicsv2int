@@ -1,13 +1,12 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using DemoUtilities;
+using BepuUtilities.Numerics;
 using SharpDX.Direct3D11;
 using System;
 using System.Collections.Generic;
-using System.Numerics;
+
 using System.Runtime.CompilerServices;
-using System.Text;
 
 namespace DemoRenderer.UI
 {
@@ -40,7 +39,7 @@ namespace DemoRenderer.UI
         {
             set
             {
-                screenToPackedScale = new Vector2(65535f / value.X, 65535f / value.Y);
+                screenToPackedScale = new Vector2(65535 / value.X, 65535 / value.Y);
             }
         }
 
@@ -65,16 +64,16 @@ namespace DemoRenderer.UI
             Draw(image, targetPosition, size, new Vector2(1, 0), new Vector4(1));
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Draw(RenderableImage image, in Vector2 targetPosition, float height)
+        public void Draw(RenderableImage image, in Vector2 targetPosition, Number height)
         {
-            var scale = height / image.Content.Height;
+            Number scale = height / image.Content.Height;
             Draw(image, targetPosition, scale * new Vector2(image.Content.Width, image.Content.Height), new Vector2(1, 0), new Vector4(1));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Draw(RenderableImage image, in Vector2 targetPosition, float height, in Vector4 color)
+        public void Draw(RenderableImage image, in Vector2 targetPosition, Number height, in Vector4 color)
         {
-            var scale = height / image.Content.Height;
+            Number scale = height / image.Content.Height;
             Draw(image, targetPosition, scale * new Vector2(image.Content.Width, image.Content.Height), new Vector2(1, 0), color);
         }
 

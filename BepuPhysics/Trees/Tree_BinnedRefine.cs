@@ -1,11 +1,10 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
-using System;
+using BepuUtilities.Numerics;
 using System.Diagnostics;
-using System.Linq;
-using System.Numerics;
 using System.Runtime.CompilerServices;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.Trees
 {
@@ -149,9 +148,9 @@ namespace BepuPhysics.Trees
             }
 
             //Bin along all three axes simultaneously.
-            var nullBoundingBox = new BoundingBox { Min = new Vector3(float.MaxValue), Max = new Vector3(float.MinValue) };
+            var nullBoundingBox = new BoundingBox { Min = new Vector3(Number.MaxValue), Max = new Vector3(Number.MinValue) };
             var span = centroidBoundingBox.Max - centroidBoundingBox.Min;
-            const float epsilon = 1e-12f;
+            Number epsilon = Constants.C1em12;
             if (span.X < epsilon && span.Y < epsilon && span.Z < epsilon)
             {
                 //All axes are degenerate.
@@ -180,7 +179,7 @@ namespace BepuPhysics.Trees
             //There is no real value in having tons of bins when there are very few children.
             //At low counts, many of them even end up empty.
             //You can get huge speed boosts by simply dropping the bin count adaptively.
-            var binCount = (int)Math.Min(MaximumBinCount, Math.Max(count * .25f, 2));
+            var binCount = (int)Math.Min(MaximumBinCount, Math.Max(count * Constants.C0p25, 2));
 
             //Take into account zero-width cases.
             //This will result in degenerate axes all being dumped into the first bin.
@@ -269,7 +268,7 @@ namespace BepuPhysics.Trees
             int bLeafCountZ = 0;
 
             int bestAxis = 0;
-            float cost = float.MaxValue;
+            Number cost = Number.MaxValue;
             var binSplitIndex = 0;
             a = nullBoundingBox;
             b = nullBoundingBox;
@@ -289,7 +288,7 @@ namespace BepuPhysics.Trees
 
 
                 //It's possible for a lot of bins in a row to be unpopulated. In that event, the metric isn't defined; don't bother calculating it.
-                float costCandidateX, costCandidateY, costCandidateZ;
+                Number costCandidateX, costCandidateY, costCandidateZ;
                 if (bLeafCountX > 0 && resources.ALeafCountsX[aIndex] > 0)
                 {
                     var metricAX = ComputeBoundsMetric(ref resources.AMergedX[aIndex]);
@@ -297,7 +296,7 @@ namespace BepuPhysics.Trees
                     costCandidateX = resources.ALeafCountsX[aIndex] * metricAX + bLeafCountX * metricBX;
                 }
                 else
-                    costCandidateX = float.MaxValue;
+                    costCandidateX = Number.MaxValue;
                 if (bLeafCountY > 0 && resources.ALeafCountsY[aIndex] > 0)
                 {
                     var metricAY = ComputeBoundsMetric(ref resources.AMergedY[aIndex]);
@@ -305,7 +304,7 @@ namespace BepuPhysics.Trees
                     costCandidateY = resources.ALeafCountsY[aIndex] * metricAY + bLeafCountY * metricBY;
                 }
                 else
-                    costCandidateY = float.MaxValue;
+                    costCandidateY = Number.MaxValue;
                 if (bLeafCountZ > 0 && resources.ALeafCountsZ[aIndex] > 0)
                 {
                     var metricAZ = ComputeBoundsMetric(ref resources.AMergedZ[aIndex]);
@@ -313,7 +312,7 @@ namespace BepuPhysics.Trees
                     costCandidateZ = resources.ALeafCountsZ[aIndex] * metricAZ + bLeafCountZ * metricBZ;
                 }
                 else
-                    costCandidateZ = float.MaxValue;
+                    costCandidateZ = Number.MaxValue;
                 if (costCandidateX < costCandidateY && costCandidateX < costCandidateZ)
                 {
                     if (costCandidateX < cost)
@@ -407,7 +406,7 @@ namespace BepuPhysics.Trees
 
         unsafe void SplitSubtreesIntoChildrenBinned(ref BinnedResources resources,
             int start, int count,
-            int stagingNodeIndex, ref int stagingNodesCount, out float childrenTreeletsCost)
+            int stagingNodeIndex, ref int stagingNodesCount, out Number childrenTreeletsCost)
         {
             Debug.Assert(count > 2);
             FindPartitionBinned(ref resources, start, count, out int splitIndex, out BoundingBox aBounds, out BoundingBox bBounds, out int leafCountA, out int leafCountB);
@@ -427,7 +426,7 @@ namespace BepuPhysics.Trees
 
             int subtreeCountA = splitIndex - start;
             int subtreeCountB = start + count - splitIndex;
-            float costA, costB;
+            Number costA, costB;
             if (subtreeCountA > 1)
             {
                 a.Index = CreateStagingNodeBinned(ref resources, start, subtreeCountA,
@@ -459,7 +458,7 @@ namespace BepuPhysics.Trees
 
         unsafe int CreateStagingNodeBinned(
             ref BinnedResources resources, int start, int count,
-            ref int stagingNodeCount, out float childTreeletsCost)
+            ref int stagingNodeCount, out Number childTreeletsCost)
         {
             var stagingNodeIndex = stagingNodeCount++;
             var stagingNode = resources.StagingNodes + stagingNodeIndex;
@@ -583,7 +582,7 @@ namespace BepuPhysics.Trees
             Debug.Assert(subtreeReferences.Span.Length >= maximumSubtrees, "Subtree references list should have a backing array large enough to hold all possible subtrees.");
             Debug.Assert(treeletInternalNodes.Count == 0, "The treelet internal nodes list should be empty since it's about to get filled.");
             Debug.Assert(treeletInternalNodes.Span.Length >= maximumSubtrees - 1, "Internal nodes queue should have a backing array large enough to hold all possible treelet internal nodes.");
-            CollectSubtrees(nodeIndex, maximumSubtrees, resources.SubtreeHeapEntries, ref subtreeReferences, ref treeletInternalNodes, out float originalTreeletCost);
+            CollectSubtrees(nodeIndex, maximumSubtrees, resources.SubtreeHeapEntries, ref subtreeReferences, ref treeletInternalNodes, out Number originalTreeletCost);
             Debug.Assert(treeletInternalNodes.Count == subtreeReferences.Count - 2,
                 "Given that this is a binary tree, the number of subtree references found must match the internal nodes traversed to reach them. Note that the treelet root is excluded.");
             Debug.Assert(subtreeReferences.Count <= maximumSubtrees);
@@ -627,7 +626,7 @@ namespace BepuPhysics.Trees
             int stagingNodeCount = 0;
 
 
-            CreateStagingNodeBinned(ref resources, 0, subtreeReferences.Count, ref stagingNodeCount, out float newTreeletCost);
+            CreateStagingNodeBinned(ref resources, 0, subtreeReferences.Count, ref stagingNodeCount, out Number newTreeletCost);
             //Copy the refine flag over from the treelet root so that it persists.
             resources.RefineFlags[0] = Metanodes[nodeIndex].RefineFlag;
 

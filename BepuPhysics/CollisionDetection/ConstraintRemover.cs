@@ -1,12 +1,11 @@
 ﻿using BepuUtilities;
 using BepuUtilities.Collections;
 using BepuUtilities.Memory;
+using BepuUtilities.Numerics;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
+using Math = BepuUtilities.Utils.Math;
 
 namespace BepuPhysics.CollisionDetection
 {
@@ -168,13 +167,17 @@ namespace BepuPhysics.CollisionDetection
 
         int previousCapacityPerBatch;
         int previousBatchCapacity;
-        float previousCapacityMultiplier;
+        Number previousCapacityMultiplier;
         int minimumConstraintCapacity;
         int minimumTypeCapacity;
         WorkerCache[] workerCaches; //there is a reference within the worker cache for the pool, so this can't be a buffer.
         int threadCount;
 
-        public ConstraintRemover(BufferPool pool, Bodies bodies, Solver solver, int minimumTypeCapacity = 4, int minimumRemovalCapacity = 128, float previousCapacityMultiplier = 1.25f)
+        public ConstraintRemover(BufferPool pool, Bodies bodies, Solver solver): this(pool, bodies, solver, 4, 128, Constants.C1p25)
+        {
+        }
+
+        public ConstraintRemover(BufferPool pool, Bodies bodies, Solver solver, int minimumTypeCapacity, int minimumRemovalCapacity, Number previousCapacityMultiplier)
         {
             this.pool = pool;
             this.bodies = bodies;
